@@ -5,6 +5,7 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
-    open: true
-  }
+    open: true,
+    allowedHosts: true, // Essencial para evitar o erro "Host not allowed"
+  },
 });
