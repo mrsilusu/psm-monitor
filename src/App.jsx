@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { BarChart3, TrendingUp, Users, AlertTriangle, CheckCircle, XCircle, Clock, MapPin, TrendingDown, Home, Upload, FileJson, Download, Calendar, BarChart, FileText, Menu, PieChart, DownloadCloud, Trash2, AlertCircle } from 'lucide-react';
 
 const PSMMonitorApp = () => {
-  console.log('🚀 PSM Monitor v3.49.16 - Índice de Excelência Removido! ✅');
+  console.log('🚀 PSM Monitor v3.49.20 - Mobile-First Responsivo! 📱✨');
   
   // ============================================================================
   // MAPEAMENTO DE ROTAS PARA PROVÍNCIAS
@@ -3615,6 +3615,70 @@ const PSMMonitorApp = () => {
       }
     });
     
+    // v3.49.17: VALIDAÇÃO - INDISPONÍVEIS SEM EXPLICAÇÃO (com correção de Fibras Dependentes)
+    console.log('🔔 VALIDANDO: Indisponíveis sem explicação...');
+    
+    routesToCheck.forEach(route => {
+      const weekData = data[selectedOperator]?.[selectedWeek]?.[route];
+      
+      if (!weekData) return;
+      
+      const indisponiveis = parseInt(weekData['Indisponíveis']) || 0;
+      
+      // Se não tem indisponíveis, não há nada para validar
+      if (indisponiveis === 0) return;
+      
+      // Calcular soma dos campos de justificação
+      const reconhecidas = parseInt(weekData['Reconhecidas']) || 0;
+      const depPassagem = parseInt(weekData['Dep. de Passagem de Cabo']) || 0;
+      const depLicenca = parseInt(weekData['Dep. de Licença']) || 0;
+      const depCutover = parseInt(weekData['Dep. de Cutover']) || 0;
+      const fibrasDependentesAtual = parseInt(weekData[`Fibras dependentes da ${selectedOperator}`]) || 0;
+      const totalReparadas = parseInt(weekData['Total Reparadas']) || 0;
+      
+      // v3.49.17: CORREÇÃO - Fibras Dependentes Original = Atual + Total Reparadas
+      // (porque Total Reparadas desconta automaticamente das Fibras Dependentes)
+      const fibrasDependentesOriginal = fibrasDependentesAtual + totalReparadas;
+      
+      const somaJustificativas = reconhecidas + depPassagem + depLicenca + depCutover + fibrasDependentesOriginal;
+      
+      console.log(`🔍 ${route}: Indisponíveis=${indisponiveis}, FibrasAtual=${fibrasDependentesAtual}, TotalReparadas=${totalReparadas}, FibrasOriginal=${fibrasDependentesOriginal}, Soma=${somaJustificativas}`);
+      
+      // Se a soma não bate com indisponíveis, criar alerta
+      if (somaJustificativas !== indisponiveis) {
+        const alertaId = `indisp-sem-explicacao-${route}-${selectedWeek}-${selectedQuarter}`;
+        const alertaJaLido = alertasLidos.includes(alertaId);
+        
+        const diferenca = indisponiveis - somaJustificativas;
+        
+        console.log(`⚠️ INDISPONÍVEIS SEM EXPLICAÇÃO: ${route} - Indisponíveis: ${indisponiveis}, Soma: ${somaJustificativas}, Diferença: ${diferenca}`);
+        
+        if (!alertaJaLido) {
+          alertasDetectados.push({
+            id: alertaId,
+            tipo: 'indisponivel-sem-explicacao',
+            rota: route,
+            provincia: routeToProvince[route],
+            indisponiveis: indisponiveis,
+            somaJustificativas: somaJustificativas,
+            diferenca: diferenca,
+            detalhes: {
+              reconhecidas,
+              depPassagem,
+              depLicenca,
+              depCutover,
+              fibrasDependentes: fibrasDependentesOriginal, // Mostrar o valor original
+              fibrasDependentesAtual: fibrasDependentesAtual,
+              totalReparadas: totalReparadas
+            },
+            semanaDeteccao: selectedWeek,
+            timestamp: new Date().toISOString(),
+            lido: false
+          });
+        }
+      }
+    });
+    
     // Ordenar alertas: mais recentes primeiro (por semana de detecção)
     alertasDetectados.sort((a, b) => {
       const weekNumA = parseInt(a.semanaDeteccao.substring(1));
@@ -4848,8 +4912,26 @@ const PSMMonitorApp = () => {
         );
       })()}
       
+      {/* Backdrop para mobile quando menu aberto */}
+      {menuOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          onClick={() => setMenuOpen(false)}
+        />
+      )}
+      
       {/* Menu Lateral */}
-      <div className={`${menuOpen ? 'w-64' : 'w-0'} bg-white border-r border-gray-200 transition-all duration-300 overflow-hidden flex-shrink-0`}>
+      <div className={`
+        ${menuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+        ${menuOpen ? 'w-64' : 'w-0 lg:w-64'}
+        fixed lg:relative
+        inset-y-0 left-0
+        z-50 lg:z-auto
+        bg-white border-r border-gray-200 
+        transition-all duration-300 
+        overflow-hidden 
+        flex-shrink-0
+      `}>
         <div className="p-4">
           <nav className="space-y-1">
             <button 
@@ -4981,34 +5063,34 @@ const PSMMonitorApp = () => {
                 >
                   <Menu className="w-6 h-6 text-gray-600" />
                 </button>
-                <BarChart3 className="w-8 h-8 text-purple-600" />
+                <BarChart3 className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600" />
                 <div>
-                  <h1 className="text-2xl font-bold text-gray-800">Performance Clean Up Advanced</h1>
-                  <p className="text-xs text-gray-500">v3.49.16 - Índice de Excelência Removido! ✅🎯</p>
+                  <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-800">Performance Clean Up Advanced</h1>
+                  <p className="hidden sm:block text-xs text-gray-500">v3.49.20 - Mobile-First Responsivo! 📱✨</p>
                 </div>
               </div>
               {/* Indicador de Salvamento */}
-              <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-2 sm:space-x-3">
                 {saveStatus === 'saving' && (
-                  <div className="flex items-center space-x-2 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200">
+                  <div className="flex items-center space-x-2 bg-blue-50 px-2 sm:px-3 py-1.5 rounded-lg border border-blue-200">
                     <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                    <span className="text-xs font-medium text-blue-700">Salvando...</span>
+                    <span className="hidden sm:inline text-xs font-medium text-blue-700">Salvando...</span>
                   </div>
                 )}
                 {saveStatus === 'saved' && (
-                  <div className="flex items-center space-x-2 bg-green-50 px-3 py-1.5 rounded-lg border border-green-200 animate-fade-in">
+                  <div className="flex items-center space-x-2 bg-green-50 px-2 sm:px-3 py-1.5 rounded-lg border border-green-200 animate-fade-in">
                     <CheckCircle className="w-4 h-4 text-green-600" />
-                    <span className="text-xs font-medium text-green-700">Dados salvos</span>
+                    <span className="hidden sm:inline text-xs font-medium text-green-700">Dados salvos</span>
                   </div>
                 )}
                 {saveStatus === 'error' && (
-                  <div className="flex items-center space-x-2 bg-red-50 px-3 py-1.5 rounded-lg border border-red-200">
+                  <div className="flex items-center space-x-2 bg-red-50 px-2 sm:px-3 py-1.5 rounded-lg border border-red-200">
                     <XCircle className="w-4 h-4 text-red-600" />
-                    <span className="text-xs font-medium text-red-700">Erro ao salvar</span>
+                    <span className="hidden sm:inline text-xs font-medium text-red-700">Erro ao salvar</span>
                   </div>
                 )}
                 {lastSaveTime && saveStatus === '' && (
-                  <div className="text-xs text-gray-500">
+                  <div className="hidden md:block text-xs text-gray-500">
                     Último salvamento: {lastSaveTime.toLocaleTimeString('pt-BR')}
                   </div>
                 )}
@@ -5017,11 +5099,11 @@ const PSMMonitorApp = () => {
           </div>
 
           {/* FILTROS E CARDS DE RESUMO */}
-          <div className="border-b border-gray-200 px-5 py-2.5">
-          <div className="flex items-center justify-between mb-4">
+          <div className="border-b border-gray-200 px-3 sm:px-5 py-2.5">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
             {/* Filtros */}
-            <div className="flex items-center space-x-3">
-              <select value={selectedOperator} onChange={(e) => setSelectedOperator(e.target.value)} className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              <select value={selectedOperator} onChange={(e) => setSelectedOperator(e.target.value)} className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
                 <option value="FIBRASOL">FIBRASOL</option>
                 <option value="ISISTEL">ISISTEL</option>
                 <option value="ANGLOBAL">ANGLOBAL</option>
@@ -5031,7 +5113,7 @@ const PSMMonitorApp = () => {
               <select
                 value={selectedProvince}
                 onChange={(e) => setSelectedProvince(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
               >
                 <option value="Todas">Todas as Províncias</option>
                 {operatorToProvinces[selectedOperator].map(prov => (
@@ -5039,17 +5121,17 @@ const PSMMonitorApp = () => {
                 ))}
               </select>
               
-              <select value={selectedWeek} onChange={(e) => setSelectedWeek(e.target.value)} className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+              <select value={selectedWeek} onChange={(e) => setSelectedWeek(e.target.value)} className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
                 {getWeeksForQuarter(selectedQuarter).map(week => (
                   <option key={week} value={week}>{week}</option>
                 ))}
               </select>
-              <select value={selectedQuarter} onChange={(e) => setSelectedQuarter(e.target.value)} className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+              <select value={selectedQuarter} onChange={(e) => setSelectedQuarter(e.target.value)} className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
                 <option value="Q3">Q3</option>
                 <option value="Q2">Q2</option>
                 <option value="Q1">Q1</option>
               </select>
-              <select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+              <select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
                 <option value="2030">2030</option>
                 <option value="2029">2029</option>
                 <option value="2028">2028</option>
@@ -5065,19 +5147,20 @@ const PSMMonitorApp = () => {
             {/* v3.42.00: BOTÃO TESTES E ANÁLISES */}
             <button
               onClick={() => setShowTestesAnalises(!showTestesAnalises)}
-              className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center space-x-2 ${
+              className={`px-3 sm:px-4 py-2 text-sm rounded-lg font-medium transition-all duration-200 flex items-center space-x-2 ${
                 showTestesAnalises
                   ? 'bg-blue-600 text-white shadow-lg'
                   : 'bg-white text-blue-600 border-2 border-blue-600 hover:bg-blue-50'
               }`}
               title="Abrir painel de Testes e Análises"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
-              <span>Testes e Análises</span>
+              <span className="hidden sm:inline">Testes e Análises</span>
+              <span className="sm:hidden">Testes</span>
               {showTestesAnalises && (
-                <span className="ml-1 text-xs opacity-75">(aberto)</span>
+                <span className="hidden md:inline ml-1 text-xs opacity-75">(aberto)</span>
               )}
             </button>
             
@@ -5113,7 +5196,7 @@ const PSMMonitorApp = () => {
               
               {/* Dropdown de alertas */}
               {alertasAbertos && (
-                <div className="absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-lg border border-gray-200 z-50 max-h-96 overflow-hidden flex flex-col">
+                <div className="absolute right-0 mt-2 w-full sm:w-96 bg-white rounded-lg shadow-lg border border-gray-200 z-50 max-h-96 overflow-hidden flex flex-col">
                   {/* Header */}
                   <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
                     <div className="flex items-center justify-between">
@@ -5150,46 +5233,113 @@ const PSMMonitorApp = () => {
                             }`}
                           >
                             <div className="flex items-start gap-3">
-                              {/* Ícone de info */}
+                              {/* Ícone condicional baseado no tipo */}
                               <div className="flex-shrink-0 mt-0.5">
-                                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                                  <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                  </svg>
-                                </div>
+                                {alerta.tipo === 'indisponivel-sem-explicacao' ? (
+                                  <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center">
+                                    <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                    </svg>
+                                  </div>
+                                ) : (
+                                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                                    <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                  </div>
+                                )}
                               </div>
                               
                               {/* Conteúdo */}
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center justify-between mb-1">
-                                  <span className="text-xs font-semibold text-blue-600 uppercase">
-                                    Inconsistência de Dados
+                                  <span className={`text-xs font-semibold uppercase ${
+                                    alerta.tipo === 'indisponivel-sem-explicacao' ? 'text-amber-600' : 'text-blue-600'
+                                  }`}>
+                                    {alerta.tipo === 'indisponivel-sem-explicacao' 
+                                      ? 'Indisp. com Cálculo Inconsistente' 
+                                      : 'Inconsistência de Dados'}
                                   </span>
                                   {!isLido && (
-                                    <span className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></span>
+                                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                                      alerta.tipo === 'indisponivel-sem-explicacao' ? 'bg-amber-500' : 'bg-blue-500'
+                                    }`}></span>
                                   )}
                                 </div>
                                 <p className="text-sm font-medium text-gray-800 mb-1">
                                   {alerta.rota}
                                 </p>
-                                <p className="text-xs text-gray-600 mb-2">
-                                  Reparadas Acumulado ({alerta.reparadasAcumulado}) {'>'} Indisponíveis ({alerta.indisponiveis}) em {alerta.semanaDeteccao}
-                                </p>
-                                <div className="flex items-center justify-between">
-                                  <span className="text-xs text-gray-500">
-                                    {alerta.provincia} • Diferença: +{alerta.diferenca}
-                                  </span>
-                                  <button
-                                    onClick={() => {
-                                      if (!isLido) {
-                                        setAlertasLidos([...alertasLidos, alerta.id]);
-                                      }
-                                    }}
-                                    className="text-xs text-blue-600 hover:text-blue-800"
-                                  >
-                                    {isLido ? '✓ Lido' : 'Marcar como lido'}
-                                  </button>
-                                </div>
+                                
+                                {/* Conteúdo específico por tipo */}
+                                {alerta.tipo === 'indisponivel-sem-explicacao' ? (
+                                  <>
+                                    <p className="text-xs text-gray-600 mb-2">
+                                      Indisponíveis ({alerta.indisponiveis}) ≠ Soma Justificativas ({alerta.somaJustificativas}) em {alerta.semanaDeteccao}
+                                    </p>
+                                    <div className="text-xs text-gray-500 mb-2 space-y-0.5">
+                                      {alerta.detalhes.reconhecidas > 0 && (
+                                        <div>• Reconhecidas: {alerta.detalhes.reconhecidas}</div>
+                                      )}
+                                      {alerta.detalhes.depPassagem > 0 && (
+                                        <div>• Dep. Passagem: {alerta.detalhes.depPassagem}</div>
+                                      )}
+                                      {alerta.detalhes.depLicenca > 0 && (
+                                        <div>• Dep. Licença: {alerta.detalhes.depLicenca}</div>
+                                      )}
+                                      {alerta.detalhes.depCutover > 0 && (
+                                        <div>• Dep. Cutover: {alerta.detalhes.depCutover}</div>
+                                      )}
+                                      {alerta.detalhes.fibrasDependentes > 0 && (
+                                        <div>
+                                          • Fibras Dependentes: {alerta.detalhes.fibrasDependentes}
+                                          {alerta.detalhes.totalReparadas > 0 && (
+                                            <span className="text-blue-600 ml-1">
+                                              (atual: {alerta.detalhes.fibrasDependentesAtual} + reparadas: {alerta.detalhes.totalReparadas})
+                                            </span>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                      <span className={`text-xs font-medium ${
+                                        alerta.diferenca > 0 ? 'text-red-600' : 'text-amber-600'
+                                      }`}>
+                                        {alerta.provincia} • {alerta.diferenca > 0 ? 'Faltam' : 'Sobram'} {Math.abs(alerta.diferenca)} fibra(s)
+                                      </span>
+                                      <button
+                                        onClick={() => {
+                                          if (!isLido) {
+                                            setAlertasLidos([...alertasLidos, alerta.id]);
+                                          }
+                                        }}
+                                        className="text-xs text-amber-600 hover:text-amber-800"
+                                      >
+                                        {isLido ? '✓ Lido' : 'Marcar como lido'}
+                                      </button>
+                                    </div>
+                                  </>
+                                ) : (
+                                  <>
+                                    <p className="text-xs text-gray-600 mb-2">
+                                      Reparadas Acumulado ({alerta.reparadasAcumulado}) {'>'} Indisponíveis ({alerta.indisponiveis}) em {alerta.semanaDeteccao}
+                                    </p>
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-xs text-gray-500">
+                                        {alerta.provincia} • Diferença: +{alerta.diferenca}
+                                      </span>
+                                      <button
+                                        onClick={() => {
+                                          if (!isLido) {
+                                            setAlertasLidos([...alertasLidos, alerta.id]);
+                                          }
+                                        }}
+                                        className="text-xs text-blue-600 hover:text-blue-800"
+                                      >
+                                        {isLido ? '✓ Lido' : 'Marcar como lido'}
+                                      </button>
+                                    </div>
+                                  </>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -5212,7 +5362,7 @@ const PSMMonitorApp = () => {
           </div>
 
           {/* Cards de Resumo Superiores - COMPACTOS EM UMA LINHA (8 cards) */}
-          <div className="grid grid-cols-8 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
             {summaryCards.map((card, index) => (
               <div 
                 key={index} 
@@ -5221,12 +5371,12 @@ const PSMMonitorApp = () => {
                 title={`Clique para ver detalhes de ${card.label}`}
               >
                 <div className="flex items-center justify-between mb-0.5">
-                  <span className="text-[10px] font-medium opacity-90 leading-tight">{card.label}</span>
+                  <span className="text-[10px] sm:text-[11px] font-medium opacity-90 leading-tight">{card.label}</span>
                   <div className="w-3 h-3">{card.icon}</div>
                 </div>
                 <div className="flex items-end space-x-1">
-                  <span className="text-xl font-bold leading-none">{card.value}</span>
-                  {card.total && <span className="text-[10px] opacity-75 mb-0.5">de {card.total}</span>}
+                  <span className="text-lg sm:text-xl font-bold leading-none">{card.value}</span>
+                  {card.total && <span className="text-[9px] sm:text-[10px] opacity-75 mb-0.5">de {card.total}</span>}
                 </div>
               </div>
             ))}
@@ -9380,6 +9530,9 @@ Gerado por: PSM Monitor v3.42.03
                 </p>
                 <p className="text-xs text-purple-800 mt-1">
                   🔄 <strong>Lógica:</strong> Total Reparadas ↑ → Fibras Dependentes ↓
+                </p>
+                <p className="text-xs text-gray-600 mt-1 sm:hidden">
+                  📱 <strong>Mobile:</strong> Deslize horizontalmente para ver todas as colunas
                 </p>
               </div>
               
