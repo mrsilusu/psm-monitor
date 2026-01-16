@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { BarChart3, TrendingUp, Users, AlertTriangle, CheckCircle, XCircle, Clock, MapPin, TrendingDown, Home, Upload, FileJson, Download, Calendar, BarChart, FileText, Menu, PieChart, DownloadCloud, Trash2, AlertCircle } from 'lucide-react';
 
 const PSMMonitorApp = () => {
-  console.log('🚀 PSM Monitor v3.49.30 - Gráfico Evolução Temporal Corrigido! 📊✅');
+  console.log('🚀 PSM Monitor v3.49.31 - Badge Efetividade Responsivo! 📱✨');
   
   // ============================================================================
   // MAPEAMENTO DE ROTAS PARA PROVÍNCIAS
@@ -5132,7 +5132,7 @@ const PSMMonitorApp = () => {
                 <BarChart3 className="w-8 h-8 text-purple-600" />
                 <div>
                   <h1 className="text-2xl font-bold text-gray-800">Performance Clean Up Advanced</h1>
-                  <p className="text-xs text-gray-500">v3.49.30 - Gráfico Corrigido! 🎨✨</p>
+                  <p className="text-xs text-gray-500">v3.49.31 - Badge Responsivo! 🎨✨</p>
                 </div>
               </div>
               {/* Indicador de Salvamento */}
@@ -6840,7 +6840,7 @@ Gerado por: PSM Monitor v3.42.03
                       </div>
 
                       {/* Card 3: Taxa de Efetividade - VELOCÍMETRO */}
-                      <div className="bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 rounded-lg p-4 shadow-sm">
+                      <div className="bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 rounded-lg p-4 shadow-sm relative">
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center space-x-2">
                             <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center">
@@ -6849,16 +6849,23 @@ Gerado por: PSM Monitor v3.42.03
                               </svg>
                             </div>
                             
-                            {/* v3.49.28: Toggle com troca de posição - modo ativo no título */}
-                            <div className="flex items-center gap-2">
+                            {/* v3.49.31: Layout responsivo para título e badge */}
+                            <div className="flex items-center gap-2 xl:gap-3">
                               <h4 className="text-sm font-semibold text-purple-900">
                                 Efetividade {efetividadeMode === 'global' ? 'Global' : 'PSM'}
                               </h4>
                               
-                              {/* Modo inativo no canto superior direito */}
+                              {/* Badge - Posicionamento Responsivo */}
                               <button
                                 onClick={() => setEfetividadeMode(efetividadeMode === 'global' ? 'psm' : 'global')}
-                                className="text-[9px] font-semibold px-2 py-0.5 rounded-full bg-purple-100 text-purple-600 hover:bg-purple-200 hover:text-purple-800 transition-all duration-200 active:scale-95"
+                                className={`
+                                  text-[9px] lg:text-[10px] font-semibold 
+                                  px-2 lg:px-2.5 py-0.5 lg:py-1
+                                  rounded-full bg-purple-100 text-purple-600 
+                                  hover:bg-purple-200 hover:text-purple-800 
+                                  transition-all duration-200 active:scale-95
+                                  lg:absolute lg:top-2 lg:right-3
+                                `}
                                 title={`Trocar para modo ${efetividadeMode === 'global' ? 'PSM' : 'Global'}`}
                               >
                                 {efetividadeMode === 'global' ? 'PSM' : 'Global'}
