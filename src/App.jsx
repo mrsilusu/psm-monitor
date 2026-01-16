@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { BarChart3, TrendingUp, Users, AlertTriangle, CheckCircle, XCircle, Clock, MapPin, TrendingDown, Home, Upload, FileJson, Download, Calendar, BarChart, FileText, Menu, PieChart, DownloadCloud, Trash2, AlertCircle } from 'lucide-react';
 
 const PSMMonitorApp = () => {
-  console.log('🚀 PSM Monitor v3.49.28 - Toggle Inteligente (Texto Troca Posição)! 🎯✨');
+  console.log('🚀 PSM Monitor v3.49.30 - Gráfico Evolução Temporal Corrigido! 📊✅');
   
   // ============================================================================
   // MAPEAMENTO DE ROTAS PARA PROVÍNCIAS
@@ -5132,7 +5132,7 @@ const PSMMonitorApp = () => {
                 <BarChart3 className="w-8 h-8 text-purple-600" />
                 <div>
                   <h1 className="text-2xl font-bold text-gray-800">Performance Clean Up Advanced</h1>
-                  <p className="text-xs text-gray-500">v3.49.28 - Toggle Posição! 🎨✨</p>
+                  <p className="text-xs text-gray-500">v3.49.30 - Gráfico Corrigido! 🎨✨</p>
                 </div>
               </div>
               {/* Indicador de Salvamento */}
@@ -5209,23 +5209,36 @@ const PSMMonitorApp = () => {
               </select>
             </div>
             
-            
-            {/* v3.42.00: BOTÃO TESTES E ANÁLISES */}
+            {/* v3.49.29: BOTÃO TESTES E ANÁLISES MODERNIZADO */}
             <button
               onClick={() => setShowTestesAnalises(!showTestesAnalises)}
-              className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center space-x-2 ${
+              className={`group relative px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-200 flex items-center gap-2 ${
                 showTestesAnalises
-                  ? 'bg-blue-600 text-white shadow-lg'
-                  : 'bg-white text-blue-600 border-2 border-blue-600 hover:bg-blue-50'
+                  ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg scale-105'
+                  : 'bg-white text-blue-600 border-2 border-blue-300 hover:border-blue-500 hover:shadow-md hover:scale-105'
               }`}
-              title="Abrir painel de Testes e Análises"
+              title={showTestesAnalises ? "Fechar Testes e Análises" : "Abrir Testes e Análises"}
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
-              <span>Testes e Análises</span>
+              {/* Ícone com animação */}
+              <div className={`transition-transform duration-200 ${showTestesAnalises ? 'rotate-180' : ''}`}>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </div>
+              
+              {/* Texto */}
+              <span className="whitespace-nowrap">Testes e Análises</span>
+              
+              {/* Badge indicador quando aberto */}
               {showTestesAnalises && (
-                <span className="ml-1 text-xs opacity-75">(aberto)</span>
+                <span className="absolute -top-1 -right-1 w-2 h-2 bg-green-400 rounded-full animate-pulse border-2 border-white"></span>
+              )}
+              
+              {/* Ícone de chevron quando fechado */}
+              {!showTestesAnalises && (
+                <svg className="w-4 h-4 opacity-60 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
               )}
             </button>
             
@@ -7837,8 +7850,8 @@ Gerado por: PSM Monitor v3.42.03
                           const y = 270 - (val * scaleFactor); // Ajustado para altura 320px
                           return (
                             <g key={idx}>
-                              <line x1="60" y1={y} x2="570" y2={y} stroke="#d1d5db" strokeWidth="1" strokeDasharray="3 3" />
-                              <text x="48" y={y + 5} fontSize="10" fill="#6b7280" textAnchor="end" fontWeight="600">{val}</text>
+                              <line x1="80" y1={y} x2="570" y2={y} stroke="#d1d5db" strokeWidth="1" strokeDasharray="3 3" />
+                              <text x="68" y={y + 5} fontSize="10" fill="#6b7280" textAnchor="end" fontWeight="600">{val}</text>
                             </g>
                           );
                         });
@@ -7865,62 +7878,65 @@ Gerado por: PSM Monitor v3.42.03
                         const scaleFactor = 240 / yAxisMax; // Altura útil (escala de 0 a yAxisMax)
                         
                         // Calcular espaçamento dinâmico para ocupar todo o espaço
-                        const totalWidth = 510; // 570 - 60 (espaço disponível)
+                        // v3.49.30: Adicionar margem para não cortar primeira semana
+                        const leftMargin = 80;  // Margem esquerda (era 60)
+                        const rightMargin = 30; // Margem direita
+                        const totalWidth = 600 - leftMargin - rightMargin; // Espaço disponível
                         const numWeeks = trendData.length;
-                        const spacing = totalWidth / (numWeeks - 1); // Espaçamento entre pontos
+                        const spacing = totalWidth / (numWeeks > 1 ? numWeeks - 1 : 1); // Espaçamento entre pontos
                         
                         return (
                           <>
                             {/* Labels das semanas */}
                             {trendData.map((item, idx) => {
-                              const x = 60 + (idx * spacing);
+                              const x = leftMargin + (idx * spacing);
                               return <text key={idx} x={x} y="295" fontSize="11" fill="#374151" fontWeight="600" textAnchor="middle">{item.week}</text>;
                             })}
                             
                             {/* Linha Indisponíveis (VERMELHA) */}
                             <path d={trendData.map((item, idx) => {
-                              const x = 60 + (idx * spacing);
+                              const x = leftMargin + (idx * spacing);
                               const y = 270 - (item.indisponiveis * scaleFactor);
                               return `${idx === 0 ? 'M' : 'L'} ${x} ${y}`;
                             }).join(' ')} fill="none" stroke="#ef4444" strokeWidth="3.5" />
                             {trendData.map((item, idx) => {
-                              const x = 60 + (idx * spacing);
+                              const x = leftMargin + (idx * spacing);
                               const y = 270 - (item.indisponiveis * scaleFactor);
                               return <circle key={idx} cx={x} cy={y} r="5" fill="#ef4444" stroke="#fff" strokeWidth="2" />;
                             })}
                             
                             {/* Linha Total Reparadas (LARANJA) */}
                             <path d={trendData.map((item, idx) => {
-                              const x = 60 + (idx * spacing);
+                              const x = leftMargin + (idx * spacing);
                               const y = 270 - (item.totalReparadas * scaleFactor);
                               return `${idx === 0 ? 'M' : 'L'} ${x} ${y}`;
                             }).join(' ')} fill="none" stroke="#f97316" strokeWidth="3" strokeDasharray="6 6" />
                             {trendData.map((item, idx) => {
-                              const x = 60 + (idx * spacing);
+                              const x = leftMargin + (idx * spacing);
                               const y = 270 - (item.totalReparadas * scaleFactor);
                               return <circle key={idx} cx={x} cy={y} r="4.5" fill="#f97316" stroke="#fff" strokeWidth="2" />;
                             })}
                             
                             {/* Linha Reparadas Global (VERDE) */}
                             <path d={trendData.map((item, idx) => {
-                              const x = 60 + (idx * spacing);
+                              const x = leftMargin + (idx * spacing);
                               const y = 270 - (item.reparadasGlobal * scaleFactor);
                               return `${idx === 0 ? 'M' : 'L'} ${x} ${y}`;
                             }).join(' ')} fill="none" stroke="#22c55e" strokeWidth="3" />
                             {trendData.map((item, idx) => {
-                              const x = 60 + (idx * spacing);
+                              const x = leftMargin + (idx * spacing);
                               const y = 270 - (item.reparadasGlobal * scaleFactor);
                               return <circle key={idx} cx={x} cy={y} r="4.5" fill="#22c55e" stroke="#fff" strokeWidth="2" />;
                             })}
                             
                             {/* Linha Fibras Dep (ROXO) - v3.40.77: valores diretos do card */}
                             <path d={trendData.map((item, idx) => {
-                              const x = 60 + (idx * spacing);
+                              const x = leftMargin + (idx * spacing);
                               const y = 270 - (item.fibrasDep * scaleFactor);
                               return `${idx === 0 ? 'M' : 'L'} ${x} ${y}`;
                             }).join(' ')} fill="none" stroke="#8b5cf6" strokeWidth="2.5" strokeDasharray="5 3" />
                             {trendData.map((item, idx) => {
-                              const x = 60 + (idx * spacing);
+                              const x = leftMargin + (idx * spacing);
                               const y = 270 - (item.fibrasDep * scaleFactor);
                               return <circle key={idx} cx={x} cy={y} r="4" fill="#8b5cf6" stroke="#fff" strokeWidth="2" />;
                             })}
@@ -7959,7 +7975,7 @@ Gerado por: PSM Monitor v3.42.03
                               // Série 1: Indisponíveis (Vermelho)
                               trendData.forEach((item, idx) => {
                                 if (isVariation(trendData, idx, 'indisponiveis')) {
-                                  const x = 60 + (idx * spacing);
+                                  const x = leftMargin + (idx * spacing);
                                   const y = 270 - (item.indisponiveis * scaleFactor);
                                   allAnnotations.push({
                                     x, y, 
@@ -7974,7 +7990,7 @@ Gerado por: PSM Monitor v3.42.03
                               // Série 2: Total Reparadas (Laranja)
                               trendData.forEach((item, idx) => {
                                 if (isVariation(trendData, idx, 'totalReparadas')) {
-                                  const x = 60 + (idx * spacing);
+                                  const x = leftMargin + (idx * spacing);
                                   const y = 270 - (item.totalReparadas * scaleFactor);
                                   allAnnotations.push({
                                     x, y,
@@ -7989,7 +8005,7 @@ Gerado por: PSM Monitor v3.42.03
                               // Série 3: Reparadas Global (Verde)
                               trendData.forEach((item, idx) => {
                                 if (isVariation(trendData, idx, 'reparadasGlobal')) {
-                                  const x = 60 + (idx * spacing);
+                                  const x = leftMargin + (idx * spacing);
                                   const y = 270 - (item.reparadasGlobal * scaleFactor);
                                   allAnnotations.push({
                                     x, y,
@@ -8004,7 +8020,7 @@ Gerado por: PSM Monitor v3.42.03
                               // Série 4: Fibras Dep (Roxo)
                               trendData.forEach((item, idx) => {
                                 if (isVariation(trendData, idx, 'fibrasDep')) {
-                                  const x = 60 + (idx * spacing);
+                                  const x = leftMargin + (idx * spacing);
                                   const y = 270 - (item.fibrasDep * scaleFactor);
                                   allAnnotations.push({
                                     x, y,
@@ -8131,7 +8147,7 @@ Gerado por: PSM Monitor v3.42.03
                             
                             {/* Áreas invisíveis para capturar hover por semana */}
                             {trendData.map((item, idx) => {
-                              const x = 60 + (idx * spacing);
+                              const x = leftMargin + (idx * spacing);
                               return (
                                 <rect
                                   key={idx}
