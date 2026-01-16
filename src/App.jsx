@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { BarChart3, TrendingUp, Users, AlertTriangle, CheckCircle, XCircle, Clock, MapPin, TrendingDown, Home, Upload, FileJson, Download, Calendar, BarChart, FileText, Menu, PieChart, DownloadCloud, Trash2, AlertCircle } from 'lucide-react';
 
 const PSMMonitorApp = () => {
-  console.log('🚀 PSM Monitor v3.49.24 - Detecção Mobile + Aviso Desktop! 📱⚠️');
+  console.log('🚀 PSM Monitor v3.49.28 - Toggle Inteligente (Texto Troca Posição)! 🎯✨');
   
   // ============================================================================
   // MAPEAMENTO DE ROTAS PARA PROVÍNCIAS
@@ -4653,7 +4653,7 @@ const PSMMonitorApp = () => {
   return (
     <div className="min-h-screen bg-gray-50 flex relative">
       
-      {/* v3.49.24: CSS para animação do banner */}
+      {/* v3.49.24: CSS para animações */}
       <style>{`
         @keyframes slideDown {
           from {
@@ -4667,6 +4667,20 @@ const PSMMonitorApp = () => {
         }
         .animate-slideDown {
           animation: slideDown 0.5s ease-out;
+        }
+        
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(-5px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .animate-fadeIn {
+          animation: fadeIn 0.2s ease-out;
         }
       `}</style>
       
@@ -5118,7 +5132,7 @@ const PSMMonitorApp = () => {
                 <BarChart3 className="w-8 h-8 text-purple-600" />
                 <div>
                   <h1 className="text-2xl font-bold text-gray-800">Performance Clean Up Advanced</h1>
-                  <p className="text-xs text-gray-500">v3.49.24 - Detecção Mobile + Aviso! 📱⚠️</p>
+                  <p className="text-xs text-gray-500">v3.49.28 - Toggle Posição! 🎨✨</p>
                 </div>
               </div>
               {/* Indicador de Salvamento */}
@@ -6374,8 +6388,14 @@ Gerado por: PSM Monitor v3.42.03
                       
                       const indisponibilidadeLiquida = Math.max(0, Math.round(indisponiveis - reparadas));
                       const efetividadeGlobal = indisponiveis > 0 ? ((reparadas / indisponiveis) * 100) : 0;
-                      const indisponiveisPSM = indisponiveis - (reconhecidas + depPassagem + depLicenca + depCutover);
-                      const efetividadePSM = indisponiveisPSM > 0 ? ((reparadas / indisponiveisPSM) * 100) : 0;
+                      
+                      // v3.49.25: Efetividade PSM com lógica rigorosa
+                      const fibrasDependentesPSM = indisponiveis - (reconhecidas + depPassagem + depLicenca + depCutover);
+                      let efetividadePSM = 0;
+                      
+                      if (fibrasDependentesPSM > 0) {
+                        efetividadePSM = Math.min(100, (reparadas / fibrasDependentesPSM) * 100);
+                      }
                       
                       console.log(`  📊 ${psm}: Efet.Global=${efetividadeGlobal.toFixed(1)}%, Efet.PSM=${efetividadePSM.toFixed(1)}%`);
                       
@@ -6387,7 +6407,7 @@ Gerado por: PSM Monitor v3.42.03
                         efetividade: efetividadeGlobal,
                         efetividadeGlobal,
                         efetividadePSM,
-                        indisponiveisPSM
+                        indisponiveisPSM: fibrasDependentesPSM
                       };
                     });
                     
@@ -6505,13 +6525,28 @@ Gerado por: PSM Monitor v3.42.03
                     // 1. Efetividade Global (ATUAL - já existia)
                     const efetividadeGlobal = indisponiveis > 0 ? ((reparadas / indisponiveis) * 100) : 0;
                     
-                    // 2. Efetividade PSM (NOVA)
-                    // Indisponíveis do PSM = Total - (Reconhecidas + Dep.Pass + Dep.Lic + Dep.Cut)
-                    const indisponiveisPSM = indisponiveis - (reconhecidas + depPassagem + depLicenca + depCutover);
-                    const efetividadePSM = indisponiveisPSM > 0 ? ((reparadas / indisponiveisPSM) * 100) : 0;
+                    // 2. Efetividade PSM (NOVA LÓGICA RIGOROSA v3.49.25)
+                    // Indisponíveis do PSM = Fibras Dependentes do PSM
+                    const fibrasDependentesPSM = indisponiveis - (reconhecidas + depPassagem + depLicenca + depCutover);
+                    
+                    // REGRA: Só conta reparações DEPOIS de reparar TODAS as fibras dependentes do PSM
+                    let efetividadePSM = 0;
+                    
+                    if (fibrasDependentesPSM > 0) {
+                      // Há fibras dependentes do PSM para reparar
+                      // Percentagem = (reparadas / fibras dependentes) * 100
+                      // MAS: limitado a 100% máximo
+                      efetividadePSM = Math.min(100, (reparadas / fibrasDependentesPSM) * 100);
+                      
+                      console.log(`  📊 ${prov} Efetividade PSM: ${efetividadePSM.toFixed(1)}% (${reparadas}/${fibrasDependentesPSM}) - ${reparadas >= fibrasDependentesPSM ? '✅ TODAS REPARADAS' : '⚠️ AINDA FALTAM'}`);
+                    } else {
+                      // Não há fibras dependentes do PSM (todos os problemas são de outras causas)
+                      // Neste caso: 0% porque não contribui para o PSM
+                      efetividadePSM = 0;
+                      console.log(`  📊 ${prov} Efetividade PSM: 0% (sem fibras dependentes do PSM) - outras causas: ${reconhecidas + depPassagem + depLicenca + depCutover}`);
+                    }
                     
                     console.log(`  📊 ${prov} Efetividade Global: ${efetividadeGlobal.toFixed(1)}% (${reparadas}/${indisponiveis})`);
-                    console.log(`  📊 ${prov} Efetividade PSM: ${efetividadePSM.toFixed(1)}% (${reparadas}/${indisponiveisPSM})`);
                     
                     return { 
                       provincia: prov, 
@@ -6520,8 +6555,8 @@ Gerado por: PSM Monitor v3.42.03
                       reparadas, 
                       efetividade: efetividadeGlobal, // GLOBAL (compatibilidade)
                       efetividadeGlobal,  // v3.40.73: GLOBAL explícito
-                      efetividadePSM,     // v3.40.73: PSM (nova)
-                      indisponiveisPSM    // Para referência
+                      efetividadePSM,     // v3.40.73: PSM (nova lógica rigorosa v3.49.25)
+                      indisponiveisPSM: fibrasDependentesPSM    // Para referência
                     };
                   });
                   } // Fim do else (modo PSM)
@@ -6800,17 +6835,60 @@ Gerado por: PSM Monitor v3.42.03
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                               </svg>
                             </div>
-                            <h4 className="text-sm font-semibold text-purple-900">Efetividade</h4>
+                            
+                            {/* v3.49.28: Toggle com troca de posição - modo ativo no título */}
+                            <div className="flex items-center gap-2">
+                              <h4 className="text-sm font-semibold text-purple-900">
+                                Efetividade {efetividadeMode === 'global' ? 'Global' : 'PSM'}
+                              </h4>
+                              
+                              {/* Modo inativo no canto superior direito */}
+                              <button
+                                onClick={() => setEfetividadeMode(efetividadeMode === 'global' ? 'psm' : 'global')}
+                                className="text-[9px] font-semibold px-2 py-0.5 rounded-full bg-purple-100 text-purple-600 hover:bg-purple-200 hover:text-purple-800 transition-all duration-200 active:scale-95"
+                                title={`Trocar para modo ${efetividadeMode === 'global' ? 'PSM' : 'Global'}`}
+                              >
+                                {efetividadeMode === 'global' ? 'PSM' : 'Global'}
+                              </button>
+                            </div>
+                            
+                            {/* Tooltip info - pequeno ícone */}
+                            <div 
+                              className="group relative cursor-help"
+                              title={efetividadeMode === 'psm' 
+                                ? "PSM: Só Fibras Dependentes. Max 100%/prov." 
+                                : "Global: Todas indisponíveis"}
+                            >
+                              <svg className={`w-3.5 h-3.5 transition-colors ${
+                                efetividadeMode === 'psm' ? 'text-purple-500' : 'text-blue-500'
+                              }`} fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                              </svg>
+                              
+                              {/* Tooltip expandido no hover */}
+                              <div className="hidden group-hover:block absolute top-5 right-0 bg-gray-900 text-white text-[10px] rounded-lg p-2 shadow-2xl w-44 z-50 animate-fadeIn">
+                                {efetividadeMode === 'psm' ? (
+                                  <>
+                                    <p className="font-bold text-purple-300 mb-1">PSM (Rigoroso)</p>
+                                    <p className="text-gray-300 text-[9px] leading-tight">
+                                      Só Fibras Dependentes PSM<br/>
+                                      Max 100% por província<br/>
+                                      Outras causas = 0%
+                                    </p>
+                                  </>
+                                ) : (
+                                  <>
+                                    <p className="font-bold text-blue-300 mb-1">Global (Completo)</p>
+                                    <p className="text-gray-300 text-[9px] leading-tight">
+                                      Todas indisponíveis<br/>
+                                      Qualquer causa conta<br/>
+                                      Pode &gt; 100%
+                                    </p>
+                                  </>
+                                )}
+                              </div>
+                            </div>
                           </div>
-                          {/* v3.40.73: Toggle Global/PSM */}
-                          <select 
-                            value={efetividadeMode} 
-                            onChange={(e) => setEfetividadeMode(e.target.value)}
-                            className="text-[10px] px-2 py-1 border border-purple-300 rounded bg-white text-purple-700 font-medium cursor-pointer hover:bg-purple-50 focus:outline-none focus:ring-2 focus:ring-purple-400"
-                          >
-                            <option value="global">Global</option>
-                            <option value="psm">PSM</option>
-                          </select>
                         </div>
                         
                         {/* VELOCÍMETRO AJUSTADO com altura fixa */}
