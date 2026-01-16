@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { BarChart3, TrendingUp, Users, AlertTriangle, CheckCircle, XCircle, Clock, MapPin, TrendingDown, Home, Upload, FileJson, Download, Calendar, BarChart, FileText, Menu, PieChart, DownloadCloud, Trash2, AlertCircle } from 'lucide-react';
 
 const PSMMonitorApp = () => {
-  console.log('🚀 PSM Monitor v3.49.20 - Mobile-First Responsivo! 📱✨');
+  console.log('🚀 PSM Monitor v3.49.24 - Detecção Mobile + Aviso Desktop! 📱⚠️');
   
   // ============================================================================
   // MAPEAMENTO DE ROTAS PARA PROVÍNCIAS
@@ -369,6 +369,10 @@ const PSMMonitorApp = () => {
   // ESTADOS DE UI (mantidos da v1.5.0)
   // ============================================================================
   
+  // v3.49.24: Estados para detecção mobile e aviso
+  const [isMobileDevice, setIsMobileDevice] = useState(false);
+  const [showMobileWarning, setShowMobileWarning] = useState(true);
+  
   // Estados para os filtros e menu
   const [selectedOperator, setSelectedOperator] = useState('FIBRASOL');
   const [selectedWeek, setSelectedWeek] = useState('W50');
@@ -446,6 +450,20 @@ const PSMMonitorApp = () => {
       console.error('Erro ao salvar validações:', e);
     }
   }, [rotasTestadas, rotasValidadas]);
+  
+  // v3.49.24: Detecção automática de dispositivo mobile
+  useEffect(() => {
+    const checkMobileDevice = () => {
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) 
+        || window.innerWidth < 768;
+      setIsMobileDevice(isMobile);
+    };
+    
+    checkMobileDevice();
+    window.addEventListener('resize', checkMobileDevice);
+    
+    return () => window.removeEventListener('resize', checkMobileDevice);
+  }, []);
   
   // v3.48.02: Função para obter quarter de uma semana
   const getQuarterFromWeek = (week) => {
@@ -4633,7 +4651,58 @@ const PSMMonitorApp = () => {
   console.log('✓ Acumulado progressivo (reparadasGlobal): ATIVO');
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-gray-50 flex relative">
+      
+      {/* v3.49.24: CSS para animação do banner */}
+      <style>{`
+        @keyframes slideDown {
+          from {
+            transform: translateY(-100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
+        .animate-slideDown {
+          animation: slideDown 0.5s ease-out;
+        }
+      `}</style>
+      
+      {/* v3.49.24: Banner de Aviso Mobile */}
+      {isMobileDevice && showMobileWarning && (
+        <div className="fixed top-0 left-0 right-0 z-[60] bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-2xl animate-slideDown">
+          <div className="px-4 py-3 flex items-start justify-between gap-3">
+            <div className="flex items-start space-x-3 flex-1">
+              <div className="flex-shrink-0 mt-0.5">
+                <svg className="w-6 h-6 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-bold mb-1 flex items-center">
+                  <span className="mr-2">📱</span>
+                  Dispositivo Móvel Detectado
+                </p>
+                <p className="text-xs leading-relaxed opacity-90">
+                  Para melhor experiência, recomendamos usar um <strong>computador desktop</strong>. 
+                  Algumas funcionalidades podem ter visualização limitada em dispositivos móveis.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowMobileWarning(false)}
+              className="flex-shrink-0 p-1.5 hover:bg-white/20 rounded-lg transition-colors active:scale-95"
+              title="Dispensar aviso"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
       
       {showModal && selectedRota && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4" style={{zIndex: 9999}} onClick={() => setShowModal(false)}>
@@ -4912,26 +4981,8 @@ const PSMMonitorApp = () => {
         );
       })()}
       
-      {/* Backdrop para mobile quando menu aberto */}
-      {menuOpen && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-          onClick={() => setMenuOpen(false)}
-        />
-      )}
-      
       {/* Menu Lateral */}
-      <div className={`
-        ${menuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-        ${menuOpen ? 'w-64' : 'w-0 lg:w-64'}
-        fixed lg:relative
-        inset-y-0 left-0
-        z-50 lg:z-auto
-        bg-white border-r border-gray-200 
-        transition-all duration-300 
-        overflow-hidden 
-        flex-shrink-0
-      `}>
+      <div className={`${menuOpen ? 'w-64' : 'w-0'} bg-white border-r border-gray-200 transition-all duration-300 overflow-hidden flex-shrink-0`}>
         <div className="p-4">
           <nav className="space-y-1">
             <button 
@@ -5047,9 +5098,10 @@ const PSMMonitorApp = () => {
         
         {/* HEADER + FILTROS UNIFICADOS - STICKY COM TRANSIÇÃO */}
         <div 
-          className={`sticky top-0 z-50 bg-white shadow-md transition-all duration-300 ${
+          className={`sticky z-50 bg-white shadow-md transition-all duration-300 ${
             headerVisible ? 'translate-y-0' : '-translate-y-[60px]'
           }`}
+          style={{ top: (isMobileDevice && showMobileWarning) ? '72px' : '0' }}
         >
           {/* Header */}
           <div className="border-b border-gray-200 px-5 py-2.5">
@@ -5063,34 +5115,34 @@ const PSMMonitorApp = () => {
                 >
                   <Menu className="w-6 h-6 text-gray-600" />
                 </button>
-                <BarChart3 className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600" />
+                <BarChart3 className="w-8 h-8 text-purple-600" />
                 <div>
-                  <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-800">Performance Clean Up Advanced</h1>
-                  <p className="hidden sm:block text-xs text-gray-500">v3.49.20 - Mobile-First Responsivo! 📱✨</p>
+                  <h1 className="text-2xl font-bold text-gray-800">Performance Clean Up Advanced</h1>
+                  <p className="text-xs text-gray-500">v3.49.24 - Detecção Mobile + Aviso! 📱⚠️</p>
                 </div>
               </div>
               {/* Indicador de Salvamento */}
-              <div className="flex items-center space-x-2 sm:space-x-3">
+              <div className="flex items-center space-x-3">
                 {saveStatus === 'saving' && (
-                  <div className="flex items-center space-x-2 bg-blue-50 px-2 sm:px-3 py-1.5 rounded-lg border border-blue-200">
+                  <div className="flex items-center space-x-2 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200">
                     <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                    <span className="hidden sm:inline text-xs font-medium text-blue-700">Salvando...</span>
+                    <span className="text-xs font-medium text-blue-700">Salvando...</span>
                   </div>
                 )}
                 {saveStatus === 'saved' && (
-                  <div className="flex items-center space-x-2 bg-green-50 px-2 sm:px-3 py-1.5 rounded-lg border border-green-200 animate-fade-in">
+                  <div className="flex items-center space-x-2 bg-green-50 px-3 py-1.5 rounded-lg border border-green-200 animate-fade-in">
                     <CheckCircle className="w-4 h-4 text-green-600" />
-                    <span className="hidden sm:inline text-xs font-medium text-green-700">Dados salvos</span>
+                    <span className="text-xs font-medium text-green-700">Dados salvos</span>
                   </div>
                 )}
                 {saveStatus === 'error' && (
-                  <div className="flex items-center space-x-2 bg-red-50 px-2 sm:px-3 py-1.5 rounded-lg border border-red-200">
+                  <div className="flex items-center space-x-2 bg-red-50 px-3 py-1.5 rounded-lg border border-red-200">
                     <XCircle className="w-4 h-4 text-red-600" />
-                    <span className="hidden sm:inline text-xs font-medium text-red-700">Erro ao salvar</span>
+                    <span className="text-xs font-medium text-red-700">Erro ao salvar</span>
                   </div>
                 )}
                 {lastSaveTime && saveStatus === '' && (
-                  <div className="hidden md:block text-xs text-gray-500">
+                  <div className="text-xs text-gray-500">
                     Último salvamento: {lastSaveTime.toLocaleTimeString('pt-BR')}
                   </div>
                 )}
@@ -5099,11 +5151,11 @@ const PSMMonitorApp = () => {
           </div>
 
           {/* FILTROS E CARDS DE RESUMO */}
-          <div className="border-b border-gray-200 px-3 sm:px-5 py-2.5">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+          <div className="border-b border-gray-200 px-5 py-2.5">
+          <div className="flex items-center justify-between mb-4">
             {/* Filtros */}
-            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-              <select value={selectedOperator} onChange={(e) => setSelectedOperator(e.target.value)} className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+            <div className="flex items-center space-x-3">
+              <select value={selectedOperator} onChange={(e) => setSelectedOperator(e.target.value)} className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
                 <option value="FIBRASOL">FIBRASOL</option>
                 <option value="ISISTEL">ISISTEL</option>
                 <option value="ANGLOBAL">ANGLOBAL</option>
@@ -5113,7 +5165,7 @@ const PSMMonitorApp = () => {
               <select
                 value={selectedProvince}
                 onChange={(e) => setSelectedProvince(e.target.value)}
-                className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
               >
                 <option value="Todas">Todas as Províncias</option>
                 {operatorToProvinces[selectedOperator].map(prov => (
@@ -5121,17 +5173,17 @@ const PSMMonitorApp = () => {
                 ))}
               </select>
               
-              <select value={selectedWeek} onChange={(e) => setSelectedWeek(e.target.value)} className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+              <select value={selectedWeek} onChange={(e) => setSelectedWeek(e.target.value)} className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
                 {getWeeksForQuarter(selectedQuarter).map(week => (
                   <option key={week} value={week}>{week}</option>
                 ))}
               </select>
-              <select value={selectedQuarter} onChange={(e) => setSelectedQuarter(e.target.value)} className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+              <select value={selectedQuarter} onChange={(e) => setSelectedQuarter(e.target.value)} className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
                 <option value="Q3">Q3</option>
                 <option value="Q2">Q2</option>
                 <option value="Q1">Q1</option>
               </select>
-              <select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+              <select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
                 <option value="2030">2030</option>
                 <option value="2029">2029</option>
                 <option value="2028">2028</option>
@@ -5147,20 +5199,19 @@ const PSMMonitorApp = () => {
             {/* v3.42.00: BOTÃO TESTES E ANÁLISES */}
             <button
               onClick={() => setShowTestesAnalises(!showTestesAnalises)}
-              className={`px-3 sm:px-4 py-2 text-sm rounded-lg font-medium transition-all duration-200 flex items-center space-x-2 ${
+              className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center space-x-2 ${
                 showTestesAnalises
                   ? 'bg-blue-600 text-white shadow-lg'
                   : 'bg-white text-blue-600 border-2 border-blue-600 hover:bg-blue-50'
               }`}
               title="Abrir painel de Testes e Análises"
             >
-              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
-              <span className="hidden sm:inline">Testes e Análises</span>
-              <span className="sm:hidden">Testes</span>
+              <span>Testes e Análises</span>
               {showTestesAnalises && (
-                <span className="hidden md:inline ml-1 text-xs opacity-75">(aberto)</span>
+                <span className="ml-1 text-xs opacity-75">(aberto)</span>
               )}
             </button>
             
@@ -5196,7 +5247,7 @@ const PSMMonitorApp = () => {
               
               {/* Dropdown de alertas */}
               {alertasAbertos && (
-                <div className="absolute right-0 mt-2 w-full sm:w-96 bg-white rounded-lg shadow-lg border border-gray-200 z-50 max-h-96 overflow-hidden flex flex-col">
+                <div className="absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-lg border border-gray-200 z-50 max-h-96 overflow-hidden flex flex-col">
                   {/* Header */}
                   <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
                     <div className="flex items-center justify-between">
@@ -5362,7 +5413,7 @@ const PSMMonitorApp = () => {
           </div>
 
           {/* Cards de Resumo Superiores - COMPACTOS EM UMA LINHA (8 cards) */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
+          <div className="grid grid-cols-8 gap-2">
             {summaryCards.map((card, index) => (
               <div 
                 key={index} 
@@ -5371,12 +5422,12 @@ const PSMMonitorApp = () => {
                 title={`Clique para ver detalhes de ${card.label}`}
               >
                 <div className="flex items-center justify-between mb-0.5">
-                  <span className="text-[10px] sm:text-[11px] font-medium opacity-90 leading-tight">{card.label}</span>
+                  <span className="text-[10px] font-medium opacity-90 leading-tight">{card.label}</span>
                   <div className="w-3 h-3">{card.icon}</div>
                 </div>
                 <div className="flex items-end space-x-1">
-                  <span className="text-lg sm:text-xl font-bold leading-none">{card.value}</span>
-                  {card.total && <span className="text-[9px] sm:text-[10px] opacity-75 mb-0.5">de {card.total}</span>}
+                  <span className="text-xl font-bold leading-none">{card.value}</span>
+                  {card.total && <span className="text-[10px] opacity-75 mb-0.5">de {card.total}</span>}
                 </div>
               </div>
             ))}
@@ -9530,9 +9581,6 @@ Gerado por: PSM Monitor v3.42.03
                 </p>
                 <p className="text-xs text-purple-800 mt-1">
                   🔄 <strong>Lógica:</strong> Total Reparadas ↑ → Fibras Dependentes ↓
-                </p>
-                <p className="text-xs text-gray-600 mt-1 sm:hidden">
-                  📱 <strong>Mobile:</strong> Deslize horizontalmente para ver todas as colunas
                 </p>
               </div>
               
