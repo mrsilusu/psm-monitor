@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { BarChart3, TrendingUp, Users, AlertTriangle, CheckCircle, XCircle, Clock, MapPin, TrendingDown, Home, Upload, FileJson, Download, Calendar, BarChart, FileText, Menu, PieChart, DownloadCloud, Trash2, AlertCircle } from 'lucide-react';
 
 const PSMMonitorApp = () => {
-  console.log('🚀 PSM Monitor v3.49.15 - Corrigido: CloudDownload → DownloadCloud (lucide-react)');
+  console.log('🚀 PSM Monitor v3.49.16 - Índice de Excelência Removido! ✅');
   
   // ============================================================================
   // MAPEAMENTO DE ROTAS PARA PROVÍNCIAS
@@ -4984,7 +4984,7 @@ const PSMMonitorApp = () => {
                 <BarChart3 className="w-8 h-8 text-purple-600" />
                 <div>
                   <h1 className="text-2xl font-bold text-gray-800">Performance Clean Up Advanced</h1>
-                  <p className="text-xs text-gray-500">v3.40.9 - Scroll Inteligente UNIFICADO! ✅🎯</p>
+                  <p className="text-xs text-gray-500">v3.49.16 - Índice de Excelência Removido! ✅🎯</p>
                 </div>
               </div>
               {/* Indicador de Salvamento */}
