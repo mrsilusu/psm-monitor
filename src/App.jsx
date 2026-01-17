@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { BarChart3, TrendingUp, Users, AlertTriangle, CheckCircle, XCircle, Clock, MapPin, TrendingDown, Home, Upload, FileJson, Download, Calendar, BarChart, FileText, Menu, PieChart, DownloadCloud, Trash2, AlertCircle } from 'lucide-react';
 
 const PSMMonitorApp = () => {
-  console.log('🚀 PSM Monitor v3.49.31 - Badge Efetividade Responsivo! 📱✨');
+  console.log('🚀 PSM Monitor v3.49.32 - Top 5 em Gráfico de Barras! 📊✨');
   
   // ============================================================================
   // MAPEAMENTO DE ROTAS PARA PROVÍNCIAS
@@ -5132,7 +5132,7 @@ const PSMMonitorApp = () => {
                 <BarChart3 className="w-8 h-8 text-purple-600" />
                 <div>
                   <h1 className="text-2xl font-bold text-gray-800">Performance Clean Up Advanced</h1>
-                  <p className="text-xs text-gray-500">v3.49.31 - Badge Responsivo! 🎨✨</p>
+                  <p className="text-xs text-gray-500">v3.49.32 - Top 5 Barras! 🎨✨</p>
                 </div>
               </div>
               {/* Indicador de Salvamento */}
@@ -7163,39 +7163,78 @@ Gerado por: PSM Monitor v3.42.03
             </div>
             <div className="p-4">
               <div className="grid grid-cols-5 gap-4">
-                {/* Top 5 Rotas Críticas - ULTRA COMPACTO */}
+                {/* Top 5 Rotas Críticas - GRÁFICO DE BARRAS HORIZONTAL */}
                 <div className="bg-red-50 rounded-lg border border-red-200 p-3">
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center space-x-2">
                       <AlertTriangle className="w-4 h-4 text-red-600" />
                       <h3 className="text-xs font-semibold text-red-700">Top 5 Rotas Críticas - {selectedQuarter}</h3>
                     </div>
                   </div>
-                  <div className="space-y-1">
-                    {topRotasCriticas.map((item) => (
-                      <div 
-                        key={item.rank} 
-                        className="bg-white rounded p-1.5 border border-red-100 cursor-pointer hover:bg-red-50 hover:border-red-300 transition-colors"
-                        onClick={() => handleRotaClick(item.rota)}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-1.5 flex-1">
-                            <span className="text-sm font-bold text-red-600 w-5">#{item.rank}</span>
-                            <div className="flex flex-col">
-                              <p className="text-xs font-medium text-gray-700 leading-tight">{item.rota}</p>
-                              {item.reparadas > 0 && (
-                                <p className="text-[9px] font-semibold text-green-600 leading-tight mt-0.5">
-                                  {item.reparadas} Fibras Reparadas
-                                </p>
-                              )}
+                  
+                  <div className="space-y-2">
+                    {(() => {
+                      // Calcular valor máximo para escala
+                      const maxValue = Math.max(...topRotasCriticas.map(r => r.value), 1);
+                      
+                      return topRotasCriticas.map((item) => {
+                        const percentage = (item.value / maxValue) * 100;
+                        
+                        return (
+                          <div 
+                            key={item.rank} 
+                            className="relative cursor-pointer group"
+                            onClick={() => handleRotaClick(item.rota)}
+                          >
+                            {/* Barra de fundo */}
+                            <div className="relative h-10 rounded-lg overflow-hidden bg-white border border-red-200 group-hover:border-red-400 transition-all duration-200">
+                              {/* Barra colorida com gradiente */}
+                              <div 
+                                className="absolute top-0 left-0 h-full bg-gradient-to-r from-red-500 to-red-600 transition-all duration-500 ease-out"
+                                style={{ width: `${Math.max(percentage, 15)}%` }}
+                              >
+                                {/* Efeito de brilho */}
+                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+                              </div>
+                              
+                              {/* Conteúdo sobre a barra */}
+                              <div className="relative h-full flex items-center justify-between px-3 z-10">
+                                {/* Lado esquerdo: Ranking + Nome da Rota */}
+                                <div className="flex items-center space-x-2 flex-1">
+                                  <span className="text-xs font-bold text-white bg-red-700/80 rounded-full w-5 h-5 flex items-center justify-center">
+                                    {item.rank}
+                                  </span>
+                                  <div className="flex flex-col">
+                                    <span className={`text-xs font-bold leading-tight ${
+                                      percentage > 40 ? 'text-white' : 'text-gray-800'
+                                    }`}>
+                                      {item.rota}
+                                    </span>
+                                    {item.reparadas > 0 && (
+                                      <span className={`text-[9px] font-semibold leading-tight ${
+                                        percentage > 40 ? 'text-white/80' : 'text-green-600'
+                                      }`}>
+                                        {item.reparadas} reparadas
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                                
+                                {/* Lado direito: Valor */}
+                                <span className={`text-sm font-bold ml-2 ${
+                                  percentage > 60 ? 'text-white' : 'text-red-600'
+                                }`}>
+                                  {item.value}
+                                </span>
+                              </div>
                             </div>
                           </div>
-                          <span className="text-lg font-bold text-red-600 ml-2">{item.value}</span>
-                        </div>
-                      </div>
-                    ))}
+                        );
+                      });
+                    })()}
                   </div>
-                  <div className="mt-2 pt-1.5 border-t border-red-200">
+                  
+                  <div className="mt-3 pt-2 border-t border-red-200">
                     <div className="text-xs text-red-700 font-medium text-center">
                       {topRotasCriticas.filter(r => r.value > 0).length} rotas com indisponíveis
                     </div>
