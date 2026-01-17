@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { BarChart3, TrendingUp, Users, AlertTriangle, CheckCircle, XCircle, Clock, MapPin, TrendingDown, Home, Upload, FileJson, Download, Calendar, BarChart, FileText, Menu, PieChart, DownloadCloud, Trash2, AlertCircle } from 'lucide-react';
 
 const PSMMonitorApp = () => {
-  console.log('🚀 PSM Monitor v3.49.32 - Top 5 em Gráfico de Barras! 📊✨');
+  console.log('🚀 PSM Monitor v3.49.33 - Barrinha Verde + Reordenação! 🎨📊');
   
   // ============================================================================
   // MAPEAMENTO DE ROTAS PARA PROVÍNCIAS
@@ -5132,7 +5132,7 @@ const PSMMonitorApp = () => {
                 <BarChart3 className="w-8 h-8 text-purple-600" />
                 <div>
                   <h1 className="text-2xl font-bold text-gray-800">Performance Clean Up Advanced</h1>
-                  <p className="text-xs text-gray-500">v3.49.32 - Top 5 Barras! 🎨✨</p>
+                  <p className="text-xs text-gray-500">v3.49.33 - Verde + Ordem! 🎨✨</p>
                 </div>
               </div>
               {/* Indicador de Salvamento */}
@@ -7179,6 +7179,7 @@ Gerado por: PSM Monitor v3.42.03
                       
                       return topRotasCriticas.map((item) => {
                         const percentage = (item.value / maxValue) * 100;
+                        const reparadasPercentage = item.value > 0 ? (item.reparadas / item.value) * 100 : 0;
                         
                         return (
                           <div 
@@ -7188,7 +7189,7 @@ Gerado por: PSM Monitor v3.42.03
                           >
                             {/* Barra de fundo */}
                             <div className="relative h-10 rounded-lg overflow-hidden bg-white border border-red-200 group-hover:border-red-400 transition-all duration-200">
-                              {/* Barra colorida com gradiente */}
+                              {/* Barra vermelha (Indisponíveis) */}
                               <div 
                                 className="absolute top-0 left-0 h-full bg-gradient-to-r from-red-500 to-red-600 transition-all duration-500 ease-out"
                                 style={{ width: `${Math.max(percentage, 15)}%` }}
@@ -7196,6 +7197,16 @@ Gerado por: PSM Monitor v3.42.03
                                 {/* Efeito de brilho */}
                                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
                               </div>
+                              
+                              {/* v3.49.33: Barrinha verde de progresso (Reparadas) */}
+                              {item.reparadas > 0 && (
+                                <div 
+                                  className="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-green-500 to-green-600 transition-all duration-500 ease-out"
+                                  style={{ width: `${Math.max(percentage * (reparadasPercentage / 100), 5)}%` }}
+                                >
+                                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent"></div>
+                                </div>
+                              )}
                               
                               {/* Conteúdo sobre a barra */}
                               <div className="relative h-full flex items-center justify-between px-3 z-10">
@@ -7205,25 +7216,20 @@ Gerado por: PSM Monitor v3.42.03
                                     {item.rank}
                                   </span>
                                   <div className="flex flex-col">
-                                    <span className={`text-xs font-bold leading-tight ${
-                                      percentage > 40 ? 'text-white' : 'text-gray-800'
-                                    }`}>
+                                    {/* v3.49.33: Nome sempre em cinza escuro */}
+                                    <span className="text-xs font-bold leading-tight text-gray-700">
                                       {item.rota}
                                     </span>
                                     {item.reparadas > 0 && (
-                                      <span className={`text-[9px] font-semibold leading-tight ${
-                                        percentage > 40 ? 'text-white/80' : 'text-green-600'
-                                      }`}>
-                                        {item.reparadas} reparadas
+                                      <span className="text-[9px] font-semibold leading-tight text-green-600">
+                                        {item.reparadas} reparadas ({reparadasPercentage.toFixed(0)}%)
                                       </span>
                                     )}
                                   </div>
                                 </div>
                                 
                                 {/* Lado direito: Valor */}
-                                <span className={`text-sm font-bold ml-2 ${
-                                  percentage > 60 ? 'text-white' : 'text-red-600'
-                                }`}>
+                                <span className="text-sm font-bold ml-2 text-red-600">
                                   {item.value}
                                 </span>
                               </div>
@@ -7446,7 +7452,6 @@ Gerado por: PSM Monitor v3.42.03
                     </div>
                   </div>
                 </div>
-
                 {/* v3.23.0: ROTAS MAIS INTERVENCIONADAS - TOP 5 */}
                 <div className="bg-purple-50 rounded-lg border border-purple-200 p-3">
                   <div className="flex items-center justify-between mb-2">
@@ -7480,6 +7485,7 @@ Gerado por: PSM Monitor v3.42.03
                     </div>
                   </div>
                 </div>
+
 
                 {/* v3.23.0: ROTAS SEM INTERVENÇÃO - CARROSSEL */}
                 <div className="bg-orange-50 rounded-lg border border-orange-200 p-3">
