@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { BarChart3, TrendingUp, Users, AlertTriangle, CheckCircle, XCircle, Clock, MapPin, TrendingDown, Home, Upload, FileJson, Download, Calendar, BarChart, FileText, Menu, PieChart, DownloadCloud, Trash2, AlertCircle } from 'lucide-react';
 
 const PSMMonitorApp = () => {
-  console.log('🚀 PSM Monitor v3.49.33 - Barrinha Verde + Reordenação! 🎨📊');
+  console.log('🚀 PSM Monitor v3.49.35 - Legenda Verde Vibrante! 🟢✨');
   
   // ============================================================================
   // MAPEAMENTO DE ROTAS PARA PROVÍNCIAS
@@ -5132,7 +5132,7 @@ const PSMMonitorApp = () => {
                 <BarChart3 className="w-8 h-8 text-purple-600" />
                 <div>
                   <h1 className="text-2xl font-bold text-gray-800">Performance Clean Up Advanced</h1>
-                  <p className="text-xs text-gray-500">v3.49.33 - Verde + Ordem! 🎨✨</p>
+                  <p className="text-xs text-gray-500">v3.49.35 - Verde Match! 🎨✨</p>
                 </div>
               </div>
               {/* Indicador de Salvamento */}
@@ -7198,13 +7198,13 @@ Gerado por: PSM Monitor v3.42.03
                                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
                               </div>
                               
-                              {/* v3.49.33: Barrinha verde de progresso (Reparadas) */}
+                              {/* v3.49.34: Barrinha verde sólida e vibrante (Reparadas) */}
                               {item.reparadas > 0 && (
                                 <div 
-                                  className="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-green-500 to-green-600 transition-all duration-500 ease-out"
+                                  className="absolute bottom-0 left-0 h-1 bg-green-500 transition-all duration-500 ease-out shadow-sm"
                                   style={{ width: `${Math.max(percentage * (reparadasPercentage / 100), 5)}%` }}
                                 >
-                                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent"></div>
+                                  <div className="absolute inset-0 bg-white/20"></div>
                                 </div>
                               )}
                               
@@ -7221,7 +7221,7 @@ Gerado por: PSM Monitor v3.42.03
                                       {item.rota}
                                     </span>
                                     {item.reparadas > 0 && (
-                                      <span className="text-[9px] font-semibold leading-tight text-green-600">
+                                      <span className="text-[9px] font-semibold leading-tight text-green-500">
                                         {item.reparadas} reparadas ({reparadasPercentage.toFixed(0)}%)
                                       </span>
                                     )}
