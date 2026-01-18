@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { BarChart3, TrendingUp, Users, AlertTriangle, CheckCircle, XCircle, Clock, MapPin, TrendingDown, Home, Upload, FileJson, Download, Calendar, BarChart, FileText, Menu, PieChart, DownloadCloud, Trash2, AlertCircle } from 'lucide-react';
 
 const PSMMonitorApp = () => {
-  console.log('🚀 PSM Monitor v3.52.0 - SISTEMA DE SLIDES COMPLETO! 🎬✨');
+  console.log('🚀 PSM Monitor v3.58.0 - Fix Classes + Debug! 🎯✨');
   
   // ============================================================================
   // MAPEAMENTO DE ROTAS PARA PROVÍNCIAS
@@ -976,6 +976,7 @@ const PSMMonitorApp = () => {
   useEffect(() => {
     presentationModeRef.current = presentationMode;
     currentSlideRef.current = currentSlide;
+    console.log('🎬 Estado atualizado:', { presentationMode, currentSlide });
   }, [presentationMode, currentSlide]);
   
   // Paginação do drill-down (16 rotas por página)
@@ -4741,18 +4742,17 @@ const PSMMonitorApp = () => {
         )}
       </button>
       
-      {/* FASE 2: Indicador visual com nomes */}
+      {/* FASE 2: Indicador visual com nome */}
       {presentationMode && (
         <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-[60] bg-white/95 backdrop-blur-sm px-6 py-3 rounded-full shadow-2xl border-2 border-purple-200">
           <div className="flex items-center space-x-3">
-            <span className="text-sm font-bold text-purple-600">Slide {currentSlide + 1} / 5</span>
+            <span className="text-sm font-bold text-purple-600">Slide {currentSlide + 1} / 7</span>
             <div className="h-4 w-px bg-purple-300"></div>
             <span className="text-sm font-semibold text-gray-700">
-              {['📊 Dashboard Executivo', '📈 Dados Gerais', '🎯 Performance', '🧪 Testes', '🚦 Acompanhamento'][currentSlide]}
+              {['📊 Dashboard', '🎯 Performance', '📈 Análise', '📊 Gráficos', '🚦 Acompanhamento', '📝 Manual', '🧪 Testes'][currentSlide]}
             </span>
           </div>
         </div>
-      
       )}
       
       {/* FASE 3: Botões de navegação */}
@@ -4772,7 +4772,7 @@ const PSMMonitorApp = () => {
           )}
           
           {/* Botão Próximo - só aparece se não for o último slide */}
-          {currentSlide < 4 && (
+          {currentSlide < 6 && (
             <button
               onClick={() => setCurrentSlide(currentSlide + 1)}
               className="fixed right-6 top-1/2 transform -translate-y-1/2 z-[60] p-3 rounded-full bg-white shadow-xl hover:bg-purple-50 transition-all"
@@ -4783,23 +4783,25 @@ const PSMMonitorApp = () => {
               </svg>
             </button>
           )}
-          
-          {/* FASE 6: Pontos indicadores na base */}
-          <div className="fixed bottom-24 left-1/2 transform -translate-x-1/2 z-[60] flex items-center space-x-2 bg-white/95 backdrop-blur-sm px-4 py-2 rounded-full shadow-xl">
-            {[0, 1, 2, 3, 4].map(idx => (
-              <button
-                key={idx}
-                onClick={() => setCurrentSlide(idx)}
-                className={`transition-all duration-300 rounded-full ${
-                  idx === currentSlide 
-                    ? 'w-8 h-3 bg-purple-600' 
-                    : 'w-3 h-3 bg-gray-300 hover:bg-purple-400'
-                }`}
-                title={['📊 Dashboard', '📈 Dados Gerais', '🎯 Performance', '🧪 Testes', '🚦 Acompanhamento'][idx]}
-              />
-            ))}
-          </div>
         </>
+      )}
+      
+      {/* Pontos indicadores na base */}
+      {presentationMode && (
+        <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-[60] flex items-center space-x-2 bg-white/95 backdrop-blur-sm px-4 py-2 rounded-full shadow-xl">
+          {[0, 1, 2, 3, 4, 5, 6].map(idx => (
+            <button
+              key={idx}
+              onClick={() => setCurrentSlide(idx)}
+              className={`transition-all duration-300 rounded-full ${
+                idx === currentSlide 
+                  ? 'w-8 h-3 bg-purple-600' 
+                  : 'w-3 h-3 bg-gray-300 hover:bg-purple-400'
+              }`}
+              title={['📊 Dashboard', '🎯 Performance', '📈 Análise', '📊 Gráficos', '🚦 Acompanhamento', '📝 Manual', '🧪 Testes'][idx]}
+            />
+          ))}
+        </div>
       )}
       
       {/* v3.49.24: CSS para animações */}
@@ -4831,6 +4833,38 @@ const PSMMonitorApp = () => {
         .animate-fadeIn {
           animation: fadeIn 0.2s ease-out;
         }
+        
+        /* SISTEMA DE SLIDES - CSS APPROACH */
+        ${presentationMode ? `
+          /* Em apresentação, esconde tudo por padrão */
+          .slide-section {
+            display: none !important;
+          }
+          
+          /* Mostra apenas o slide ativo */
+          .slide-section.slide-active {
+            display: flex !important;
+            position: fixed;
+            inset: 0;
+            z-index: 40;
+            background: linear-gradient(to bottom right, #111827, #1f2937);
+            padding: 2rem;
+            align-items: center;
+            justify-content: center;
+          }
+          
+          /* Estiliza o conteúdo interno - QUALQUER filho direto */
+          .slide-section.slide-active > div {
+            width: 100%;
+            max-width: 80rem;
+            height: 100%;
+            background: white;
+            border-radius: 1rem;
+            padding: 2rem;
+            overflow: auto;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+          }
+        ` : ''}
       `}</style>
       
       {/* v3.49.24: Banner de Aviso Mobile */}
@@ -5696,12 +5730,9 @@ const PSMMonitorApp = () => {
         </div>
         </div> {/* Fim do div HEADER + FILTROS UNIFICADOS */}
 
-        {/* v3.42.00: PAINEL TESTES E ANÁLISES - SLIDE 3 */}
+        {/* v3.42.00: PAINEL TESTES E ANÁLISES - SLIDE 6 */}
         {showTestesAnalises && (
-          <div 
-            id="slide-3"
-            className={`px-5 py-3 ${presentationMode && currentSlide !== 3 ? 'hidden' : ''}`}
-          >
+          <div className={`slide-section ${currentSlide === 6 ? 'slide-active' : ''}`}>
             <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg shadow-lg border-2 border-blue-200 relative">
               {/* Botão Fechar (X) */}
               <button
@@ -6528,15 +6559,12 @@ Gerado por: PSM Monitor v3.42.03
         )}
 
         {/* Dashboard Executivo - SLIDE 0 */}
-        <div 
-          id="slide-0" 
-          className={`px-5 py-3 ${presentationMode && currentSlide !== 0 ? 'hidden' : ''}`}
-        >
+        <div className={`slide-section ${currentSlide === 0 ? 'slide-active' : ''}`}>
           <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-            <div className="py-4 px-4 border-b border-gray-200 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors">
+            <div className="py-4 px-4 border-b border-gray-200 flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <BarChart3 className="w-5 h-5 text-gray-600" />
-                <h2 className="text-lg font-semibold text-gray-800">Dashboard Executivo</h2>
+                <BarChart3 className={`text-gray-600 ${presentationMode ? 'w-8 h-8' : 'w-5 h-5'}`} />
+                <h2 className={`font-semibold text-gray-800 ${presentationMode ? 'text-3xl' : 'text-lg'}`}>📊 Dashboard Executivo</h2>
               </div>
               <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
@@ -7387,16 +7415,14 @@ Gerado por: PSM Monitor v3.42.03
             </div>
           </div>
 
-          {/* Performance das Rotas - SLIDE 2 */}
-          <div 
-            id="slide-2"
-            className={`bg-white rounded-lg shadow-sm border border-gray-200 mt-6 ${presentationMode && currentSlide !== 2 ? 'hidden' : ''}`}
-          >
-            <div className="py-4 px-4 border-b border-gray-200 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors">
+          {/* Performance das Rotas - SLIDE 1 */}
+          <div className={`slide-section ${currentSlide === 1 ? 'slide-active' : ''}`}>
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 mt-6">
+            <div className="py-4 px-4 border-b border-gray-200 flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <TrendingDown className="w-5 h-5 text-gray-600" />
                 <h2 className="text-lg font-semibold text-gray-800">
-                  Performance das Rotas
+                  🎯 Performance das Rotas
                   {selectedProvince !== 'Todas' && <span className="text-blue-600"> | {selectedProvince}</span>}
                 </h2>
               </div>
@@ -7802,15 +7828,17 @@ Gerado por: PSM Monitor v3.42.03
               </div>
             </div>
           </div>
+          </div>
 
           {/* v3.9.0: Gráfico Semicircular CORRETO - Distribuição por Status */}
-          {/* v3.13.0: Análise Comparativa - 2 Colunas Lado a Lado Estilo Performance */}
+          {/* v3.13.0: Análise Comparativa - SLIDE 2 */}
+          <div className={`slide-section ${currentSlide === 2 ? 'slide-active' : ''}`}>
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 mt-6">
             <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors">
               <div className="flex items-center space-x-3">
                 <BarChart3 className="w-5 h-5 text-gray-600" />
                 <h2 className="text-lg font-semibold text-gray-800">
-                  Análise Comparativa: Distribuição e Tendências
+                  📈 Análise Comparativa: Distribuição e Tendências
                   {selectedProvince !== 'Todas' && <span className="text-blue-600"> | {selectedProvince}</span>}
                 </h2>
               </div>
@@ -8758,8 +8786,10 @@ Gerado por: PSM Monitor v3.42.03
               </div>
             </div>
           </div>
+          </div>
 
-          {/* v3.14.81: GRÁFICOS POR CLASSIFICAÇÃO COM CARROSSEL */}
+          {/* v3.14.81: GRÁFICOS POR CLASSIFICAÇÃO - SLIDE 3 */}
+          <div className={`slide-section ${currentSlide === 3 ? 'slide-active' : ''}`}>
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 mt-6">
             {/* HEADER COM BOTÃO TOGGLE */}
             <div className="px-6 py-4 border-b border-gray-200">
@@ -9784,11 +9814,11 @@ Gerado por: PSM Monitor v3.42.03
               })()}
             </div>
           </div>
-          {/* TABELA DE ACOMPANHAMENTO - APENAS DADOS IMPORTADOS - SLIDE 4 */}
-          <div 
-            id="slide-4"
-            className={`bg-white rounded-lg shadow-sm border border-gray-200 mt-6 ${presentationMode && currentSlide !== 4 ? 'hidden' : ''}`}
-          >
+          </div>
+          
+          {/* TABELA DE ACOMPANHAMENTO - SLIDE 4 */}
+          <div className={`slide-section ${currentSlide === 4 ? 'slide-active' : ''}`}>
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 mt-6">
             <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <FileText className="w-5 h-5 text-gray-600" />
@@ -9955,8 +9985,10 @@ Gerado por: PSM Monitor v3.42.03
               </div>
             )}
           </div>
+          </div>
 
-          {/* Tabela de Introdução Manual - FASE 9: INPUTS CONTROLADOS */}
+          {/* Tabela de Introdução Manual - SLIDE 5 */}
+          <div className={`slide-section ${currentSlide === 5 ? 'slide-active' : ''}`}>
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 mt-6">
             <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors">
               <div className="flex items-center space-x-3">
@@ -10102,6 +10134,7 @@ Gerado por: PSM Monitor v3.42.03
                 Mostrando todas as {routesByPSM[selectedOperator].length} rotas do PSM {selectedOperator}
               </div>
             </div>
+          </div>
           </div>
         </div>
       </div>
