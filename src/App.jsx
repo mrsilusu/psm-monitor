@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { BarChart3, TrendingUp, Users, AlertTriangle, CheckCircle, XCircle, Clock, MapPin, TrendingDown, Home, Upload, FileJson, Download, Calendar, BarChart, FileText, Menu, PieChart, DownloadCloud, Trash2, AlertCircle } from 'lucide-react';
 
 const PSMMonitorApp = () => {
-  console.log('🚀 PSM Monitor v3.49.43 - Número Reparadas + Limpeza! 🔢✨');
+  console.log('🚀 PSM Monitor v3.50.1 - Apresentação Pro (Atalho P)! 🎬✨');
   
   // ============================================================================
   // MAPEAMENTO DE ROTAS PARA PROVÍNCIAS
@@ -851,6 +851,24 @@ const PSMMonitorApp = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [alertasAbertos]);
   
+  // v3.50.1: Atalho de teclado para Modo Apresentação (tecla "P")
+  useEffect(() => {
+    const handleKeyPress = (e) => {
+      // Tecla "P" (maiúscula ou minúscula) sem modificadores
+      if ((e.key === 'p' || e.key === 'P') && !e.ctrlKey && !e.altKey && !e.metaKey) {
+        // Ignorar se estiver digitando em input/textarea/select
+        const tagName = e.target.tagName.toLowerCase();
+        if (tagName !== 'input' && tagName !== 'textarea' && tagName !== 'select') {
+          e.preventDefault();
+          setPresentationMode(prev => !prev);
+        }
+      }
+    };
+    
+    document.addEventListener('keydown', handleKeyPress);
+    return () => document.removeEventListener('keydown', handleKeyPress);
+  }, []);
+  
   // FASE 1: Filtro de província
   const [selectedProvince, setSelectedProvince] = useState('Todas'); // 'Todas' ou nome da província
   
@@ -910,6 +928,9 @@ const PSMMonitorApp = () => {
   // Modal de drill-down de status
   const [showStatusDrilldown, setShowStatusDrilldown] = useState(false);
   const [selectedStatusDrilldown, setSelectedStatusDrilldown] = useState(null);
+  
+  // v3.50.0: Modo de Apresentação
+  const [presentationMode, setPresentationMode] = useState(false);
   
   // Paginação do drill-down (16 rotas por página)
   const [currentPageDrilldown, setCurrentPageDrilldown] = useState(0);
@@ -4653,6 +4674,27 @@ const PSMMonitorApp = () => {
   return (
     <div className="min-h-screen bg-gray-50 flex relative">
       
+      {/* v3.50.0: BOTÃO MODO APRESENTAÇÃO - Flutuante */}
+      <button
+        onClick={() => setPresentationMode(!presentationMode)}
+        className={`fixed bottom-6 right-6 z-50 p-4 rounded-full shadow-2xl transition-all duration-300 ${
+          presentationMode 
+            ? 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700' 
+            : 'bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700'
+        } text-white hover:scale-110 active:scale-95`}
+        title={presentationMode ? 'Sair do Modo Apresentação' : 'Ativar Modo Apresentação'}
+      >
+        {presentationMode ? (
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        ) : (
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+          </svg>
+        )}
+      </button>
+      
       {/* v3.49.24: CSS para animações */}
       <style>{`
         @keyframes slideDown {
@@ -4953,12 +4995,12 @@ const PSMMonitorApp = () => {
                             ></div>
                           </div>
                           
-                          {/* v3.49.43: Barra VERDE de reparadas com NÚMERO */}
+                          {/* v3.49.44: Barra VERDE de reparadas com NÚMERO (sem semana) */}
                           {reparadas > 0 ? (
                             <>
                               <div className="flex items-center justify-between mb-0.5">
                                 <p className="text-[8px] text-gray-500 leading-tight">
-                                  {rota.semana} • {percentagemReparadas}%
+                                  {percentagemReparadas}%
                                 </p>
                                 <p className="text-[9px] font-bold text-green-600">
                                   {reparadas}
@@ -5041,10 +5083,11 @@ const PSMMonitorApp = () => {
         );
       })()}
       
-      {/* Menu Lateral */}
-      <div className={`${menuOpen ? 'w-64' : 'w-0'} bg-white border-r border-gray-200 transition-all duration-300 overflow-hidden flex-shrink-0`}>
-        <div className="p-4">
-          <nav className="space-y-1">
+      {/* Menu Lateral - Oculto em Modo Apresentação */}
+      {!presentationMode && (
+        <div className={`${menuOpen ? 'w-64' : 'w-0'} bg-white border-r border-gray-200 transition-all duration-300 overflow-hidden flex-shrink-0`}>
+          <div className="p-4">
+            <nav className="space-y-1">
             <button 
               onClick={handleDownloadCSV}
               className="w-full flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-blue-50 rounded-lg transition-colors border-2 border-blue-500"
@@ -5152,6 +5195,7 @@ const PSMMonitorApp = () => {
           </nav>
         </div>
       </div>
+      )}
 
       {/* Conteúdo Principal */}
       <div ref={scrollContainerRef} className="flex-1 overflow-auto">
@@ -5167,18 +5211,20 @@ const PSMMonitorApp = () => {
           <div className="border-b border-gray-200 px-5 py-2.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                {/* Botão Hamburguer para Menu */}
-                <button 
-                  onClick={() => setMenuOpen(!menuOpen)}
-                  className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-                  title={menuOpen ? "Fechar menu" : "Abrir menu"}
-                >
-                  <Menu className="w-6 h-6 text-gray-600" />
-                </button>
-                <BarChart3 className="w-8 h-8 text-purple-600" />
+                {/* Botão Hamburguer para Menu - Oculto em Modo Apresentação */}
+                {!presentationMode && (
+                  <button 
+                    onClick={() => setMenuOpen(!menuOpen)}
+                    className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                    title={menuOpen ? "Fechar menu" : "Abrir menu"}
+                  >
+                    <Menu className="w-6 h-6 text-gray-600" />
+                  </button>
+                )}
+                <BarChart3 className={`w-8 h-8 text-purple-600 ${presentationMode ? 'w-10 h-10' : ''}`} />
                 <div>
-                  <h1 className="text-2xl font-bold text-gray-800">Performance Clean Up Advanced</h1>
-                  <p className="text-xs text-gray-500">v3.49.43 - Número + Limpo! 🎨✨</p>
+                  <h1 className={`font-bold text-gray-800 ${presentationMode ? 'text-3xl' : 'text-2xl'}`}>Performance Clean Up Advanced</h1>
+                  <p className={`text-gray-500 ${presentationMode ? 'text-sm' : 'text-xs'}`}>v3.50.1 - Apresentação Pro! 🎬✨</p>
                 </div>
               </div>
               {/* Indicador de Salvamento */}
@@ -5213,47 +5259,82 @@ const PSMMonitorApp = () => {
           {/* FILTROS E CARDS DE RESUMO */}
           <div className="border-b border-gray-200 px-5 py-2.5">
           <div className="flex items-center justify-between mb-4">
-            {/* Filtros */}
-            <div className="flex items-center space-x-3">
-              <select value={selectedOperator} onChange={(e) => setSelectedOperator(e.target.value)} className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
-                <option value="FIBRASOL">FIBRASOL</option>
-                <option value="ISISTEL">ISISTEL</option>
-                <option value="ANGLOBAL">ANGLOBAL</option>
-              </select>
-              
-              {/* FILTRO DE PROVÍNCIA - Texto simples */}
-              <select
-                value={selectedProvince}
-                onChange={(e) => setSelectedProvince(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-              >
-                <option value="Todas">Todas as Províncias</option>
-                {operatorToProvinces[selectedOperator].map(prov => (
-                  <option key={prov} value={prov}>{prov}</option>
-                ))}
-              </select>
-              
-              <select value={selectedWeek} onChange={(e) => setSelectedWeek(e.target.value)} className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
-                {getWeeksForQuarter(selectedQuarter).map(week => (
-                  <option key={week} value={week}>{week}</option>
-                ))}
-              </select>
-              <select value={selectedQuarter} onChange={(e) => setSelectedQuarter(e.target.value)} className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
-                <option value="Q3">Q3</option>
-                <option value="Q2">Q2</option>
-                <option value="Q1">Q1</option>
-              </select>
-              <select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
-                <option value="2030">2030</option>
-                <option value="2029">2029</option>
-                <option value="2028">2028</option>
-                <option value="2027">2027</option>
-                <option value="2026">2026</option>
-                <option value="2025">2025</option>
-                <option value="2024">2024</option>
-                <option value="2023">2023</option>
-              </select>
-            </div>
+            {/* Filtros - Ocultos em Modo Apresentação */}
+            {!presentationMode && (
+              <div className="flex items-center space-x-3">
+                <select value={selectedOperator} onChange={(e) => setSelectedOperator(e.target.value)} className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                  <option value="FIBRASOL">FIBRASOL</option>
+                  <option value="ISISTEL">ISISTEL</option>
+                  <option value="ANGLOBAL">ANGLOBAL</option>
+                </select>
+                
+                {/* FILTRO DE PROVÍNCIA - Texto simples */}
+                <select
+                  value={selectedProvince}
+                  onChange={(e) => setSelectedProvince(e.target.value)}
+                  className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                >
+                  <option value="Todas">Todas as Províncias</option>
+                  {operatorToProvinces[selectedOperator].map(prov => (
+                    <option key={prov} value={prov}>{prov}</option>
+                  ))}
+                </select>
+                
+                <select value={selectedWeek} onChange={(e) => setSelectedWeek(e.target.value)} className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                  {getWeeksForQuarter(selectedQuarter).map(week => (
+                    <option key={week} value={week}>{week}</option>
+                  ))}
+                </select>
+                <select value={selectedQuarter} onChange={(e) => setSelectedQuarter(e.target.value)} className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                  <option value="Q3">Q3</option>
+                  <option value="Q2">Q2</option>
+                  <option value="Q1">Q1</option>
+                </select>
+                <select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                  <option value="2030">2030</option>
+                  <option value="2029">2029</option>
+                  <option value="2028">2028</option>
+                  <option value="2027">2027</option>
+                  <option value="2026">2026</option>
+                  <option value="2025">2025</option>
+                  <option value="2024">2024</option>
+                  <option value="2023">2023</option>
+                </select>
+              </div>
+            )}
+            
+            {/* v3.50.0: Info compacta em Modo Apresentação */}
+            {presentationMode && (
+              <div className="bg-gradient-to-r from-purple-600 to-purple-700 text-white px-6 py-3 rounded-lg shadow-lg">
+                <div className="flex items-center space-x-6">
+                  <div className="flex items-center space-x-2">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                    <span className="font-bold text-lg">{selectedOperator}</span>
+                  </div>
+                  <div className="h-6 w-px bg-white/30"></div>
+                  <div className="flex items-center space-x-2">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <span className="font-semibold">{selectedQuarter} {selectedYear}</span>
+                  </div>
+                  {selectedProvince !== 'Todas' && (
+                    <>
+                      <div className="h-6 w-px bg-white/30"></div>
+                      <div className="flex items-center space-x-2">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <span className="font-semibold">{selectedProvince}</span>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
             
             {/* v3.49.29: BOTÃO TESTES E ANÁLISES MODERNIZADO */}
             <button
