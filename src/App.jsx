@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { BarChart3, TrendingUp, Users, AlertTriangle, CheckCircle, XCircle, Clock, MapPin, TrendingDown, Home, Upload, FileJson, Download, Calendar, BarChart, FileText, Menu, PieChart, DownloadCloud, Trash2, AlertCircle } from 'lucide-react';
 
 const PSMMonitorApp = () => {
-  console.log('🚀 PSM Monitor v3.58.0 - Fix Classes + Debug! 🎯✨');
+  console.log("🚀 PSM Monitor v4.95.0 - MODAL + GRÁFICOS! ✅✅");
   
   // ============================================================================
   // MAPEAMENTO DE ROTAS PARA PROVÍNCIAS
@@ -379,6 +379,10 @@ const PSMMonitorApp = () => {
   const [selectedQuarter, setSelectedQuarter] = useState('Q3');
   const [selectedYear, setSelectedYear] = useState('2025');
   const [menuOpen, setMenuOpen] = useState(false);
+  
+  // Estados para modo apresentação
+  const [presentationMode, setPresentationMode] = useState(false);
+  const [currentSlide, setCurrentSlide] = useState(0);
   
   // v3.40.27: Estados para sino de alertas
   const [alertasAbertos, setAlertasAbertos] = useState(false);
@@ -851,57 +855,6 @@ const PSMMonitorApp = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [alertasAbertos]);
   
-  // v3.50.1: Atalho de teclado para Modo Apresentação (tecla "P")
-  useEffect(() => {
-    const handleKeyPress = (e) => {
-      // Tecla "P" (maiúscula ou minúscula) sem modificadores
-      if ((e.key === 'p' || e.key === 'P') && !e.ctrlKey && !e.altKey && !e.metaKey) {
-        // Ignorar se estiver digitando em input/textarea/select
-        const tagName = e.target.tagName.toLowerCase();
-        if (tagName !== 'input' && tagName !== 'textarea' && tagName !== 'select') {
-          e.preventDefault();
-          setPresentationMode(prev => !prev);
-        }
-      }
-    };
-    
-    document.addEventListener('keydown', handleKeyPress);
-    return () => document.removeEventListener('keydown', handleKeyPress);
-  }, []);
-  
-  // FASE 4 V2: Navegação por teclado usando refs (sem dependências problemáticas)
-  useEffect(() => {
-    const handleArrowKeys = (e) => {
-      // Só funciona se estiver em modo apresentação
-      if (!presentationModeRef.current) return;
-      
-      // Ignorar se estiver digitando
-      const tag = e.target.tagName?.toLowerCase();
-      if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
-      
-      const current = currentSlideRef.current;
-      
-      // Seta direita ou baixo = próximo
-      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-        e.preventDefault();
-        if (current < 4) {
-          setCurrentSlide(current + 1);
-        }
-      }
-      
-      // Seta esquerda ou cima = anterior
-      if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-        e.preventDefault();
-        if (current > 0) {
-          setCurrentSlide(current - 1);
-        }
-      }
-    };
-    
-    document.addEventListener('keydown', handleArrowKeys);
-    return () => document.removeEventListener('keydown', handleArrowKeys);
-  }, []); // SEM dependências - usa refs
-  
   // FASE 1: Filtro de província
   const [selectedProvince, setSelectedProvince] = useState('Todas'); // 'Todas' ou nome da província
   
@@ -961,23 +914,6 @@ const PSMMonitorApp = () => {
   // Modal de drill-down de status
   const [showStatusDrilldown, setShowStatusDrilldown] = useState(false);
   const [selectedStatusDrilldown, setSelectedStatusDrilldown] = useState(null);
-  
-  // v3.50.0: Modo de Apresentação
-  const [presentationMode, setPresentationMode] = useState(false);
-  
-  // FASE 1: Estado do slide atual (0 = primeiro slide)
-  const [currentSlide, setCurrentSlide] = useState(0);
-  
-  // FASE 4 V2: Refs para acessar valores atuais sem causar re-render no useEffect
-  const presentationModeRef = useRef(presentationMode);
-  const currentSlideRef = useRef(currentSlide);
-  
-  // Atualizar refs quando os estados mudarem
-  useEffect(() => {
-    presentationModeRef.current = presentationMode;
-    currentSlideRef.current = currentSlide;
-    console.log('🎬 Estado atualizado:', { presentationMode, currentSlide });
-  }, [presentationMode, currentSlide]);
   
   // Paginação do drill-down (16 rotas por página)
   const [currentPageDrilldown, setCurrentPageDrilldown] = useState(0);
@@ -4718,91 +4654,514 @@ const PSMMonitorApp = () => {
 
   console.log('✓ Acumulado progressivo (reparadasGlobal): ATIVO');
 
-  return (
-    <div className="min-h-screen bg-gray-50 flex relative">
-      
-      {/* v3.50.0: BOTÃO MODO APRESENTAÇÃO - Flutuante */}
-      <button
-        onClick={() => setPresentationMode(!presentationMode)}
-        className={`fixed bottom-6 right-6 z-50 p-4 rounded-full shadow-2xl transition-all duration-300 ${
-          presentationMode 
-            ? 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700' 
-            : 'bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700'
-        } text-white hover:scale-110 active:scale-95`}
-        title={presentationMode ? 'Sair do Modo Apresentação' : 'Ativar Modo Apresentação'}
-      >
-        {presentationMode ? (
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        ) : (
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-          </svg>
-        )}
-      </button>
-      
-      {/* FASE 2: Indicador visual com nome */}
-      {presentationMode && (
-        <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-[60] bg-white/95 backdrop-blur-sm px-6 py-3 rounded-full shadow-2xl border-2 border-purple-200">
-          <div className="flex items-center space-x-3">
-            <span className="text-sm font-bold text-purple-600">Slide {currentSlide + 1} / 7</span>
-            <div className="h-4 w-px bg-purple-300"></div>
-            <span className="text-sm font-semibold text-gray-700">
-              {['📊 Dashboard', '🎯 Performance', '📈 Análise', '📊 Gráficos', '🚦 Acompanhamento', '📝 Manual', '🧪 Testes'][currentSlide]}
-            </span>
+  // ===============================
+  // ===============================
+  // MODO APRESENTAÇÃO - CONFIGURAÇÃO DE VISIBILIDADE
+  // ===============================
+  
+  // Configuração dos slides - define quais seções aparecem em cada slide
+  const slideConfig = {
+    0: ["cards", "summary"],                          // Slide 0: Dashboard Executivo
+    1: ["performance"],                               // Slide 1: Performance das Rotas
+    2: ["comparative"],                               // Slide 2: Análise Comparativa
+    3: ["classification"],                            // Slide 3: Gráficos por Classificação
+    4: ["tracking"],                                  // Slide 4: Acompanhamento
+    5: ["manual"],                                    // Slide 5: Introdução Manual
+    6: ["tests"]                                      // Slide 6: Testes (opcional)
+  };
+  
+  // Função que controla visibilidade das seções (não usada mais)
+  const isVisible = (section) => {
+    if (!presentationMode) return true;
+    return slideConfig[currentSlide]?.includes(section);
+  };
+
+  // ===============================================
+  // MODO APRESENTAÇÃO - TELA CHEIA
+  // ===============================================
+  if (presentationMode) {
+    return (
+      <div className="w-full h-screen bg-slate-950 text-white flex flex-col overflow-hidden">
+        {/* Barra de Controle */}
+        <div className="flex justify-between items-center px-6 py-3 bg-slate-900 border-b border-slate-700 flex-shrink-0">
+          <span className="text-lg font-semibold">
+            📽️ Modo Apresentação — Slide {currentSlide + 1} de 7
+          </span>
+          
+          <div className="flex gap-2">
+            <button
+              onClick={() => setCurrentSlide(s => Math.max(0, s - 1))}
+              disabled={currentSlide === 0}
+              className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded disabled:opacity-50 text-white"
+            >
+              ◀ Anterior
+            </button>
+            
+            <button
+              onClick={() => setCurrentSlide(s => Math.min(6, s + 1))}
+              disabled={currentSlide === 6}
+              className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded disabled:opacity-50 text-white"
+            >
+              Próximo ▶
+            </button>
+            
+            <button
+              onClick={() => {
+                setPresentationMode(false);
+                setCurrentSlide(0);
+              }}
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded text-white ml-2"
+            >
+              ✕ Sair
+            </button>
           </div>
         </div>
-      )}
-      
-      {/* FASE 3: Botões de navegação */}
-      {presentationMode && (
-        <>
-          {/* Botão Anterior - só aparece se não for o primeiro slide */}
-          {currentSlide > 0 && (
-            <button
-              onClick={() => setCurrentSlide(currentSlide - 1)}
-              className="fixed left-6 top-1/2 transform -translate-y-1/2 z-[60] p-3 rounded-full bg-white shadow-xl hover:bg-purple-50 transition-all"
-              title="Slide Anterior"
-            >
-              <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-          )}
+
+        {/* Conteúdo dos Slides */}
+        <div className="flex-1 overflow-auto p-0 bg-white">
           
-          {/* Botão Próximo - só aparece se não for o último slide */}
-          {currentSlide < 6 && (
-            <button
-              onClick={() => setCurrentSlide(currentSlide + 1)}
-              className="fixed right-6 top-1/2 transform -translate-y-1/2 z-[60] p-3 rounded-full bg-white shadow-xl hover:bg-purple-50 transition-all"
-              title="Próximo Slide"
-            >
-              <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
+          {/* SLIDE 0: Dashboard Executivo - USA SEÇÃO REAL DO APP */}
+          {currentSlide === 0 && (
+            <div className="p-6">
+              {/* Copiando estrutura EXATA da seção Dashboard Executivo */}
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+                <div className="py-4 px-4 border-b border-gray-200 flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <BarChart3 className="w-5 h-5 text-gray-600" />
+                    <h2 className="text-lg font-semibold text-gray-800">Dashboard Executivo</h2>
+                  </div>
+                </div>
+                <div className="p-4">
+                  <div className="flex items-center space-x-2 mb-4">
+                    <div className="w-1 h-6 bg-blue-500 rounded"></div>
+                    <h3 className="text-md font-semibold text-gray-700">
+                      Dados Gerais - PSM {selectedOperator}
+                      {selectedProvince !== 'Todas' && <span className="text-blue-600"> | {selectedProvince}</span>}
+                    </h3>
+                  </div>
+                  
+                  {/* 8 Cards principais - CLICÁVEIS */}
+                  <div className="grid grid-cols-4 gap-1 mb-6">
+                    {Object.values(executiveDashboard).map((item, idx) => (
+                      <div 
+                        key={idx}
+                        onClick={() => handleStatusClick(item.label)}
+                        className={`${item.color} ${item.textColor} rounded p-1.5 shadow-sm cursor-pointer hover:scale-105 active:scale-95 transition-transform duration-200`}
+                        title={`Clique para ver detalhes de ${item.label}`}
+                      >
+                        <div className="text-[10px] font-medium opacity-90 mb-0.5 flex items-center gap-0.5">
+                          <span>{['📦', '⚠️', '✅', '🔍', '👥', '📋', '🔄', '🔌'][idx]}</span>
+                          <span className="truncate">{item.label}</span>
+                        </div>
+                        <div className="text-lg font-bold leading-tight">{item.value}</div>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {/* 4 CARDS DE ANÁLISE - COM GRÁFICOS COMPLETOS */}
+                  <div className="grid grid-cols-4 gap-4">
+                    {(() => {
+                      // Calcular dados por província
+                      const isGlobalMode = selectedOperator === 'Global';
+                      let entidadesDados = [];
+                      
+                      if (isGlobalMode) {
+                        // Modo Global: calcular por PSM
+                        const psmsDisponiveis = ['FIBRASOL', 'ISISTEL', 'ANGLOBAL'];
+                        entidadesDados = psmsDisponiveis.map(psm => {
+                          let indisponiveis = 0;
+                          let reparadas = 0;
+                          
+                          routesByPSM[psm].forEach(route => {
+                            let ultimoIndisp = 0;
+                            let somaReparadas = 0;
+                            
+                            quarterWeeks.forEach(week => {
+                              const weekData = data[psm]?.[week]?.[route];
+                              if (weekData) {
+                                const indisp = parseInt(weekData['Indisponíveis']) || 0;
+                                const rep = parseInt(weekData['Total Reparadas']) || 0;
+                                if (indisp > 0) ultimoIndisp = indisp;
+                                somaReparadas += rep;
+                              }
+                            });
+                            
+                            indisponiveis += ultimoIndisp;
+                            reparadas += somaReparadas;
+                          });
+                          
+                          const efetividade = indisponiveis > 0 ? (reparadas / indisponiveis * 100) : 0;
+                          return {
+                            provincia: psm,
+                            indisponiveis,
+                            indisponiveisOriginal: indisponiveis,
+                            reparadas,
+                            efetividade,
+                            efetividadeGlobal: efetividade,
+                            efetividadePSM: efetividade
+                          };
+                        });
+                      } else {
+                        // Modo PSM: calcular por província
+                        const provincias = selectedProvince !== 'Todas' 
+                          ? [selectedProvince] 
+                          : operatorToProvinces[selectedOperator];
+                        
+                        entidadesDados = provincias.map(prov => {
+                          const rotas = routesByPSM[selectedOperator].filter(r => routeToProvince[r] === prov);
+                          let indisponiveis = 0;
+                          let reparadas = 0;
+                          
+                          rotas.forEach(rota => {
+                            let ultimoIndisp = 0;
+                            let totalRep = 0;
+                            
+                            quarterWeeks.forEach(week => {
+                              const weekData = data[selectedOperator]?.[week]?.[rota];
+                              if (weekData) {
+                                const indisp = parseInt(weekData['Indisponíveis']) || 0;
+                                const rep = parseInt(weekData['Total Reparadas']) || 0;
+                                if (indisp > 0) ultimoIndisp = indisp;
+                                totalRep += rep;
+                              }
+                            });
+                            
+                            indisponiveis += ultimoIndisp;
+                            reparadas += totalRep;
+                          });
+                          
+                          const efetividade = indisponiveis > 0 ? (reparadas / indisponiveis * 100) : 0;
+                          return {
+                            provincia: prov,
+                            indisponiveis,
+                            indisponiveisOriginal: indisponiveis,
+                            reparadas,
+                            efetividade,
+                            efetividadeGlobal: efetividade,
+                            efetividadePSM: efetividade
+                          };
+                        });
+                      }
+                      
+                      const totalIndisp = entidadesDados.reduce((sum, p) => sum + p.indisponiveis, 0);
+                      const maisProdutiva = entidadesDados.reduce((max, p) => p.reparadas > max.reparadas ? p : max, entidadesDados[0] || {});
+                      const maisEfetiva = entidadesDados.reduce((max, p) => {
+                        const efetAtual = efetividadeMode === 'psm' ? p.efetividadePSM : p.efetividadeGlobal;
+                        const efetMax = efetividadeMode === 'psm' ? max.efetividadePSM : max.efetividadeGlobal;
+                        return efetAtual > efetMax ? p : max;
+                      }, entidadesDados[0] || {});
+                      const emAlerta = entidadesDados.reduce((min, p) => {
+                        const efetAtual = efetividadeMode === 'psm' ? p.efetividadePSM : p.efetividadeGlobal;
+                        const efetMin = efetividadeMode === 'psm' ? min.efetividadePSM : min.efetividadeGlobal;
+                        return (efetAtual < efetMin && p.indisponiveisOriginal > 0) ? p : min;
+                      }, entidadesDados[0] || {});
+                      
+                      // RENDERIZAR OS 4 CARDS COM GRÁFICOS
+                      return (
+                        <>
+                          {/* CARD 1: Pizza */}
+                          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-3 border border-blue-200">
+                            <h4 className="text-xs font-semibold text-blue-900 mb-2">Peso Indisponibilidade</h4>
+                            {totalIndisp > 0 && (
+                              <div className="flex flex-col items-center">
+                                <svg width="100" height="100">
+                                  {(() => {
+                                    let angle = 0;
+                                    const colors = ['#f97316', '#10b981', '#3b82f6', '#8b5cf6'];
+                                    return entidadesDados.filter(p => p.indisponiveis > 0).map((prov, idx) => {
+                                      const pct = (prov.indisponiveis / totalIndisp) * 100;
+                                      const a = (pct / 100) * 360;
+                                      const start = angle - 90;
+                                      const end = (angle + a) - 90;
+                                      angle += a;
+                                      const x1 = 50 + 40 * Math.cos(start * Math.PI / 180);
+                                      const y1 = 50 + 40 * Math.sin(start * Math.PI / 180);
+                                      const x2 = 50 + 40 * Math.cos(end * Math.PI / 180);
+                                      const y2 = 50 + 40 * Math.sin(end * Math.PI / 180);
+                                      return <path key={idx} d={`M50 50 L${x1} ${y1} A40 40 0 ${a>180?1:0} 1 ${x2} ${y2}Z`} fill={colors[idx%4]}/>;
+                                    });
+                                  })()}
+                                  <circle cx="50" cy="50" r="20" fill="white"/>
+                                  <text x="50" y="55" textAnchor="middle" className="text-sm font-bold fill-gray-700">{totalIndisp}</text>
+                                </svg>
+                                {entidadesDados.filter(p => p.indisponiveis > 0).slice(0,3).map((p, i) => (
+                                  <div key={i} className="text-[9px] w-full flex justify-between">
+                                    <span>{p.provincia}</span><span className="font-bold">{((p.indisponiveis/totalIndisp)*100).toFixed(1)}%</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          
+                          {/* CARD 2: Mais Produtiva */}
+                          <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-3 border border-green-200">
+                            <h4 className="text-xs font-semibold text-green-900 mb-2">Mais Produtiva</h4>
+                            <p className="text-2xl font-bold text-green-700 text-center">{maisProdutiva?.provincia}</p>
+                            <p className="text-xl font-bold text-green-600 text-center">{maisProdutiva?.reparadas}</p>
+                            <p className="text-[9px] text-center">fibras em {selectedQuarter}</p>
+                          </div>
+                          
+                          {/* CARD 3: Efetividade */}
+                          <div onClick={() => setEfetividadeMode(efetividadeMode==='global'?'psm':'global')} className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-3 border border-purple-200 cursor-pointer">
+                            <h4 className="text-xs font-semibold text-purple-900 mb-2">Efetividade {efetividadeMode==='psm'?'PSM':'Global'}</h4>
+                            <svg width="100" height="60" className="mx-auto">
+                              {(() => {
+                                const e = efetividadeMode==='psm' ? maisEfetiva?.efetividadePSM||0 : maisEfetiva?.efetividadeGlobal||0;
+                                const a = (e/100)*180;
+                                const r = ((180-a)*Math.PI)/180;
+                                return (
+                                  <>
+                                    <path d="M15 50A35 35 0 0185 50" fill="none" stroke="#e5e7eb" strokeWidth="6"/>
+                                    <path d="M15 50A35 35 0 0185 50" fill="none" stroke="#10b981" strokeWidth="6" strokeDasharray={`${(e/100)*110} 110`}/>
+                                    <line x1="50" y1="50" x2={50+30*Math.cos(r)} y2={50+30*Math.sin(r)} stroke="#7c3aed" strokeWidth="2"/>
+                                  </>
+                                );
+                              })()}
+                            </svg>
+                            <p className="text-2xl font-bold text-purple-700 text-center">{((efetividadeMode==='psm'?maisEfetiva?.efetividadePSM:maisEfetiva?.efetividadeGlobal)||0).toFixed(1)}%</p>
+                            <p className="text-[8px] text-center text-purple-600">🔄 Clique para alternar</p>
+                          </div>
+                          
+                          {/* CARD 4: Precisa Atenção */}
+                          <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-lg p-3 border border-red-200">
+                            <h4 className="text-xs font-semibold text-red-900 mb-2">Precisa Atenção</h4>
+                            <p className="text-2xl font-bold text-red-700 text-center">{emAlerta?.provincia}</p>
+                            <div className="flex justify-around text-[10px] mt-2">
+                              <div><p className="font-bold text-red-600">{emAlerta?.indisponiveisOriginal||0}</p><p>Indisp</p></div>
+                              <div><p className="font-bold text-green-600">{emAlerta?.reparadas||0}</p><p>Rep</p></div>
+                            </div>
+                            <p className="text-xs text-center text-red-600 font-bold mt-1">Efet: {((efetividadeMode==='psm'?emAlerta?.efetividadePSM:emAlerta?.efetividadeGlobal)||0).toFixed(1)}%</p>
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
-        </>
-      )}
-      
-      {/* Pontos indicadores na base */}
-      {presentationMode && (
-        <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-[60] flex items-center space-x-2 bg-white/95 backdrop-blur-sm px-4 py-2 rounded-full shadow-xl">
-          {[0, 1, 2, 3, 4, 5, 6].map(idx => (
-            <button
-              key={idx}
-              onClick={() => setCurrentSlide(idx)}
-              className={`transition-all duration-300 rounded-full ${
-                idx === currentSlide 
-                  ? 'w-8 h-3 bg-purple-600' 
-                  : 'w-3 h-3 bg-gray-300 hover:bg-purple-400'
-              }`}
-              title={['📊 Dashboard', '🎯 Performance', '📈 Análise', '📊 Gráficos', '🚦 Acompanhamento', '📝 Manual', '🧪 Testes'][idx]}
-            />
-          ))}
+
+          {/* SLIDE 1: Performance */}
+          {currentSlide === 1 && (
+            <div className="space-y-6">
+              <h2 className="text-4xl font-bold border-b-4 border-green-500 pb-4">
+                🎯 Performance das Rotas
+              </h2>
+              <div className="grid grid-cols-4 gap-4">
+                {summaryCards.map((card, i) => (
+                  <div key={i} className="bg-slate-800 p-6 rounded-lg">
+                    <p className="text-sm text-slate-400">{card.label}</p>
+                    <p className="text-3xl font-bold">{card.value}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* SLIDE 2: Comparativa */}
+          {currentSlide === 2 && (
+            <div className="space-y-6">
+              <h2 className="text-4xl font-bold border-b-4 border-purple-500 pb-4">
+                📈 Análise Comparativa
+              </h2>
+              <div className="grid grid-cols-4 gap-4">
+                {summaryCards.map((card, i) => (
+                  <div key={i} className="bg-slate-800 p-6 rounded-lg">
+                    <p className="text-sm text-slate-400">{card.label}</p>
+                    <p className="text-3xl font-bold">{card.value}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* SLIDE 3: Classificação */}
+          {currentSlide === 3 && (
+            <div className="space-y-6">
+              <h2 className="text-4xl font-bold border-b-4 border-orange-500 pb-4">
+                📊 Gráficos por Classificação
+              </h2>
+              <div className="grid grid-cols-4 gap-4">
+                {summaryCards.map((card, i) => (
+                  <div key={i} className="bg-slate-800 p-6 rounded-lg">
+                    <p className="text-sm text-slate-400">{card.label}</p>
+                    <p className="text-3xl font-bold">{card.value}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* SLIDE 4: Acompanhamento */}
+          {currentSlide === 4 && (
+            <div className="space-y-6">
+              <h2 className="text-4xl font-bold border-b-4 border-red-500 pb-4">
+                🚦 Acompanhamento
+              </h2>
+              <div className="grid grid-cols-4 gap-4">
+                {summaryCards.map((card, i) => (
+                  <div key={i} className="bg-slate-800 p-6 rounded-lg">
+                    <p className="text-sm text-slate-400">{card.label}</p>
+                    <p className="text-3xl font-bold">{card.value}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* SLIDE 5: Manual */}
+          {currentSlide === 5 && (
+            <div className="space-y-6">
+              <h2 className="text-4xl font-bold border-b-4 border-gray-500 pb-4">
+                📝 Introdução Manual
+              </h2>
+              <div className="grid grid-cols-4 gap-4">
+                {summaryCards.map((card, i) => (
+                  <div key={i} className="bg-slate-800 p-6 rounded-lg">
+                    <p className="text-sm text-slate-400">{card.label}</p>
+                    <p className="text-3xl font-bold">{card.value}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* SLIDE 6: Testes */}
+          {currentSlide === 6 && (
+            <div className="space-y-6">
+              <h2 className="text-4xl font-bold border-b-4 border-yellow-500 pb-4">
+                🧪 Testes e Análises
+              </h2>
+              <div className="bg-slate-800 p-6 rounded-lg">
+                <p className="text-slate-300 text-lg">Dados de testes para {selectedOperator}</p>
+              </div>
+            </div>
+          )}
+
         </div>
-      )}
+
+        {/* MODAL STATUS DRILLDOWN - MODO APRESENTAÇÃO */}
+        {showStatusDrilldown && selectedStatusDrilldown && (() => {
+          const totalPages = Math.ceil(selectedStatusDrilldown.rotas.length / itemsPerPageDrilldown);
+          const startIdx = currentPageDrilldown * itemsPerPageDrilldown;
+          const endIdx = startIdx + itemsPerPageDrilldown;
+          const currentRotas = selectedStatusDrilldown.rotas.slice(startIdx, endIdx);
+          
+          return (
+            <div 
+              className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-8"
+              onClick={() => setShowStatusDrilldown(false)}
+            >
+              <div 
+                className="bg-white rounded-lg shadow-2xl w-full max-w-4xl max-h-[50vh] overflow-hidden flex flex-col"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-3 py-2 flex justify-between items-center">
+                  <div>
+                    <h2 className="text-sm font-bold">📊 {selectedStatusDrilldown.label}</h2>
+                    <p className="text-[10px] text-blue-100">
+                      {selectedOperator} • {selectedQuarter} • Total: {selectedStatusDrilldown.total}
+                    </p>
+                  </div>
+                  <button 
+                    onClick={() => setShowStatusDrilldown(false)}
+                    className="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-1"
+                  >
+                    <span className="text-2xl">×</span>
+                  </button>
+                </div>
+                
+                <div className="flex-1 overflow-auto p-2">
+                  {currentRotas.length > 0 ? (
+                    <div className="grid grid-cols-4 gap-2">
+                      {currentRotas.map((rota, idx) => {
+                        const percentage = ((rota.valor / selectedStatusDrilldown.total) * 100).toFixed(1);
+                        
+                        let reparadas = 0;
+                        let percentagemReparadas = 0;
+                        
+                        if (selectedStatusDrilldown.label.includes('Indisponíveis')) {
+                          const quarterLimits = quarterConfig[selectedQuarter];
+                          for (let i = quarterLimits.start; i <= quarterLimits.end; i++) {
+                            const week = 'W' + i;
+                            const val = data[selectedOperator]?.[week]?.[rota.rota]?.['Total Reparadas'];
+                            if (val) reparadas += parseInt(val) || 0;
+                          }
+                          if (rota.valor > 0) {
+                            percentagemReparadas = ((reparadas / rota.valor) * 100).toFixed(1);
+                          }
+                        }
+                        
+                        return (
+                          <div key={idx} className="bg-gray-50 rounded px-2 py-1.5 border border-gray-200">
+                            <div className="flex items-start justify-between gap-1 mb-1">
+                              <p className="text-[10px] font-medium text-gray-800 truncate" title={rota.rota}>
+                                {rota.rota}
+                              </p>
+                              <p className="text-sm font-bold text-blue-600">{rota.valor}</p>
+                            </div>
+                            
+                            <p className="text-[8px] text-gray-500 mb-1">
+                              {rota.semana} • {percentage}%
+                            </p>
+                            
+                            <div className="bg-gray-200 rounded-sm h-1.5 overflow-hidden mb-1">
+                              <div className="bg-blue-500 h-full" style={{ width: `${percentage}%` }}></div>
+                            </div>
+                            
+                            {reparadas > 0 && (
+                              <>
+                                <div className="flex items-center justify-between mb-0.5">
+                                  <p className="text-[8px] text-gray-500">{percentagemReparadas}%</p>
+                                  <p className="text-[9px] font-bold text-green-600">{reparadas}</p>
+                                </div>
+                                <div className="bg-gray-200 rounded-sm h-1.5 overflow-hidden">
+                                  <div className="bg-green-500 h-full" style={{ width: `${percentagemReparadas}%` }}></div>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 text-center">Sem dados</p>
+                  )}
+                </div>
+                
+                {totalPages > 1 && (
+                  <div className="px-2 py-2 border-t border-gray-200 flex justify-between items-center">
+                    <button
+                      onClick={() => setCurrentPageDrilldown(Math.max(0, currentPageDrilldown - 1))}
+                      disabled={currentPageDrilldown === 0}
+                      className="px-3 py-1 text-xs bg-blue-500 text-white rounded disabled:bg-gray-300"
+                    >
+                      ◀
+                    </button>
+                    <span className="text-xs">Pág {currentPageDrilldown + 1}/{totalPages}</span>
+                    <button
+                      onClick={() => setCurrentPageDrilldown(Math.min(totalPages - 1, currentPageDrilldown + 1))}
+                      disabled={currentPageDrilldown >= totalPages - 1}
+                      className="px-3 py-1 text-xs bg-blue-500 text-white rounded disabled:bg-gray-300"
+                    >
+                      ▶
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
+
+      </div>
+    );
+  }
+
+  // ===============================================
+  // MODO NORMAL - APP ORIGINAL
+  // ===============================================
+  return (
+    <div className="min-h-screen bg-gray-50 flex relative">
       
       {/* v3.49.24: CSS para animações */}
       <style>{`
@@ -4833,38 +5192,6 @@ const PSMMonitorApp = () => {
         .animate-fadeIn {
           animation: fadeIn 0.2s ease-out;
         }
-        
-        /* SISTEMA DE SLIDES - CSS APPROACH */
-        ${presentationMode ? `
-          /* Em apresentação, esconde tudo por padrão */
-          .slide-section {
-            display: none !important;
-          }
-          
-          /* Mostra apenas o slide ativo */
-          .slide-section.slide-active {
-            display: flex !important;
-            position: fixed;
-            inset: 0;
-            z-index: 40;
-            background: linear-gradient(to bottom right, #111827, #1f2937);
-            padding: 2rem;
-            align-items: center;
-            justify-content: center;
-          }
-          
-          /* Estiliza o conteúdo interno - QUALQUER filho direto */
-          .slide-section.slide-active > div {
-            width: 100%;
-            max-width: 80rem;
-            height: 100%;
-            background: white;
-            border-radius: 1rem;
-            padding: 2rem;
-            overflow: auto;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-          }
-        ` : ''}
       `}</style>
       
       {/* v3.49.24: Banner de Aviso Mobile */}
@@ -5136,7 +5463,7 @@ const PSMMonitorApp = () => {
                             ></div>
                           </div>
                           
-                          {/* v3.49.44: Barra VERDE de reparadas com NÚMERO (sem semana) */}
+                          {/* v4.95.0: Barra VERDE de reparadas com NÚMERO (sem semana) */}
                           {reparadas > 0 ? (
                             <>
                               <div className="flex items-center justify-between mb-0.5">
@@ -5224,11 +5551,17 @@ const PSMMonitorApp = () => {
         );
       })()}
       
-      {/* Menu Lateral - Oculto em Modo Apresentação */}
-      {!presentationMode && (
-        <div className={`${menuOpen ? 'w-64' : 'w-0'} bg-white border-r border-gray-200 transition-all duration-300 overflow-hidden flex-shrink-0`}>
-          <div className="p-4">
-            <nav className="space-y-1">
+      {/* Menu Lateral */}
+      <div className={`${menuOpen ? 'w-64' : 'w-0'} bg-white border-r border-gray-200 transition-all duration-300 overflow-hidden flex-shrink-0`}>
+        <div className="p-4">
+          <nav className="space-y-1">
+            <button 
+              onClick={() => setPresentationMode(true)}
+              className="w-full flex items-center space-x-3 px-4 py-3 text-white bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors border-2 border-purple-700"
+            >
+              <span className="text-lg">📽️</span>
+              <span className="text-sm font-bold">Modo Apresentação</span>
+            </button>
             <button 
               onClick={handleDownloadCSV}
               className="w-full flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-blue-50 rounded-lg transition-colors border-2 border-blue-500"
@@ -5336,7 +5669,6 @@ const PSMMonitorApp = () => {
           </nav>
         </div>
       </div>
-      )}
 
       {/* Conteúdo Principal */}
       <div ref={scrollContainerRef} className="flex-1 overflow-auto">
@@ -5352,20 +5684,18 @@ const PSMMonitorApp = () => {
           <div className="border-b border-gray-200 px-5 py-2.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                {/* Botão Hamburguer para Menu - Oculto em Modo Apresentação */}
-                {!presentationMode && (
-                  <button 
-                    onClick={() => setMenuOpen(!menuOpen)}
-                    className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-                    title={menuOpen ? "Fechar menu" : "Abrir menu"}
-                  >
-                    <Menu className="w-6 h-6 text-gray-600" />
-                  </button>
-                )}
-                <BarChart3 className={`w-8 h-8 text-purple-600 ${presentationMode ? 'w-10 h-10' : ''}`} />
+                {/* Botão Hamburguer para Menu */}
+                <button 
+                  onClick={() => setMenuOpen(!menuOpen)}
+                  className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                  title={menuOpen ? "Fechar menu" : "Abrir menu"}
+                >
+                  <Menu className="w-6 h-6 text-gray-600" />
+                </button>
+                <BarChart3 className="w-8 h-8 text-purple-600" />
                 <div>
-                  <h1 className={`font-bold text-gray-800 ${presentationMode ? 'text-3xl' : 'text-2xl'}`}>Performance Clean Up Advanced</h1>
-                  <p className={`text-gray-500 ${presentationMode ? 'text-sm' : 'text-xs'}`}>v3.50.1 - Apresentação Pro! 🎬✨</p>
+                  <h1 className="text-2xl font-bold text-gray-800">Performance Clean Up Advanced</h1>
+                  <p className="text-xs text-gray-500">v4.95.0 - Sem Semana Rep! 🎨✨</p>
                 </div>
               </div>
               {/* Indicador de Salvamento */}
@@ -5400,82 +5730,47 @@ const PSMMonitorApp = () => {
           {/* FILTROS E CARDS DE RESUMO */}
           <div className="border-b border-gray-200 px-5 py-2.5">
           <div className="flex items-center justify-between mb-4">
-            {/* Filtros - Ocultos em Modo Apresentação */}
-            {!presentationMode && (
-              <div className="flex items-center space-x-3">
-                <select value={selectedOperator} onChange={(e) => setSelectedOperator(e.target.value)} className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
-                  <option value="FIBRASOL">FIBRASOL</option>
-                  <option value="ISISTEL">ISISTEL</option>
-                  <option value="ANGLOBAL">ANGLOBAL</option>
-                </select>
-                
-                {/* FILTRO DE PROVÍNCIA - Texto simples */}
-                <select
-                  value={selectedProvince}
-                  onChange={(e) => setSelectedProvince(e.target.value)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                >
-                  <option value="Todas">Todas as Províncias</option>
-                  {operatorToProvinces[selectedOperator].map(prov => (
-                    <option key={prov} value={prov}>{prov}</option>
-                  ))}
-                </select>
-                
-                <select value={selectedWeek} onChange={(e) => setSelectedWeek(e.target.value)} className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
-                  {getWeeksForQuarter(selectedQuarter).map(week => (
-                    <option key={week} value={week}>{week}</option>
-                  ))}
-                </select>
-                <select value={selectedQuarter} onChange={(e) => setSelectedQuarter(e.target.value)} className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
-                  <option value="Q3">Q3</option>
-                  <option value="Q2">Q2</option>
-                  <option value="Q1">Q1</option>
-                </select>
-                <select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
-                  <option value="2030">2030</option>
-                  <option value="2029">2029</option>
-                  <option value="2028">2028</option>
-                  <option value="2027">2027</option>
-                  <option value="2026">2026</option>
-                  <option value="2025">2025</option>
-                  <option value="2024">2024</option>
-                  <option value="2023">2023</option>
-                </select>
-              </div>
-            )}
-            
-            {/* v3.50.0: Info compacta em Modo Apresentação */}
-            {presentationMode && (
-              <div className="bg-gradient-to-r from-purple-600 to-purple-700 text-white px-6 py-3 rounded-lg shadow-lg">
-                <div className="flex items-center space-x-6">
-                  <div className="flex items-center space-x-2">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                    </svg>
-                    <span className="font-bold text-lg">{selectedOperator}</span>
-                  </div>
-                  <div className="h-6 w-px bg-white/30"></div>
-                  <div className="flex items-center space-x-2">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    <span className="font-semibold">{selectedQuarter} {selectedYear}</span>
-                  </div>
-                  {selectedProvince !== 'Todas' && (
-                    <>
-                      <div className="h-6 w-px bg-white/30"></div>
-                      <div className="flex items-center space-x-2">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                        <span className="font-semibold">{selectedProvince}</span>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-            )}
+            {/* Filtros */}
+            <div className="flex items-center space-x-3">
+              <select value={selectedOperator} onChange={(e) => setSelectedOperator(e.target.value)} className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                <option value="FIBRASOL">FIBRASOL</option>
+                <option value="ISISTEL">ISISTEL</option>
+                <option value="ANGLOBAL">ANGLOBAL</option>
+              </select>
+              
+              {/* FILTRO DE PROVÍNCIA - Texto simples */}
+              <select
+                value={selectedProvince}
+                onChange={(e) => setSelectedProvince(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+              >
+                <option value="Todas">Todas as Províncias</option>
+                {operatorToProvinces[selectedOperator].map(prov => (
+                  <option key={prov} value={prov}>{prov}</option>
+                ))}
+              </select>
+              
+              <select value={selectedWeek} onChange={(e) => setSelectedWeek(e.target.value)} className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                {getWeeksForQuarter(selectedQuarter).map(week => (
+                  <option key={week} value={week}>{week}</option>
+                ))}
+              </select>
+              <select value={selectedQuarter} onChange={(e) => setSelectedQuarter(e.target.value)} className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                <option value="Q3">Q3</option>
+                <option value="Q2">Q2</option>
+                <option value="Q1">Q1</option>
+              </select>
+              <select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                <option value="2030">2030</option>
+                <option value="2029">2029</option>
+                <option value="2028">2028</option>
+                <option value="2027">2027</option>
+                <option value="2026">2026</option>
+                <option value="2025">2025</option>
+                <option value="2024">2024</option>
+                <option value="2023">2023</option>
+              </select>
+            </div>
             
             {/* v3.49.29: BOTÃO TESTES E ANÁLISES MODERNIZADO */}
             <button
@@ -5708,6 +6003,7 @@ const PSMMonitorApp = () => {
           </div>
 
           {/* Cards de Resumo Superiores - COMPACTOS EM UMA LINHA (8 cards) */}
+          {isVisible("cards") && (
           <div className="grid grid-cols-8 gap-2">
             {summaryCards.map((card, index) => (
               <div 
@@ -5727,12 +6023,13 @@ const PSMMonitorApp = () => {
               </div>
             ))}
           </div>
+          )}
         </div>
         </div> {/* Fim do div HEADER + FILTROS UNIFICADOS */}
 
-        {/* v3.42.00: PAINEL TESTES E ANÁLISES - SLIDE 6 */}
+        {/* v3.42.00: PAINEL TESTES E ANÁLISES */}
         {showTestesAnalises && (
-          <div className={`slide-section ${currentSlide === 6 ? 'slide-active' : ''}`}>
+          <div className="px-5 py-3">
             <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg shadow-lg border-2 border-blue-200 relative">
               {/* Botão Fechar (X) */}
               <button
@@ -6558,13 +6855,13 @@ Gerado por: PSM Monitor v3.42.03
           </div>
         )}
 
-        {/* Dashboard Executivo - SLIDE 0 */}
-        <div className={`slide-section ${currentSlide === 0 ? 'slide-active' : ''}`}>
+        {/* Dashboard Executivo */}
+        <div className="px-5 py-3">
           <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-            <div className="py-4 px-4 border-b border-gray-200 flex items-center justify-between">
+            <div className="py-4 px-4 border-b border-gray-200 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors">
               <div className="flex items-center space-x-3">
-                <BarChart3 className={`text-gray-600 ${presentationMode ? 'w-8 h-8' : 'w-5 h-5'}`} />
-                <h2 className={`font-semibold text-gray-800 ${presentationMode ? 'text-3xl' : 'text-lg'}`}>📊 Dashboard Executivo</h2>
+                <BarChart3 className="w-5 h-5 text-gray-600" />
+                <h2 className="text-lg font-semibold text-gray-800">Dashboard Executivo</h2>
               </div>
               <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
@@ -7415,14 +7712,13 @@ Gerado por: PSM Monitor v3.42.03
             </div>
           </div>
 
-          {/* Performance das Rotas - SLIDE 1 */}
-          <div className={`slide-section ${currentSlide === 1 ? 'slide-active' : ''}`}>
+          {/* Performance das Rotas */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 mt-6">
-            <div className="py-4 px-4 border-b border-gray-200 flex items-center justify-between">
+            <div className="py-4 px-4 border-b border-gray-200 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors">
               <div className="flex items-center space-x-3">
                 <TrendingDown className="w-5 h-5 text-gray-600" />
                 <h2 className="text-lg font-semibold text-gray-800">
-                  🎯 Performance das Rotas
+                  Performance das Rotas
                   {selectedProvince !== 'Todas' && <span className="text-blue-600"> | {selectedProvince}</span>}
                 </h2>
               </div>
@@ -7828,17 +8124,15 @@ Gerado por: PSM Monitor v3.42.03
               </div>
             </div>
           </div>
-          </div>
 
           {/* v3.9.0: Gráfico Semicircular CORRETO - Distribuição por Status */}
-          {/* v3.13.0: Análise Comparativa - SLIDE 2 */}
-          <div className={`slide-section ${currentSlide === 2 ? 'slide-active' : ''}`}>
+          {/* v3.13.0: Análise Comparativa - 2 Colunas Lado a Lado Estilo Performance */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 mt-6">
             <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors">
               <div className="flex items-center space-x-3">
                 <BarChart3 className="w-5 h-5 text-gray-600" />
                 <h2 className="text-lg font-semibold text-gray-800">
-                  📈 Análise Comparativa: Distribuição e Tendências
+                  Análise Comparativa: Distribuição e Tendências
                   {selectedProvince !== 'Todas' && <span className="text-blue-600"> | {selectedProvince}</span>}
                 </h2>
               </div>
@@ -8786,10 +9080,8 @@ Gerado por: PSM Monitor v3.42.03
               </div>
             </div>
           </div>
-          </div>
 
-          {/* v3.14.81: GRÁFICOS POR CLASSIFICAÇÃO - SLIDE 3 */}
-          <div className={`slide-section ${currentSlide === 3 ? 'slide-active' : ''}`}>
+          {/* v3.14.81: GRÁFICOS POR CLASSIFICAÇÃO COM CARROSSEL */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 mt-6">
             {/* HEADER COM BOTÃO TOGGLE */}
             <div className="px-6 py-4 border-b border-gray-200">
@@ -9814,10 +10106,7 @@ Gerado por: PSM Monitor v3.42.03
               })()}
             </div>
           </div>
-          </div>
-          
-          {/* TABELA DE ACOMPANHAMENTO - SLIDE 4 */}
-          <div className={`slide-section ${currentSlide === 4 ? 'slide-active' : ''}`}>
+          {/* TABELA DE ACOMPANHAMENTO - APENAS DADOS IMPORTADOS */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 mt-6">
             <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
               <div className="flex items-center space-x-3">
@@ -9985,10 +10274,8 @@ Gerado por: PSM Monitor v3.42.03
               </div>
             )}
           </div>
-          </div>
 
-          {/* Tabela de Introdução Manual - SLIDE 5 */}
-          <div className={`slide-section ${currentSlide === 5 ? 'slide-active' : ''}`}>
+          {/* Tabela de Introdução Manual - FASE 9: INPUTS CONTROLADOS */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 mt-6">
             <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors">
               <div className="flex items-center space-x-3">
@@ -10134,7 +10421,6 @@ Gerado por: PSM Monitor v3.42.03
                 Mostrando todas as {routesByPSM[selectedOperator].length} rotas do PSM {selectedOperator}
               </div>
             </div>
-          </div>
           </div>
         </div>
       </div>
