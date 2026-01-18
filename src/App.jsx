@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { BarChart3, TrendingUp, Users, AlertTriangle, CheckCircle, XCircle, Clock, MapPin, TrendingDown, Home, Upload, FileJson, Download, Calendar, BarChart, FileText, Menu, PieChart, DownloadCloud, Trash2, AlertCircle } from 'lucide-react';
 
 const PSMMonitorApp = () => {
-  console.log('🚀 PSM Monitor v3.49.38 - Legenda Bold Maior! 💪✨');
+  console.log('🚀 PSM Monitor v3.49.43 - Número Reparadas + Limpeza! 🔢✨');
   
   // ============================================================================
   // MAPEAMENTO DE ROTAS PARA PROVÍNCIAS
@@ -4899,6 +4899,28 @@ const PSMMonitorApp = () => {
                   <div className="w-full grid grid-cols-4 gap-2">
                     {currentRotas.map((rota, idx) => {
                       const percentage = ((rota.valor / selectedStatusDrilldown.total) * 100).toFixed(1);
+                      
+                      // v3.49.43: Buscar dados de reparadas para esta rota (se estiver em "Indisponíveis")
+                      let reparadas = 0;
+                      let percentagemReparadas = 0;
+                      
+                      if (selectedStatusDrilldown.label === 'Indisponíveis' || selectedStatusDrilldown.label.includes('Indisponíveis')) {
+                        // Buscar total de reparadas para esta rota no quarter
+                        const quarterLimits = quarterConfig[selectedQuarter];
+                        for (let i = quarterLimits.start; i <= quarterLimits.end; i++) {
+                          const week = 'W' + i;
+                          const val = data[selectedOperator]?.[week]?.[rota.rota]?.['Total Reparadas'];
+                          if (val !== undefined && val > 0) {
+                            reparadas += parseInt(val) || 0;
+                          }
+                        }
+                        
+                        // Calcular percentagem de reparadas em relação aos indisponíveis
+                        if (rota.valor > 0) {
+                          percentagemReparadas = ((reparadas / rota.valor) * 100).toFixed(1);
+                        }
+                      }
+                      
                       return (
                         <div 
                           key={idx}
@@ -4923,13 +4945,37 @@ const PSMMonitorApp = () => {
                             {rota.semana} • {percentage}%
                           </p>
                           
-                          {/* Barra de progresso */}
-                          <div className="bg-gray-200 rounded-full h-1 overflow-hidden mt-auto">
+                          {/* v3.49.43: Barra AZUL de indisponíveis */}
+                          <div className="bg-gray-200 rounded-sm h-1.5 overflow-hidden mb-1">
                             <div 
-                              className="bg-blue-500 h-full rounded-full transition-all duration-300"
+                              className="bg-blue-500 h-full transition-all duration-300"
                               style={{ width: `${percentage}%` }}
                             ></div>
                           </div>
+                          
+                          {/* v3.49.43: Barra VERDE de reparadas com NÚMERO */}
+                          {reparadas > 0 ? (
+                            <>
+                              <div className="flex items-center justify-between mb-0.5">
+                                <p className="text-[8px] text-gray-500 leading-tight">
+                                  {rota.semana} • {percentagemReparadas}%
+                                </p>
+                                <p className="text-[9px] font-bold text-green-600">
+                                  {reparadas}
+                                </p>
+                              </div>
+                              <div className="bg-gray-200 rounded-sm h-1.5 overflow-hidden">
+                                <div 
+                                  className="bg-green-500 h-full transition-all duration-300"
+                                  style={{ width: `${Math.min(parseFloat(percentagemReparadas), 100)}%` }}
+                                ></div>
+                              </div>
+                            </>
+                          ) : (
+                            <p className="text-[8px] text-gray-400 italic mt-auto">
+                              Sem reparações
+                            </p>
+                          )}
                         </div>
                       );
                     })}
@@ -5132,7 +5178,7 @@ const PSMMonitorApp = () => {
                 <BarChart3 className="w-8 h-8 text-purple-600" />
                 <div>
                   <h1 className="text-2xl font-bold text-gray-800">Performance Clean Up Advanced</h1>
-                  <p className="text-xs text-gray-500">v3.49.38 - Legenda Bold! 🎨✨</p>
+                  <p className="text-xs text-gray-500">v3.49.43 - Número + Limpo! 🎨✨</p>
                 </div>
               </div>
               {/* Indicador de Salvamento */}
