@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { BarChart3, TrendingUp, Users, AlertTriangle, CheckCircle, XCircle, Clock, MapPin, TrendingDown, Home, Upload, FileJson, Download, Calendar, BarChart, FileText, Menu, PieChart, DownloadCloud, Trash2, AlertCircle } from 'lucide-react';
 
 const PSMMonitorApp = () => {
-  console.log('🚀 PSM Monitor v3.49.35 - Legenda Verde Vibrante! 🟢✨');
+  console.log('🚀 PSM Monitor v3.49.37 - Círculo Compacto! ⚪✨');
   
   // ============================================================================
   // MAPEAMENTO DE ROTAS PARA PROVÍNCIAS
@@ -5132,7 +5132,7 @@ const PSMMonitorApp = () => {
                 <BarChart3 className="w-8 h-8 text-purple-600" />
                 <div>
                   <h1 className="text-2xl font-bold text-gray-800">Performance Clean Up Advanced</h1>
-                  <p className="text-xs text-gray-500">v3.49.35 - Verde Match! 🎨✨</p>
+                  <p className="text-xs text-gray-500">v3.49.37 - Círculo Compacto! 🎨✨</p>
                 </div>
               </div>
               {/* Indicador de Salvamento */}
@@ -7221,17 +7221,19 @@ Gerado por: PSM Monitor v3.42.03
                                       {item.rota}
                                     </span>
                                     {item.reparadas > 0 && (
-                                      <span className="text-[9px] font-semibold leading-tight text-green-500">
-                                        {item.reparadas} reparadas ({reparadasPercentage.toFixed(0)}%)
+                                      <span className="text-[9px] leading-tight text-green-500">
+                                        <span className="font-bold">{item.reparadas}</span> reparadas ({reparadasPercentage.toFixed(0)}%)
                                       </span>
                                     )}
                                   </div>
                                 </div>
                                 
-                                {/* Lado direito: Valor */}
-                                <span className="text-sm font-bold ml-2 text-red-600">
-                                  {item.value}
-                                </span>
+                                {/* v3.49.37: Valor em círculo branco compacto */}
+                                <div className="flex items-center justify-center w-7 h-7 bg-white rounded-full shadow-sm border border-red-200">
+                                  <span className="text-[11px] font-bold text-red-600">
+                                    {item.value}
+                                  </span>
+                                </div>
                               </div>
                             </div>
                           </div>
