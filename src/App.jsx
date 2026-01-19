@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { BarChart3, TrendingUp, Users, AlertTriangle, CheckCircle, XCircle, Clock, MapPin, TrendingDown, Home, Upload, FileJson, Download, Calendar, BarChart, FileText, Menu, PieChart, DownloadCloud, Trash2, AlertCircle } from 'lucide-react';
 
 const PSMMonitorApp = () => {
-  console.log("🚀 PSM Monitor v4.95.0 - MODAL + GRÁFICOS! ✅✅");
+  console.log("🚀 PSM Monitor v5.02.0 - LÓGICA Q1→Q3 CORRETA! ✅");
   
   // ============================================================================
   // MAPEAMENTO DE ROTAS PARA PROVÍNCIAS
@@ -2790,10 +2790,11 @@ const PSMMonitorApp = () => {
           const anoAnterior = parseInt(selectedYear) - 1;
           return `Transporte Q3 (${anoAnterior})`;
         } else if (selectedQuarter === 'Q2') {
-          return `Transporte Q1 (${selectedYear})`;
-        } else {
-          return `Transporte Q2 (${selectedYear})`;
+          return `Transporte Q1`;
+        } else if (selectedQuarter === 'Q3') {
+          return `Transporte Q2`;
         }
+        return `Transporte Q1`;
       })(),
       value: statsOriginais.transporteSum,  // Original
       color: 'bg-slate-700', 
@@ -2851,10 +2852,11 @@ const PSMMonitorApp = () => {
           const anoAnterior = parseInt(selectedYear) - 1;
           return `Transporte Q3 (${anoAnterior})`;
         } else if (selectedQuarter === 'Q2') {
-          return `Transporte Q1 (${selectedYear})`;
-        } else {
-          return `Transporte Q2 (${selectedYear})`;
+          return `Transporte Q1`;
+        } else if (selectedQuarter === 'Q3') {
+          return `Transporte Q2`;
         }
+        return `Transporte Q1`;
       })(),
       value: stats.transporteSum,  // Com redução
       color: 'bg-slate-700', 
@@ -4498,6 +4500,31 @@ const PSMMonitorApp = () => {
 
   // NOVO: Dados para Tabela de Acompanhamento Transporte vs Degradação (Página 4 do PDF)
   // Combina dados mock com justificativas importadas
+  
+  // Função para calcular o trimestre anterior
+  const getQuarterAnterior = (currentQuarter, currentYear) => {
+    const quarterMap = {
+      'Q1': { quarter: 'Q3', yearOffset: -1 },
+      'Q2': { quarter: 'Q1', yearOffset: 0 },
+      'Q3': { quarter: 'Q2', yearOffset: 0 }
+    };
+    
+    const result = quarterMap[currentQuarter];
+    if (!result) return { quarter: 'Q1', year: currentYear, label: 'Q1' };
+    
+    const year = currentYear + result.yearOffset;
+    
+    // Formatar label: se ano diferente, mostrar ano
+    let label = result.quarter;
+    if (result.yearOffset !== 0) {
+      label = `${result.quarter} ${year}`;
+    }
+    
+    return { quarter: result.quarter, year, label };
+  };
+  
+  const quarterAnterior = getQuarterAnterior(selectedQuarter, selectedYear);
+  
   const acompanhamentoData = useMemo(() => {
 
     console.log('📊 Justificativas disponíveis:', Object.keys(justificativas).length);
@@ -4758,183 +4785,76 @@ const PSMMonitorApp = () => {
                     ))}
                   </div>
                   
-                  {/* 4 CARDS DE ANÁLISE - COM GRÁFICOS COMPLETOS */}
+                  {/* 4 Cards de análise - grid 4 colunas */}
                   <div className="grid grid-cols-4 gap-4">
-                    {(() => {
-                      // Calcular dados por província
-                      const isGlobalMode = selectedOperator === 'Global';
-                      let entidadesDados = [];
-                      
-                      if (isGlobalMode) {
-                        // Modo Global: calcular por PSM
-                        const psmsDisponiveis = ['FIBRASOL', 'ISISTEL', 'ANGLOBAL'];
-                        entidadesDados = psmsDisponiveis.map(psm => {
-                          let indisponiveis = 0;
-                          let reparadas = 0;
-                          
-                          routesByPSM[psm].forEach(route => {
-                            let ultimoIndisp = 0;
-                            let somaReparadas = 0;
-                            
-                            quarterWeeks.forEach(week => {
-                              const weekData = data[psm]?.[week]?.[route];
-                              if (weekData) {
-                                const indisp = parseInt(weekData['Indisponíveis']) || 0;
-                                const rep = parseInt(weekData['Total Reparadas']) || 0;
-                                if (indisp > 0) ultimoIndisp = indisp;
-                                somaReparadas += rep;
-                              }
-                            });
-                            
-                            indisponiveis += ultimoIndisp;
-                            reparadas += somaReparadas;
-                          });
-                          
-                          const efetividade = indisponiveis > 0 ? (reparadas / indisponiveis * 100) : 0;
-                          return {
-                            provincia: psm,
-                            indisponiveis,
-                            indisponiveisOriginal: indisponiveis,
-                            reparadas,
-                            efetividade,
-                            efetividadeGlobal: efetividade,
-                            efetividadePSM: efetividade
-                          };
-                        });
-                      } else {
-                        // Modo PSM: calcular por província
-                        const provincias = selectedProvince !== 'Todas' 
-                          ? [selectedProvince] 
-                          : operatorToProvinces[selectedOperator];
-                        
-                        entidadesDados = provincias.map(prov => {
-                          const rotas = routesByPSM[selectedOperator].filter(r => routeToProvince[r] === prov);
-                          let indisponiveis = 0;
-                          let reparadas = 0;
-                          
-                          rotas.forEach(rota => {
-                            let ultimoIndisp = 0;
-                            let totalRep = 0;
-                            
-                            quarterWeeks.forEach(week => {
-                              const weekData = data[selectedOperator]?.[week]?.[rota];
-                              if (weekData) {
-                                const indisp = parseInt(weekData['Indisponíveis']) || 0;
-                                const rep = parseInt(weekData['Total Reparadas']) || 0;
-                                if (indisp > 0) ultimoIndisp = indisp;
-                                totalRep += rep;
-                              }
-                            });
-                            
-                            indisponiveis += ultimoIndisp;
-                            reparadas += totalRep;
-                          });
-                          
-                          const efetividade = indisponiveis > 0 ? (reparadas / indisponiveis * 100) : 0;
-                          return {
-                            provincia: prov,
-                            indisponiveis,
-                            indisponiveisOriginal: indisponiveis,
-                            reparadas,
-                            efetividade,
-                            efetividadeGlobal: efetividade,
-                            efetividadePSM: efetividade
-                          };
-                        });
-                      }
-                      
-                      const totalIndisp = entidadesDados.reduce((sum, p) => sum + p.indisponiveis, 0);
-                      const maisProdutiva = entidadesDados.reduce((max, p) => p.reparadas > max.reparadas ? p : max, entidadesDados[0] || {});
-                      const maisEfetiva = entidadesDados.reduce((max, p) => {
-                        const efetAtual = efetividadeMode === 'psm' ? p.efetividadePSM : p.efetividadeGlobal;
-                        const efetMax = efetividadeMode === 'psm' ? max.efetividadePSM : max.efetividadeGlobal;
-                        return efetAtual > efetMax ? p : max;
-                      }, entidadesDados[0] || {});
-                      const emAlerta = entidadesDados.reduce((min, p) => {
-                        const efetAtual = efetividadeMode === 'psm' ? p.efetividadePSM : p.efetividadeGlobal;
-                        const efetMin = efetividadeMode === 'psm' ? min.efetividadePSM : min.efetividadeGlobal;
-                        return (efetAtual < efetMin && p.indisponiveisOriginal > 0) ? p : min;
-                      }, entidadesDados[0] || {});
-                      
-                      // RENDERIZAR OS 4 CARDS COM GRÁFICOS
-                      return (
-                        <>
-                          {/* CARD 1: Pizza */}
-                          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-3 border border-blue-200">
-                            <h4 className="text-xs font-semibold text-blue-900 mb-2">Peso Indisponibilidade</h4>
-                            {totalIndisp > 0 && (
-                              <div className="flex flex-col items-center">
-                                <svg width="100" height="100">
-                                  {(() => {
-                                    let angle = 0;
-                                    const colors = ['#f97316', '#10b981', '#3b82f6', '#8b5cf6'];
-                                    return entidadesDados.filter(p => p.indisponiveis > 0).map((prov, idx) => {
-                                      const pct = (prov.indisponiveis / totalIndisp) * 100;
-                                      const a = (pct / 100) * 360;
-                                      const start = angle - 90;
-                                      const end = (angle + a) - 90;
-                                      angle += a;
-                                      const x1 = 50 + 40 * Math.cos(start * Math.PI / 180);
-                                      const y1 = 50 + 40 * Math.sin(start * Math.PI / 180);
-                                      const x2 = 50 + 40 * Math.cos(end * Math.PI / 180);
-                                      const y2 = 50 + 40 * Math.sin(end * Math.PI / 180);
-                                      return <path key={idx} d={`M50 50 L${x1} ${y1} A40 40 0 ${a>180?1:0} 1 ${x2} ${y2}Z`} fill={colors[idx%4]}/>;
-                                    });
-                                  })()}
-                                  <circle cx="50" cy="50" r="20" fill="white"/>
-                                  <text x="50" y="55" textAnchor="middle" className="text-sm font-bold fill-gray-700">{totalIndisp}</text>
-                                </svg>
-                                {entidadesDados.filter(p => p.indisponiveis > 0).slice(0,3).map((p, i) => (
-                                  <div key={i} className="text-[9px] w-full flex justify-between">
-                                    <span>{p.provincia}</span><span className="font-bold">{((p.indisponiveis/totalIndisp)*100).toFixed(1)}%</span>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                          
-                          {/* CARD 2: Mais Produtiva */}
-                          <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-3 border border-green-200">
-                            <h4 className="text-xs font-semibold text-green-900 mb-2">Mais Produtiva</h4>
-                            <p className="text-2xl font-bold text-green-700 text-center">{maisProdutiva?.provincia}</p>
-                            <p className="text-xl font-bold text-green-600 text-center">{maisProdutiva?.reparadas}</p>
-                            <p className="text-[9px] text-center">fibras em {selectedQuarter}</p>
-                          </div>
-                          
-                          {/* CARD 3: Efetividade */}
-                          <div onClick={() => setEfetividadeMode(efetividadeMode==='global'?'psm':'global')} className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-3 border border-purple-200 cursor-pointer">
-                            <h4 className="text-xs font-semibold text-purple-900 mb-2">Efetividade {efetividadeMode==='psm'?'PSM':'Global'}</h4>
-                            <svg width="100" height="60" className="mx-auto">
-                              {(() => {
-                                const e = efetividadeMode==='psm' ? maisEfetiva?.efetividadePSM||0 : maisEfetiva?.efetividadeGlobal||0;
-                                const a = (e/100)*180;
-                                const r = ((180-a)*Math.PI)/180;
-                                return (
-                                  <>
-                                    <path d="M15 50A35 35 0 0185 50" fill="none" stroke="#e5e7eb" strokeWidth="6"/>
-                                    <path d="M15 50A35 35 0 0185 50" fill="none" stroke="#10b981" strokeWidth="6" strokeDasharray={`${(e/100)*110} 110`}/>
-                                    <line x1="50" y1="50" x2={50+30*Math.cos(r)} y2={50+30*Math.sin(r)} stroke="#7c3aed" strokeWidth="2"/>
-                                  </>
-                                );
-                              })()}
-                            </svg>
-                            <p className="text-2xl font-bold text-purple-700 text-center">{((efetividadeMode==='psm'?maisEfetiva?.efetividadePSM:maisEfetiva?.efetividadeGlobal)||0).toFixed(1)}%</p>
-                            <p className="text-[8px] text-center text-purple-600">🔄 Clique para alternar</p>
-                          </div>
-                          
-                          {/* CARD 4: Precisa Atenção */}
-                          <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-lg p-3 border border-red-200">
-                            <h4 className="text-xs font-semibold text-red-900 mb-2">Precisa Atenção</h4>
-                            <p className="text-2xl font-bold text-red-700 text-center">{emAlerta?.provincia}</p>
-                            <div className="flex justify-around text-[10px] mt-2">
-                              <div><p className="font-bold text-red-600">{emAlerta?.indisponiveisOriginal||0}</p><p>Indisp</p></div>
-                              <div><p className="font-bold text-green-600">{emAlerta?.reparadas||0}</p><p>Rep</p></div>
-                            </div>
-                            <p className="text-xs text-center text-red-600 font-bold mt-1">Efet: {((efetividadeMode==='psm'?emAlerta?.efetividadePSM:emAlerta?.efetividadeGlobal)||0).toFixed(1)}%</p>
-                          </div>
-                        </>
-                      );
-                    })()}
+                    {/* Card: Peso de Indisponibilidade */}
+                    <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
+                          <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M10 2a8 8 0 100 16 8 8 0 000-16zM9 9a1 1 0 012 0v4a1 1 0 11-2 0V9zm1-5a1 1 0 100 2 1 1 0 000-2z"/>
+                          </svg>
+                        </div>
+                        <h4 className="text-sm font-semibold text-blue-900">Peso de Indisponibilidade por Província</h4>
+                      </div>
+                      <p className="text-xs text-gray-600">Sem dados</p>
+                    </div>
+
+                    {/* Card: Mais Produtiva */}
+                    <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-4 border border-green-200">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
+                          <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                          </svg>
+                        </div>
+                        <h4 className="text-sm font-semibold text-green-900">Mais Produtiva</h4>
+                      </div>
+                      <p className="text-2xl font-bold text-green-700">Zaire</p>
+                      <p className="text-xs text-gray-600">0 fibras reparadas em Q3</p>
+                    </div>
+
+                    {/* Card: Efetividade Global - CLICÁVEL PARA ALTERNAR */}
+                    <div 
+                      onClick={() => setEfetividadeMode(efetividadeMode === 'global' ? 'psm' : 'global')}
+                      className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-4 border border-purple-200 cursor-pointer hover:shadow-lg transition-shadow"
+                      title="Clique para alternar entre Global e PSM"
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center">
+                          <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M2 10a8 8 0 018-8v8h8a8 8 0 11-16 0z"/>
+                            <path d="M12 2.252A8.014 8.014 0 0117.748 8H12V2.252z"/>
+                          </svg>
+                        </div>
+                        <h4 className="text-sm font-semibold text-purple-900">
+                          Efetividade {efetividadeMode === 'psm' ? 'PSM' : 'Global'}
+                        </h4>
+                      </div>
+                      <div className="flex items-center justify-center">
+                        <div className="text-4xl font-bold text-purple-700">0.0%</div>
+                      </div>
+                      <p className="text-xs text-center text-gray-600 mt-1">Média {selectedOperator}</p>
+                      <p className="text-[10px] text-center text-purple-600 mt-1">🔄 Clique para alternar</p>
+                    </div>
+
+                    {/* Card: Precisa Atenção */}
+                    <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-lg p-4 border border-red-200">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-8 h-8 bg-red-500 rounded-lg flex items-center justify-center">
+                          <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd"/>
+                          </svg>
+                        </div>
+                        <h4 className="text-sm font-semibold text-red-900">Precisa Atenção</h4>
+                      </div>
+                      <p className="text-2xl font-bold text-red-700">Zaire</p>
+                      <div className="flex items-center justify-between mt-1">
+                        <span className="text-xs font-semibold text-red-600">0 Indisponíveis</span>
+                        <span className="text-xs font-semibold text-green-600">0 Reparadas</span>
+                      </div>
+                      <p className="text-xs text-center text-red-600 font-semibold mt-1">Efetividade: 0.0%</p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -5257,9 +5177,10 @@ const PSMMonitorApp = () => {
                         return `Transporte Q3 (${parseInt(selectedYear) - 1})`;
                       } else if (selectedQuarter === 'Q2') {
                         return `Transporte Q1`;
-                      } else {
+                      } else if (selectedQuarter === 'Q3') {
                         return `Transporte Q2`;
                       }
+                      return `Transporte Q1`;
                     })(), 
                     bg:'from-slate-700 to-slate-900', 
                     icon:'🔄'
@@ -5463,7 +5384,7 @@ const PSMMonitorApp = () => {
                             ></div>
                           </div>
                           
-                          {/* v4.95.0: Barra VERDE de reparadas com NÚMERO (sem semana) */}
+                          {/* v5.02.0: Barra VERDE de reparadas com NÚMERO (sem semana) */}
                           {reparadas > 0 ? (
                             <>
                               <div className="flex items-center justify-between mb-0.5">
@@ -5695,7 +5616,7 @@ const PSMMonitorApp = () => {
                 <BarChart3 className="w-8 h-8 text-purple-600" />
                 <div>
                   <h1 className="text-2xl font-bold text-gray-800">Performance Clean Up Advanced</h1>
-                  <p className="text-xs text-gray-500">v4.95.0 - Sem Semana Rep! 🎨✨</p>
+                  <p className="text-xs text-gray-500">v5.02.0 - Sem Semana Rep! 🎨✨</p>
                 </div>
               </div>
               {/* Indicador de Salvamento */}
@@ -10167,7 +10088,7 @@ Gerado por: PSM Monitor v3.42.03
                         <tr className="bg-yellow-100 border-b-2 border-yellow-300">
                           <th className="px-2 py-1.5 text-left text-xs font-bold text-gray-800 border-r border-yellow-200 sticky left-0 bg-yellow-100 z-30">Secção</th>
                           <th className="px-2 py-1.5 text-center text-xs font-bold text-gray-800 border-r border-yellow-200">Região</th>
-                          <th className="px-2 py-1.5 text-center text-xs font-bold text-gray-800 border-r border-yellow-200 bg-slate-100">Transp. Q2</th>
+                          <th className="px-2 py-1.5 text-center text-xs font-bold text-gray-800 border-r border-yellow-200 bg-slate-100">Transp. {quarterAnterior.label}</th>
                           <th className="px-2 py-1.5 text-center text-xs font-bold text-gray-800 border-r border-yellow-200 bg-red-100">Indisp.</th>
                           <th className="px-2 py-1.5 text-center text-xs font-bold text-gray-800 border-r border-yellow-200">Delta</th>
                           <th className="px-2 py-1.5 text-left text-xs font-bold text-gray-800">Justificativa</th>
