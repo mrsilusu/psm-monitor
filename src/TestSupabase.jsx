@@ -5,7 +5,16 @@ function TestSupabase() {
   const [status, setStatus] = useState('🔄 Testando conexão...');
   const [dados, setDados] = useState(null);
   const [erro, setErro] = useState(null);
-
+function TestSupabase() {
+  // DEBUG: Ver variáveis
+  console.log('🔍 DEBUG VARIÁVEIS:');
+  console.log('URL:', process.env.REACT_APP_SUPABASE_URL);
+  console.log('KEY:', process.env.REACT_APP_SUPABASE_ANON_KEY ? 'Existe ✅' : 'Não existe ❌');
+  console.log('NODE_ENV:', process.env.NODE_ENV);
+  console.log('Todas as env:', Object.keys(process.env).filter(k => k.startsWith('REACT_APP')));
+  
+  const [status, setStatus] = useState('loading');
+  // resto do código...
   useEffect(() => {
     const testarConexao = async () => {
       try {
