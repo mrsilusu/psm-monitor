@@ -17,15 +17,15 @@ function TestSupabase() {
         console.log('🧪 [TESTE SUPABASE] Iniciando...');
         
         // Verificar variáveis de ambiente
-        const url = process.env.REACT_APP_SUPABASE_URL;
-        const key = process.env.REACT_APP_SUPABASE_ANON_KEY;
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+        const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
         
         console.log('🌐 [TESTE] URL definida:', url ? '✅' : '❌', url);
         console.log('🔑 [TESTE] Key definida:', key ? '✅' : '❌');
         console.log('📦 [TESTE] NODE_ENV:', process.env.NODE_ENV);
-        console.log('📋 [TESTE] Todas REACT_APP_*:', 
-          Object.keys(process.env).filter(k => k.startsWith('REACT_APP'))
-        );
+        console.log('📋 [TESTE] Todas VITE_*:', 
+  Object.keys(import.meta.env).filter(k => k.startsWith('VITE_'))
+);
         
         if (!url || !key) {
           throw new Error('Variáveis de ambiente não configuradas no Vercel. Vá em Settings → Environment Variables e marque ✅ Preview para ambas as variáveis.');
@@ -47,8 +47,8 @@ function TestSupabase() {
         setStatus('error');
         setMessage(error.message);
         setDetails({
-          url: process.env.REACT_APP_SUPABASE_URL ? '✅' : '❌',
-          key: process.env.REACT_APP_SUPABASE_ANON_KEY ? '✅' : '❌',
+          url: import.meta.env.VITE_SUPABASE_URL ? '✅' : '❌',
+          key: import.meta.env.VITE_SUPABASE_ANON_KEY ? '✅' : '❌',
           ambiente: process.env.NODE_ENV || 'development'
         });
       }
