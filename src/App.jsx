@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { BarChart3, TrendingUp, Users, AlertTriangle, CheckCircle, XCircle, Clock, MapPin, TrendingDown, Home, Upload, FileJson, Download, Calendar, BarChart, FileText, Menu, PieChart, DownloadCloud, Trash2, AlertCircle } from 'lucide-react';
+import TestEnv from './TestEnv';
 import TestSupabase from './TestSupabase';
 const PSMMonitorApp = () => {
   console.log("🚀 PSM Monitor v5.02.0 - LÓGICA Q1→Q3 CORRETA! ✅");
@@ -5114,6 +5115,7 @@ const PSMMonitorApp = () => {
         }
       `}</style>
       <TestSupabase />
+       <TestEnv />
       {/* v3.49.24: Banner de Aviso Mobile */}
       {isMobileDevice && showMobileWarning && (
         <div className="fixed top-0 left-0 right-0 z-[60] bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-2xl animate-slideDown">
