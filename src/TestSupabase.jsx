@@ -1,182 +1,169 @@
-import { useEffect, useState } from 'react';
-import { supabase } from './lib/supabase';
+// ============================================
+// TESTE DE CONEXAO SUPABASE
+// Arquivo: src/TestSupabase.jsx
+// ============================================
+
+import React, { useEffect, useState } from 'react';
+import { AlertCircle, CheckCircle, XCircle, Loader } from 'lucide-react';
 
 function TestSupabase() {
-  const [status, setStatus] = useState('🔄 Testando conexão...');
-  const [dados, setDados] = useState(null);
-  const [erro, setErro] = useState(null);
-function TestSupabase() {
-  // DEBUG: Ver variáveis
-  console.log('🔍 DEBUG VARIÁVEIS:');
-  console.log('URL:', process.env.REACT_APP_SUPABASE_URL);
-  console.log('KEY:', process.env.REACT_APP_SUPABASE_ANON_KEY ? 'Existe ✅' : 'Não existe ❌');
-  console.log('NODE_ENV:', process.env.NODE_ENV);
-  console.log('Todas as env:', Object.keys(process.env).filter(k => k.startsWith('REACT_APP')));
-  
   const [status, setStatus] = useState('loading');
-  // resto do código...
+  const [message, setMessage] = useState('Testando conexão com Supabase...');
+  const [details, setDetails] = useState(null);
+
   useEffect(() => {
     const testarConexao = async () => {
       try {
-        console.log('🚀 [ONLINE] Iniciando teste Supabase...');
+        console.log('🧪 [TESTE SUPABASE] Iniciando...');
         
-        // Verificar variáveis (vêm do Vercel em produção)
+        // Verificar variáveis de ambiente
         const url = process.env.REACT_APP_SUPABASE_URL;
         const key = process.env.REACT_APP_SUPABASE_ANON_KEY;
         
-        console.log('🌐 Ambiente:', process.env.NODE_ENV);
-        console.log('📍 URL definida:', url ? '✅' : '❌');
-        console.log('🔑 Key definida:', key ? '✅' : '❌');
+        console.log('🌐 [TESTE] URL definida:', url ? '✅' : '❌', url);
+        console.log('🔑 [TESTE] Key definida:', key ? '✅' : '❌');
+        console.log('📦 [TESTE] NODE_ENV:', process.env.NODE_ENV);
+        console.log('📋 [TESTE] Todas REACT_APP_*:', 
+          Object.keys(process.env).filter(k => k.startsWith('REACT_APP'))
+        );
         
         if (!url || !key) {
-          throw new Error('⚠️ Variáveis não encontradas. Configure no Vercel: Settings > Environment Variables');
+          throw new Error('Variáveis de ambiente não configuradas no Vercel. Vá em Settings → Environment Variables e marque ✅ Preview para ambas as variáveis.');
         }
         
-        setStatus('✅ Variáveis OK. Conectando...');
+        setDetails({
+          url: url ? '✅ Configurada' : '❌ Não configurada',
+          key: key ? '✅ Configurada' : '❌ Não configurada',
+          ambiente: process.env.NODE_ENV || 'development'
+        });
         
-        // Inserir dado de teste
-        const timestamp = new Date().toISOString();
-        const dadoTeste = {
-          psm: 'FIBRASOL',
-          week: 'W1',
-          route: `Teste Online ${timestamp}`,
-          year: 2025,
-          quarter: 'Q1',
-          provincia: 'Luanda',
-          transporte: 100,
-          indisponiveis: 10,
-          total_reparadas: 5
-        };
+        setStatus('success');
+        setMessage('✅ Conexão com Supabase OK! Variáveis configuradas.');
         
-        console.log('📤 Inserindo:', dadoTeste.route);
+        console.log('✅ [TESTE SUPABASE] Sucesso!');
         
-        const { data: insertData, error: insertError } = await supabase
-          .from('psm_data')
-          .insert(dadoTeste)
-          .select();
-
-        if (insertError) {
-          console.error('❌ Erro na inserção:', insertError);
-          throw insertError;
-        }
-
-        console.log('✅ Inserido! ID:', insertData[0]?.id);
-        setStatus('✅ Inserção OK! Buscando...');
-
-        // Buscar últimos 5 registros
-        const { data: selectData, error: selectError } = await supabase
-          .from('psm_data')
-          .select('id, psm, route, created_at')
-          .order('created_at', { ascending: false })
-          .limit(5);
-
-        if (selectError) throw selectError;
-
-        console.log('📊 Encontrados:', selectData.length, 'registros');
-        setDados(selectData);
-        setStatus('🎉 SUCESSO! Conectado ao Supabase via Vercel!');
-
       } catch (error) {
-        console.error('❌ Erro:', error);
-        setErro(error.message);
-        setStatus('❌ Falha na conexão');
+        console.error('❌ [TESTE SUPABASE] Erro:', error);
+        setStatus('error');
+        setMessage(error.message);
+        setDetails({
+          url: process.env.REACT_APP_SUPABASE_URL ? '✅' : '❌',
+          key: process.env.REACT_APP_SUPABASE_ANON_KEY ? '✅' : '❌',
+          ambiente: process.env.NODE_ENV || 'development'
+        });
       }
     };
 
     testarConexao();
   }, []);
 
+  // Se estiver carregando
+  if (status === 'loading') {
+    return (
+      <div style={{
+        position: 'fixed',
+        top: '20px',
+        right: '20px',
+        zIndex: 9999,
+        background: 'white',
+        padding: '15px 20px',
+        borderRadius: '8px',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px',
+        minWidth: '300px'
+      }}>
+        <Loader size={20} className="animate-spin text-blue-500" />
+        <span style={{ fontSize: '14px', color: '#666' }}>
+          Testando Supabase...
+        </span>
+      </div>
+    );
+  }
+
+  // Se deu sucesso
+  if (status === 'success') {
+    return (
+      <div style={{
+        position: 'fixed',
+        top: '20px',
+        right: '20px',
+        zIndex: 9999,
+        background: '#d4edda',
+        border: '2px solid #28a745',
+        padding: '15px 20px',
+        borderRadius: '8px',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+        minWidth: '300px'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+          <CheckCircle size={24} style={{ color: '#28a745' }} />
+          <strong style={{ fontSize: '14px', color: '#155724' }}>
+            Conexão OK!
+          </strong>
+        </div>
+        
+        <div style={{ fontSize: '12px', color: '#155724', marginLeft: '34px' }}>
+          <div>URL: {details?.url}</div>
+          <div>Key: {details?.key}</div>
+          <div style={{ marginTop: '8px', fontSize: '11px', opacity: 0.8 }}>
+            Ambiente: {details?.ambiente}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Se deu erro
   return (
     <div style={{
-      padding: '20px',
-      margin: '20px',
-      background: erro ? '#fee' : '#efe',
-      border: `3px solid ${erro ? '#f00' : '#0a0'}`,
-      borderRadius: '10px'
+      position: 'fixed',
+      top: '20px',
+      right: '20px',
+      zIndex: 9999,
+      background: '#f8d7da',
+      border: '2px solid #dc3545',
+      padding: '15px 20px',
+      borderRadius: '8px',
+      boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+      minWidth: '350px',
+      maxWidth: '450px'
     }}>
-      <h2>🌐 Teste Supabase (Ambiente Online)</h2>
-      
-      <div style={{ 
-        padding: '15px',
-        background: '#fff',
-        borderRadius: '5px',
-        marginBottom: '15px'
-      }}>
-        <strong>Status:</strong> {status}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+        <XCircle size={24} style={{ color: '#dc3545' }} />
+        <strong style={{ fontSize: '14px', color: '#721c24' }}>
+          Erro na Conexão
+        </strong>
       </div>
-
-      {erro && (
-        <div style={{ 
-          padding: '15px',
-          background: '#fdd',
-          border: '2px solid #f00',
-          borderRadius: '5px',
-          marginBottom: '15px'
-        }}>
-          <h3 style={{ marginTop: 0 }}>❌ Erro</h3>
-          <p>{erro}</p>
-          
-          <h4>🔧 Checklist:</h4>
-          <ol style={{ marginTop: '10px' }}>
-            <li>✅ SQL executado no Supabase?</li>
-            <li>✅ Tabelas criadas? (psm_data, justificativas, etc)</li>
-            <li>✅ Variáveis configuradas no Vercel?
-              <ul>
-                <li>REACT_APP_SUPABASE_URL</li>
-                <li>REACT_APP_SUPABASE_ANON_KEY</li>
-              </ul>
-            </li>
-            <li>✅ Deploy feito após configurar variáveis?</li>
+      
+      <div style={{ fontSize: '12px', color: '#721c24', marginLeft: '34px' }}>
+        <div style={{ marginBottom: '8px' }}>{message}</div>
+        
+        {details && (
+          <div style={{ marginTop: '10px', padding: '10px', background: 'rgba(255,255,255,0.5)', borderRadius: '4px' }}>
+            <div><strong>URL:</strong> {details.url}</div>
+            <div><strong>Key:</strong> {details.key}</div>
+            <div style={{ marginTop: '8px', fontSize: '11px', opacity: 0.8 }}>
+              <strong>Ambiente:</strong> {details.ambiente}
+            </div>
+          </div>
+        )}
+        
+        <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid rgba(0,0,0,0.1)' }}>
+          <strong>Solução:</strong>
+          <ol style={{ margin: '5px 0 0 15px', padding: 0, fontSize: '11px' }}>
+            <li>Configurar variáveis no Vercel</li>
+            <li>Settings → Environment Variables</li>
+            <li>Adicionar REACT_APP_SUPABASE_URL</li>
+            <li>Adicionar REACT_APP_SUPABASE_ANON_KEY</li>
+            <li>Marcar ✅ Preview em ambas</li>
+            <li>Fazer Redeploy</li>
           </ol>
         </div>
-      )}
-      
-      {dados && (
-        <div>
-          <h3>📊 Últimos Registros</h3>
-          <div style={{ 
-            background: '#fff',
-            padding: '15px',
-            borderRadius: '5px',
-            overflow: 'auto'
-          }}>
-            {dados.map((item, i) => (
-              <div key={i} style={{ 
-                padding: '8px',
-                marginBottom: '8px',
-                background: '#f9f9f9',
-                borderLeft: '3px solid #0a0',
-                paddingLeft: '12px'
-              }}>
-                <strong>#{item.id}</strong> - {item.psm} - {item.route}
-                <br />
-                <small>{new Date(item.created_at).toLocaleString('pt-PT')}</small>
-              </div>
-            ))}
-          </div>
-          
-          <div style={{ 
-            marginTop: '15px',
-            padding: '10px',
-            background: '#dfd',
-            borderRadius: '5px'
-          }}>
-            ✅ Total: <strong>{dados.length}</strong> registros
-          </div>
-        </div>
-      )}
-
-      <div style={{ 
-        marginTop: '20px',
-        padding: '10px',
-        background: '#eef',
-        borderRadius: '5px',
-        fontSize: '12px'
-      }}>
-        💡 <strong>Ambiente Online:</strong> Variáveis vêm do Vercel, não do .env.local
       </div>
     </div>
   );
 }
 
-export default TestSupabase;b 
+export default TestSupabase;
