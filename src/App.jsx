@@ -1546,7 +1546,9 @@ const PSMMonitorApp = () => {
             data,
             selectedQuarter,
             anoAtual,
-            routeToProvince
+            routeToProvince,
+            rotasTestadas,  
+            rotasValidadas  
           );
           
           if (resultado.success) {
@@ -5163,7 +5165,7 @@ const PSMMonitorApp = () => {
           animation: fadeIn 0.2s ease-out;
         }
       `}</style>
-      
+    
        
       {/* v3.49.24: Banner de Aviso Mobile */}
       {isMobileDevice && showMobileWarning && (
