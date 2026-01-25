@@ -13,28 +13,28 @@ function TestSupabase() {
 
   useEffect(() => {
     const testarConexao = async () => {
+      // Definir variáveis NO INÍCIO, fora do try
+      const url = import.meta.env.VITE_SUPABASE_URL;
+      const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      
       try {
         console.log('🧪 [TESTE SUPABASE] Iniciando...');
-        
-        // Verificar variáveis de ambiente
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-        const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
-        
         console.log('🌐 [TESTE] URL definida:', url ? '✅' : '❌', url);
         console.log('🔑 [TESTE] Key definida:', key ? '✅' : '❌');
-        console.log('📦 [TESTE] NODE_ENV:', process.env.NODE_ENV);
+        console.log('📦 [TESTE] MODE:', import.meta.env.MODE);
         console.log('📋 [TESTE] Todas VITE_*:', 
-  Object.keys(import.meta.env).filter(k => k.startsWith('VITE_'))
-);
+          Object.keys(import.meta.env).filter(k => k.startsWith('VITE_'))
+        );
         
         if (!url || !key) {
-          throw new Error('Variáveis de ambiente não configuradas no Vercel. Vá em Settings → Environment Variables e marque ✅ Preview para ambas as variáveis.');
+          throw new Error('Variáveis de ambiente não configuradas. Verifique VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY.');
         }
         
         setDetails({
-          url: url ? '✅ Configurada' : '❌ Não configurada',
-          key: key ? '✅ Configurada' : '❌ Não configurada',
-          ambiente: process.env.NODE_ENV || 'development'
+          url: '✅ Configurada',
+          key: '✅ Configurada',
+          urlValue: url,
+          ambiente: import.meta.env.MODE || 'development'
         });
         
         setStatus('success');
@@ -47,9 +47,10 @@ function TestSupabase() {
         setStatus('error');
         setMessage(error.message);
         setDetails({
-          url: import.meta.env.VITE_SUPABASE_URL ? '✅' : '❌',
-          key: import.meta.env.VITE_SUPABASE_ANON_KEY ? '✅' : '❌',
-          ambiente: process.env.NODE_ENV || 'development'
+          url: url ? '✅ Configurada' : '❌ Não configurada',
+          key: key ? '✅ Configurada' : '❌ Não configurada',
+          urlValue: url || 'undefined',
+          ambiente: import.meta.env.MODE || 'development'
         });
       }
     };
@@ -95,7 +96,7 @@ function TestSupabase() {
         padding: '15px 20px',
         borderRadius: '8px',
         boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-        minWidth: '300px'
+        minWidth: '350px'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
           <CheckCircle size={24} style={{ color: '#28a745' }} />
@@ -105,10 +106,13 @@ function TestSupabase() {
         </div>
         
         <div style={{ fontSize: '12px', color: '#155724', marginLeft: '34px' }}>
-          <div>URL: {details?.url}</div>
-          <div>Key: {details?.key}</div>
+          <div><strong>URL:</strong> {details?.url}</div>
+          <div style={{ fontSize: '10px', opacity: 0.7, marginTop: '2px' }}>
+            {details?.urlValue}
+          </div>
+          <div style={{ marginTop: '5px' }}><strong>Key:</strong> {details?.key}</div>
           <div style={{ marginTop: '8px', fontSize: '11px', opacity: 0.8 }}>
-            Ambiente: {details?.ambiente}
+            <strong>Ambiente:</strong> {details?.ambiente}
           </div>
         </div>
       </div>
@@ -143,7 +147,10 @@ function TestSupabase() {
         {details && (
           <div style={{ marginTop: '10px', padding: '10px', background: 'rgba(255,255,255,0.5)', borderRadius: '4px' }}>
             <div><strong>URL:</strong> {details.url}</div>
-            <div><strong>Key:</strong> {details.key}</div>
+            <div style={{ fontSize: '10px', opacity: 0.7, marginTop: '2px' }}>
+              {details.urlValue}
+            </div>
+            <div style={{ marginTop: '5px' }}><strong>Key:</strong> {details.key}</div>
             <div style={{ marginTop: '8px', fontSize: '11px', opacity: 0.8 }}>
               <strong>Ambiente:</strong> {details.ambiente}
             </div>
@@ -153,11 +160,8 @@ function TestSupabase() {
         <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid rgba(0,0,0,0.1)' }}>
           <strong>Solução:</strong>
           <ol style={{ margin: '5px 0 0 15px', padding: 0, fontSize: '11px' }}>
-            <li>Configurar variáveis no Vercel</li>
-            <li>Settings → Environment Variables</li>
-            <li>Adicionar REACT_APP_SUPABASE_URL</li>
-            <li>Adicionar REACT_APP_SUPABASE_ANON_KEY</li>
-            <li>Marcar ✅ Preview em ambas</li>
+            <li>Criar .env.production com as variáveis</li>
+            <li>Ou configurar no Vercel Dashboard</li>
             <li>Fazer Redeploy</li>
           </ol>
         </div>
