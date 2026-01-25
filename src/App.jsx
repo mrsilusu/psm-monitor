@@ -3,7 +3,6 @@ import { BarChart3, TrendingUp, Users, AlertTriangle, CheckCircle, XCircle, Cloc
 
 import { lerTudoDoSupabase, salvarTudoNoSupabase } from './services/supabaseService';
 
-import TestSupabase from './TestSupabase';
 const PSMMonitorApp = () => {
   console.log("🚀 PSM Monitor v5.02.0 - LÓGICA Q1→Q3 CORRETA! ✅");
   
@@ -5164,7 +5163,7 @@ const PSMMonitorApp = () => {
           animation: fadeIn 0.2s ease-out;
         }
       `}</style>
-      <TestSupabase />
+      
        
       {/* v3.49.24: Banner de Aviso Mobile */}
       {isMobileDevice && showMobileWarning && (

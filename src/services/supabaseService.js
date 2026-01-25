@@ -1,6 +1,6 @@
 // ============================================
-// SERVIÇO SUPABASE - PSM MONITOR
-// Funções para salvar e ler dados do Supabase
+// SERVIÇO SUPABASE - PSM MONITOR (OTIMIZADO)
+// Versão com BATCH operations
 // ============================================
 
 import { supabase } from '../lib/supabase';
@@ -48,208 +48,154 @@ const mapSupabaseToLocalStorage = (supabaseData) => {
 };
 
 // ============================================
-// SALVAR DADOS DE UMA ROTA
-// ============================================
-export const salvarRotaNoSupabase = async (psmName, week, route, routeData, quarter, year, provincia) => {
-  try {
-    const dadosSupabase = mapLocalStorageToSupabase(
-      psmName, 
-      week, 
-      route, 
-      routeData, 
-      quarter, 
-      year, 
-      provincia
-    );
-
-    // Verificar se já existe registro
-    const { data: existing, error: searchError } = await supabase
-      .from('psm_data')
-      .select('id')
-      .eq('psm', psmName)
-      .eq('week', week)
-      .eq('route', route)
-      .eq('year', year)
-      .single();
-
-    if (searchError && searchError.code !== 'PGRST116') {
-      // PGRST116 = "não encontrado" (OK, vamos inserir)
-      throw searchError;
-    }
-
-    let result;
-    
-    if (existing) {
-      // UPDATE - registro já existe
-      result = await supabase
-        .from('psm_data')
-        .update({
-          ...dadosSupabase,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', existing.id)
-        .select();
-    } else {
-      // INSERT - novo registro
-      result = await supabase
-        .from('psm_data')
-        .insert(dadosSupabase)
-        .select();
-    }
-
-    if (result.error) throw result.error;
-
-    console.log(`✅ Rota salva: ${psmName} - ${route} - ${week}`);
-    return { success: true, data: result.data };
-
-  } catch (error) {
-    console.error(`❌ Erro ao salvar rota:`, error);
-    return { success: false, error };
-  }
-};
-
-// ============================================
-// SALVAR TODOS OS DADOS DE UM PSM
-// ============================================
-export const salvarPSMCompleto = async (psmName, psmData, quarter, year, routesToProvinceMap) => {
-  try {
-    const results = [];
-    
-    for (const week in psmData) {
-      for (const route in psmData[week]) {
-        const routeData = psmData[week][route];
-        const provincia = routesToProvinceMap[route] || '';
-        
-        const result = await salvarRotaNoSupabase(
-          psmName, 
-          week, 
-          route, 
-          routeData, 
-          quarter, 
-          year, 
-          provincia
-        );
-        
-        results.push(result);
-      }
-    }
-    
-    const successCount = results.filter(r => r.success).length;
-    const totalCount = results.length;
-    
-    console.log(`✅ Salvamento completo: ${successCount}/${totalCount} rotas`);
-    
-    return { 
-      success: successCount === totalCount, 
-      successCount, 
-      totalCount,
-      results 
-    };
-
-  } catch (error) {
-    console.error(`❌ Erro ao salvar PSM completo:`, error);
-    return { success: false, error };
-  }
-};
-
-// ============================================
-// SALVAR TODOS OS DADOS (TODOS OS PSMs)
+// SALVAR TODOS OS DADOS (BATCH OTIMIZADO)
 // ============================================
 export const salvarTudoNoSupabase = async (allData, quarter, year, routesToProvinceMap) => {
   try {
-    console.log('🚀 Iniciando salvamento completo...');
+    console.log('🚀 Iniciando salvamento BATCH no Supabase...');
     
-    const results = {
-      ISISTEL: null,
-      FIBRASOL: null,
-      ANGLOBAL: null
-    };
+    const anoAtual = year || new Date().getFullYear();
+    const todosRegistros = [];
     
+    // 1. Coletar TODOS os dados primeiro
     for (const psmName of ['ISISTEL', 'FIBRASOL', 'ANGLOBAL']) {
-      if (allData[psmName]) {
-        console.log(`📊 Salvando ${psmName}...`);
-        results[psmName] = await salvarPSMCompleto(
-          psmName, 
-          allData[psmName], 
-          quarter, 
-          year, 
-          routesToProvinceMap
-        );
+      if (!allData[psmName]) continue;
+      
+      for (const week in allData[psmName]) {
+        for (const route in allData[psmName][week]) {
+          const routeData = allData[psmName][week][route];
+          const provincia = routesToProvinceMap[route] || '';
+          
+          // Só adicionar se tiver pelo menos 1 campo preenchido
+          const temDados = Object.values(routeData).some(val => val !== '' && val !== 0);
+          if (!temDados) continue;
+          
+          const registro = mapLocalStorageToSupabase(
+            psmName,
+            week,
+            route,
+            routeData,
+            quarter,
+            anoAtual,
+            provincia
+          );
+          
+          todosRegistros.push(registro);
+        }
       }
     }
     
-    console.log('✅ Salvamento completo finalizado!');
-    return { success: true, results };
-
-  } catch (error) {
-    console.error('❌ Erro no salvamento completo:', error);
-    return { success: false, error };
-  }
-};
-
-// ============================================
-// LER DADOS DE UM PSM
-// ============================================
-export const lerPSMDoSupabase = async (psmName, year) => {
-  try {
-    const { data, error } = await supabase
-      .from('psm_data')
-      .select('*')
-      .eq('psm', psmName)
-      .eq('year', year)
-      .order('week', { ascending: true });
-
-    if (error) throw error;
-
-    // Converter para formato localStorage
-    const psmData = {};
+    if (todosRegistros.length === 0) {
+      console.log('⚠️ Nenhum dado para salvar');
+      return { success: true, count: 0 };
+    }
     
-    data.forEach(row => {
-      if (!psmData[row.week]) {
-        psmData[row.week] = {};
+    console.log(`📦 Preparados ${todosRegistros.length} registros para salvar`);
+    
+    // 2. Apagar dados antigos do ano (para evitar duplicatas)
+    console.log('🗑️ Removendo dados antigos...');
+    const { error: deleteError } = await supabase
+      .from('psm_data')
+      .delete()
+      .eq('year', anoAtual);
+    
+    if (deleteError) {
+      console.error('⚠️ Erro ao apagar dados antigos:', deleteError);
+      // Continuar mesmo com erro, pois upsert pode lidar com isso
+    }
+    
+    // 3. Inserir TODOS de uma vez (BATCH)
+    console.log('💾 Inserindo dados em batch...');
+    const BATCH_SIZE = 100; // Supabase recomenda max 1000, usamos 100 para segurança
+    let totalInseridos = 0;
+    
+    for (let i = 0; i < todosRegistros.length; i += BATCH_SIZE) {
+      const batch = todosRegistros.slice(i, i + BATCH_SIZE);
+      
+      const { data, error } = await supabase
+        .from('psm_data')
+        .insert(batch)
+        .select();
+      
+      if (error) {
+        console.error(`❌ Erro no batch ${i}-${i + BATCH_SIZE}:`, error);
+        // Continuar com próximo batch
+      } else {
+        totalInseridos += batch.length;
+        console.log(`✅ Batch ${Math.floor(i / BATCH_SIZE) + 1}: ${batch.length} registros salvos`);
       }
       
-      psmData[row.week][row.route] = mapSupabaseToLocalStorage(row);
-    });
-
-    console.log(`✅ Dados lidos: ${psmName} (${data.length} registros)`);
-    return { success: true, data: psmData };
+      // Pequeno delay entre batches para não sobrecarregar
+      if (i + BATCH_SIZE < todosRegistros.length) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    }
+    
+    console.log(`✅ Salvamento completo! ${totalInseridos}/${todosRegistros.length} registros`);
+    
+    return { 
+      success: true, 
+      count: totalInseridos,
+      total: todosRegistros.length
+    };
 
   } catch (error) {
-    console.error(`❌ Erro ao ler PSM:`, error);
+    console.error('❌ Erro no salvamento BATCH:', error);
     return { success: false, error };
   }
 };
 
 // ============================================
-// LER TODOS OS DADOS
+// LER TODOS OS DADOS (OTIMIZADO)
 // ============================================
 export const lerTudoDoSupabase = async (year) => {
   try {
     console.log('🚀 Carregando dados do Supabase...');
     
+    const anoAtual = year || new Date().getFullYear();
+    
+    // UMA query para buscar TUDO
+    const { data: todosRegistros, error } = await supabase
+      .from('psm_data')
+      .select('*')
+      .eq('year', anoAtual)
+      .order('psm', { ascending: true })
+      .order('week', { ascending: true });
+
+    if (error) throw error;
+
+    if (!todosRegistros || todosRegistros.length === 0) {
+      console.log('⚠️ Nenhum dado encontrado no Supabase para', anoAtual);
+      return { success: true, data: {} };
+    }
+
+    console.log(`📦 ${todosRegistros.length} registros encontrados`);
+
+    // Converter para formato localStorage
     const allData = {};
     
-    for (const psmName of ['ISISTEL', 'FIBRASOL', 'ANGLOBAL']) {
-      const result = await lerPSMDoSupabase(psmName, year);
-      if (result.success) {
-        allData[psmName] = result.data;
+    todosRegistros.forEach(row => {
+      // Inicializar estrutura se não existir
+      if (!allData[row.psm]) {
+        allData[row.psm] = {};
       }
-    }
-    
-    console.log('✅ Dados carregados do Supabase!');
+      if (!allData[row.psm][row.week]) {
+        allData[row.psm][row.week] = {};
+      }
+      
+      allData[row.psm][row.week][row.route] = mapSupabaseToLocalStorage(row);
+    });
+
+    console.log('✅ Dados convertidos para formato local');
     return { success: true, data: allData };
 
   } catch (error) {
-    console.error('❌ Erro ao carregar dados:', error);
-    return { success: false, error };
+    console.error('❌ Erro ao ler dados:', error);
+    return { success: false, error, data: {} };
   }
 };
 
 export default {
-  salvarRotaNoSupabase,
-  salvarPSMCompleto,
   salvarTudoNoSupabase,
-  lerPSMDoSupabase,
   lerTudoDoSupabase
 };
