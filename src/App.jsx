@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { BarChart3, TrendingUp, Users, AlertTriangle, CheckCircle, XCircle, Clock, MapPin, TrendingDown, Home, Upload, FileJson, Download, Calendar, BarChart, FileText, Menu, PieChart, DownloadCloud, Trash2, AlertCircle } from 'lucide-react';
 
+import { lerTudoDoSupabase, salvarTudoNoSupabase } from './services/supabaseService';
+
 import TestSupabase from './TestSupabase';
 const PSMMonitorApp = () => {
   console.log("🚀 PSM Monitor v5.02.0 - LÓGICA Q1→Q3 CORRETA! ✅");
@@ -350,6 +352,29 @@ const PSMMonitorApp = () => {
 
     return initialData;
   });
+
+// ============================================================================
+  // CARREGAR DADOS DO SUPABASE AO INICIAR
+  // ============================================================================
+  useEffect(() => {
+    const carregarDadosDoSupabase = async () => {
+      console.log('🔄 Carregando dados do Supabase...');
+      
+      const anoAtual = new Date().getFullYear();
+      const resultado = await lerTudoDoSupabase(anoAtual);
+      
+      if (resultado.success && resultado.data && Object.keys(resultado.data).length > 0) {
+        console.log('✅ Dados carregados do Supabase!', resultado.data);
+        setData(resultado.data);
+      } else {
+        console.log('⚠️ Sem dados no Supabase ou erro ao carregar');
+        // Mantém dados do localStorage que já foram carregados no useState
+      }
+    };
+    
+    // Executar carregamento
+    carregarDadosDoSupabase();
+  }, []); // Executar apenas uma vez ao montar
 
   // ESTADO: JUSTIFICATIVAS
   // Estrutura: { 'PSM_Rota': { seccao, regiao, transporteQ2, indisponiveis, delta, justificativa } }
@@ -1502,15 +1527,37 @@ const PSMMonitorApp = () => {
   // FASE 8: PERSISTÊNCIA AUTOMÁTICA COM useEffect
   // ============================================================================
 
-  // useEffect #1: Salvar estado 'data' no localStorage automaticamente
+  // useEffect #1: Salvar estado 'data' no localStorage E SUPABASE automaticamente
+  // useEffect #1: Salvar estado 'data' no localStorage E SUPABASE automaticamente
   useEffect(() => {
     if (Object.keys(data).length > 0) {
       setSaveStatus('saving');
       
       try {
+        // 1. Salvar no localStorage (backup local + rápido)
         window.localStorage.setItem('psm_rotas_data_v3', JSON.stringify(data));
         
-        // Feedback visual de sucesso
+        // 2. Salvar no Supabase (compartilhado, com debounce)
+        clearTimeout(window.salvarSupabaseTimeout);
+        window.salvarSupabaseTimeout = setTimeout(async () => {
+          console.log('💾 Salvando no Supabase...');
+          
+          const anoAtual = new Date().getFullYear();
+          const resultado = await salvarTudoNoSupabase(
+            data,
+            selectedQuarter,
+            anoAtual,
+            routeToProvince
+          );
+          
+          if (resultado.success) {
+            console.log('✅ Dados salvos no Supabase!');
+          } else {
+            console.error('❌ Erro ao salvar no Supabase:', resultado.error);
+          }
+        }, 5000); // Espera 5 segundos sem mudanças antes de salvar
+        
+        // Feedback visual de sucesso (localStorage)
         setSaveStatus('saved');
         setLastSaveTime(new Date());
         
@@ -1519,7 +1566,10 @@ const PSMMonitorApp = () => {
           setSaveStatus('');
         }, 2000);
         
-        return () => clearTimeout(timer);
+        return () => {
+          clearTimeout(timer);
+          clearTimeout(window.salvarSupabaseTimeout);
+        };
       } catch (error) {
         console.error('Erro ao salvar dados:', error);
         setSaveStatus('error');
@@ -1532,7 +1582,7 @@ const PSMMonitorApp = () => {
         return () => clearTimeout(timer);
       }
     }
-  }, [data]); // Executar sempre que 'data' mudar
+  }, [data, selectedQuarter]); // Adicionar selectedQuarter como dependência
 
   // useEffect #2: Salvar estado 'justificativas' no localStorage automaticamente
   useEffect(() => {
