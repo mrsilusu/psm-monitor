@@ -8,7 +8,7 @@ import { supabase } from '../lib/supabase';
 // ============================================
 // MAPEAR CAMPOS localStorage → Supabase
 // ============================================
-const mapLocalStorageToSupabase = (psmName, week, route, routeData, quarter, year, provincia) => {
+const mapLocalStorageToSupabase = (psmName, week, route, routeData, quarter, year, provincia, rotasTestadas, rotasValidadas) => {
   return {
     psm: psmName,
     week: week,
@@ -26,6 +26,8 @@ const mapLocalStorageToSupabase = (psmName, week, route, routeData, quarter, yea
     dep_isistel: parseInt(routeData['Fibras dependentes da ISISTEL']) || 0,
     dep_fibrasol: parseInt(routeData['Fibras dependentes da FIBRASOL']) || 0,
     dep_anglobal: parseInt(routeData['Fibras dependentes da ANGLOBAL']) || 0,
+    testada: rotasTestadas?.[psmName]?.[week]?.[route]?.testada === true,
+    validada: rotasValidadas?.[psmName]?.[week]?.[route]?.validada === true,
   };
 };
 
@@ -50,7 +52,7 @@ const mapSupabaseToLocalStorage = (supabaseData) => {
 // ============================================
 // SALVAR TODOS OS DADOS (BATCH OTIMIZADO)
 // ============================================
-export const salvarTudoNoSupabase = async (allData, quarter, year, routesToProvinceMap) => {
+export const salvarTudoNoSupabase = async (allData, quarter, year, routesToProvinceMap, rotasTestadas, rotasValidadas) =>  {
   try {
     console.log('🚀 Iniciando salvamento BATCH no Supabase...');
     
@@ -77,7 +79,9 @@ export const salvarTudoNoSupabase = async (allData, quarter, year, routesToProvi
             routeData,
             quarter,
             anoAtual,
-            provincia
+            provincia,
+            rotasTestadas,  
+            rotasValidadas  
           );
           
           todosRegistros.push(registro);
