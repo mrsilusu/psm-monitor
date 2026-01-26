@@ -399,15 +399,39 @@ const PSMMonitorApp = () => {
   const [showMobileWarning, setShowMobileWarning] = useState(true);
   
   // Estados para os filtros e menu
-  const [selectedOperator, setSelectedOperator] = useState('FIBRASOL');
-  const [selectedWeek, setSelectedWeek] = useState('W50');
-  const [selectedQuarter, setSelectedQuarter] = useState('Q3');
+  const [selectedOperator, setSelectedOperator] = useState(() => {
+  return localStorage.getItem('psm_selectedOperator') || 'FIBRASOL';
+  });
+
+  const [selectedWeek, setSelectedWeek] = useState(() => {
+  return localStorage.getItem('psm_selectedWeek') || 'W1';
+});
+  const [selectedQuarter, setSelectedQuarter] = useState(() => {
+  return localStorage.getItem('psm_selectedQuarter') || 'Q1';
+  });
   const [selectedYear, setSelectedYear] = useState('2025');
   const [menuOpen, setMenuOpen] = useState(false);
   
   // Estados para modo apresentação
-  const [presentationMode, setPresentationMode] = useState(false);
+ 
   const [currentSlide, setCurrentSlide] = useState(0);
+
+    // useEffects para salvar 
+useEffect(() => {
+  localStorage.setItem('psm_selectedOperator', selectedOperator);
+}, [selectedOperator]);
+
+useEffect(() => {
+  localStorage.setItem('psm_selectedWeek', selectedWeek);
+}, [selectedWeek]);
+
+useEffect(() => {
+  localStorage.setItem('psm_selectedQuarter', selectedQuarter);
+}, [selectedQuarter]);
+
+useEffect(() => {
+  localStorage.setItem('psm_selectedYear', selectedYear.toString());
+}, [selectedYear]);
   
   // v3.40.27: Estados para sino de alertas
   const [alertasAbertos, setAlertasAbertos] = useState(false);
