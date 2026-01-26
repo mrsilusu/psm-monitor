@@ -405,18 +405,20 @@ const PSMMonitorApp = () => {
 
   const [selectedWeek, setSelectedWeek] = useState(() => {
   return localStorage.getItem('psm_selectedWeek') || 'W1';
-});
+  });
   const [selectedQuarter, setSelectedQuarter] = useState(() => {
   return localStorage.getItem('psm_selectedQuarter') || 'Q1';
   });
-  const [selectedYear, setSelectedYear] = useState('2025');
+  const [selectedYear, setSelectedYear] = useState(() => {
+  return parseInt(localStorage.getItem('psm_selectedYear')) || new Date().getFullYear();
+  });
   const [menuOpen, setMenuOpen] = useState(false);
   
   // Estados para modo apresentação
  
   const [currentSlide, setCurrentSlide] = useState(0);
 
-    // useEffects para salvar 
+    //  useEffects para salvar filtros no localStorage 
 useEffect(() => {
   localStorage.setItem('psm_selectedOperator', selectedOperator);
 }, [selectedOperator]);
@@ -430,7 +432,7 @@ useEffect(() => {
 }, [selectedQuarter]);
 
 useEffect(() => {
-  localStorage.setItem('psm_selectedYear', selectedYear.toString());
+  localStorage.setItem('psm_selectedYear', String(selectedYear));
 }, [selectedYear]);
   
   // v3.40.27: Estados para sino de alertas
