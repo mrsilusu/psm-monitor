@@ -1583,7 +1583,7 @@ const PSMMonitorApp = () => {
         return () => clearTimeout(timer);
       }
     }
-  }, [data, selectedQuarter]); // Adicionar selectedQuarter como dependência
+  }, [data, selectedQuarter, rotasTestadas, rotasValidadas]); // Adicionar selectedQuarter como dependência
 
   // useEffect #2: Salvar estado 'justificativas' no localStorage automaticamente
   useEffect(() => {
