@@ -415,8 +415,9 @@ const PSMMonitorApp = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   
   // Estados para modo apresentação
- 
+  const [presentationMode, setPresentationMode] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
+
 
     //  useEffects para salvar filtros no localStorage 
 useEffect(() => {
