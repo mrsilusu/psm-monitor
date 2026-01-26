@@ -52,7 +52,7 @@ const mapSupabaseToLocalStorage = (supabaseData) => {
 // ============================================
 // SALVAR TODOS OS DADOS (BATCH OTIMIZADO)
 // ============================================
-export const salvarTudoNoSupabase = async (allData, quarter, year, routesToProvinceMap, rotasTestadas, rotasValidadas) =>  {
+export const salvarTudoNoSupabase = async (allData, quarter, year, routesToProvinceMap, rotasTestadas, rotasValidadas) => {
   try {
     console.log('🚀 Iniciando salvamento BATCH no Supabase...');
     
@@ -80,8 +80,8 @@ export const salvarTudoNoSupabase = async (allData, quarter, year, routesToProvi
             quarter,
             anoAtual,
             provincia,
-            rotasTestadas,  
-            rotasValidadas  
+            rotasTestadas,
+            rotasValidadas
           );
           
           todosRegistros.push(registro);
@@ -96,50 +96,42 @@ export const salvarTudoNoSupabase = async (allData, quarter, year, routesToProvi
     
     console.log(`📦 Preparados ${todosRegistros.length} registros para salvar`);
     
-    // 2. Apagar dados antigos do ano (para evitar duplicatas)
-    console.log('🗑️ Removendo dados antigos...');
-    const { error: deleteError } = await supabase
-      .from('psm_data')
-      .delete()
-      .eq('year', anoAtual);
-    
-    if (deleteError) {
-      console.error('⚠️ Erro ao apagar dados antigos:', deleteError);
-      // Continuar mesmo com erro, pois upsert pode lidar com isso
-    }
-    
-    // 3. Inserir TODOS de uma vez (BATCH)
-    console.log('💾 Inserindo dados em batch...');
-    const BATCH_SIZE = 100; // Supabase recomenda max 1000, usamos 100 para segurança
-    let totalInseridos = 0;
+    // 2. UPSERT em batches (não apaga, só atualiza/insere)
+    console.log('💾 Salvando dados em batch com UPSERT...');
+    const BATCH_SIZE = 100;
+    let totalSalvos = 0;
     
     for (let i = 0; i < todosRegistros.length; i += BATCH_SIZE) {
       const batch = todosRegistros.slice(i, i + BATCH_SIZE);
       
+      // UPSERT: atualiza se existir (psm+week+route+year), insere se não
       const { data, error } = await supabase
         .from('psm_data')
-        .insert(batch)
+        .upsert(batch, {
+          onConflict: 'psm,week,route,year',
+          ignoreDuplicates: false
+        })
         .select();
       
       if (error) {
         console.error(`❌ Erro no batch ${i}-${i + BATCH_SIZE}:`, error);
         // Continuar com próximo batch
       } else {
-        totalInseridos += batch.length;
+        totalSalvos += batch.length;
         console.log(`✅ Batch ${Math.floor(i / BATCH_SIZE) + 1}: ${batch.length} registros salvos`);
       }
       
-      // Pequeno delay entre batches para não sobrecarregar
+      // Pequeno delay entre batches
       if (i + BATCH_SIZE < todosRegistros.length) {
         await new Promise(resolve => setTimeout(resolve, 100));
       }
     }
     
-    console.log(`✅ Salvamento completo! ${totalInseridos}/${todosRegistros.length} registros`);
+    console.log(`✅ Salvamento completo! ${totalSalvos}/${todosRegistros.length} registros`);
     
     return { 
       success: true, 
-      count: totalInseridos,
+      count: totalSalvos,
       total: todosRegistros.length
     };
 
