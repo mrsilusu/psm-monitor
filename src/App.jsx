@@ -355,6 +355,8 @@ const PSMMonitorApp = () => {
 // ============================================================================
   // CARREGAR DADOS DO SUPABASE AO INICIAR
   // ============================================================================
+ 
+
   useEffect(() => {
     const carregarDadosDoSupabase = async () => {
       console.log('🔄 Carregando dados do Supabase...');
@@ -365,6 +367,17 @@ const PSMMonitorApp = () => {
       if (resultado.success && resultado.data && Object.keys(resultado.data).length > 0) {
         console.log('✅ Dados carregados do Supabase!', resultado.data);
         setData(resultado.data);
+        
+        // ✅ CORREÇÃO: Carregar também os estados de teste e validação
+        if (resultado.rotasTestadas && Object.keys(resultado.rotasTestadas).length > 0) {
+          console.log('✅ Rotas testadas carregadas do Supabase:', resultado.rotasTestadas);
+          setRotasTestadas(resultado.rotasTestadas);
+        }
+        
+        if (resultado.rotasValidadas && Object.keys(resultado.rotasValidadas).length > 0) {
+          console.log('✅ Rotas validadas carregadas do Supabase:', resultado.rotasValidadas);
+          setRotasValidadas(resultado.rotasValidadas);
+        }
       } else {
         console.log('⚠️ Sem dados no Supabase ou erro ao carregar');
         // Mantém dados do localStorage que já foram carregados no useState
@@ -374,6 +387,8 @@ const PSMMonitorApp = () => {
     // Executar carregamento
     carregarDadosDoSupabase();
   }, []); // Executar apenas uma vez ao montar
+
+ 
 
   // ESTADO: JUSTIFICATIVAS
   // Estrutura: { 'PSM_Rota': { seccao, regiao, transporteQ2, indisponiveis, delta, justificativa } }
