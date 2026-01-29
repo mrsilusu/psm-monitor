@@ -306,10 +306,10 @@ const PSMMonitorApp = () => {
       'Saurimo - Dala',
       'Saurimo - Lucapa',
       'Saurimo(Br_Muconda) - Muconda',
+      'Saurimo Norte -- IEIA',
       'Saurimo_CRT - IEIA',
       'Saurimo_Norte - Neto',
       'Stº António - Saurimo_sul',
-      'Terra_Nova - Saurimo_CRT',
       'Terra_Nova - Saurimo_CRT',
       'Zorro - Br_Capango_Sul'
     ]
