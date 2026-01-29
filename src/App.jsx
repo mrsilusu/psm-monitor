@@ -5052,7 +5052,7 @@ useEffect(() => {
               onClick={() => setShowStatusDrilldown(false)}
             >
               <div 
-                className="bg-white rounded-lg shadow-2xl w-full max-w-4xl max-h-[50vh] overflow-hidden flex flex-col"
+                className="bg-white rounded-lg shadow-2xl w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-3 py-2 flex justify-between items-center">
