@@ -218,7 +218,6 @@ export const salvarTudoNoSupabase = async (allData, quarter, year, routesToProvi
             }
           }
         }
-    }
     
     console.log(`📦 Para atualizar: ${paraAtualizar.length}`);
     console.log(`📦 Para inserir: ${paraInserir.length}`);
