@@ -36,16 +36,16 @@ const mapLocalStorageToSupabase = (psmName, week, route, routeData, quarter, yea
 // ============================================
 const mapSupabaseToLocalStorage = (supabaseData) => {
   return {
-    'Transporte': supabaseData.transporte,
-    'Indisponíveis': supabaseData.indisponiveis,
-    'Total Reparadas': supabaseData.total_reparadas,
-    'Reconhecidas': supabaseData.reconhecidas,
-    'Dep. de Passagem de Cabo': supabaseData.dep_passagem,
-    'Dep. de Licença': supabaseData.dep_licenca,
-    'Dep. de Cutover': supabaseData.dep_cutover,
-    'Fibras dependentes da ISISTEL': supabaseData.dep_isistel,
-    'Fibras dependentes da FIBRASOL': supabaseData.dep_fibrasol,
-    'Fibras dependentes da ANGLOBAL': supabaseData.dep_anglobal,
+    'Transporte': supabaseData.transporte || 0,
+    'Indisponíveis': supabaseData.indisponiveis || 0,
+    'Total Reparadas': supabaseData.total_reparadas || 0,
+    'Reconhecidas': supabaseData.reconhecidas || 0,
+    'Dep. de Passagem de Cabo': supabaseData.dep_passagem || 0,
+    'Dep. de Licença': supabaseData.dep_licenca || 0,
+    'Dep. de Cutover': supabaseData.dep_cutover || 0,
+    'Fibras dependentes da ISISTEL': supabaseData.dep_isistel || 0,
+    'Fibras dependentes da FIBRASOL': supabaseData.dep_fibrasol || 0,
+    'Fibras dependentes da ANGLOBAL': supabaseData.dep_anglobal || 0,
   };
 };
 
@@ -84,22 +84,79 @@ export const salvarTudoNoSupabase = async (allData, quarter, year, routesToProvi
     const paraAtualizar = [];
     const paraInserir = [];
     
+    // ✅ CORREÇÃO: Criar um Set de todas as rotas que precisam ser processadas
+    // Inclui rotas de allData + rotas testadas + rotas validadas
+    const rotasParaProcessar = new Map(); // chave: "PSM|WEEK|ROUTE", valor: { psm, week, route }
+    
+    // Adicionar rotas de allData
     for (const psmName of ['ISISTEL', 'FIBRASOL', 'ANGLOBAL']) {
-      if (!allData[psmName]) continue;
+      if (allData[psmName]) {
+        for (const week in allData[psmName]) {
+          for (const route in allData[psmName][week]) {
+            const chave = `${psmName}|${week}|${route}`;
+            rotasParaProcessar.set(chave, { psm: psmName, week, route });
+          }
+        }
+      }
+    }
+    
+    // ✅ Adicionar rotas marcadas como TESTADAS (mesmo sem dados numéricos)
+    if (rotasTestadas) {
+      for (const psmName in rotasTestadas) {
+        for (const week in rotasTestadas[psmName]) {
+          for (const route in rotasTestadas[psmName][week]) {
+            if (rotasTestadas[psmName][week][route]?.testada === true) {
+              const chave = `${psmName}|${week}|${route}`;
+              if (!rotasParaProcessar.has(chave)) {
+                rotasParaProcessar.set(chave, { psm: psmName, week, route });
+                console.log(`📌 Adicionando rota TESTADA sem dados: ${chave}`);
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    // ✅ Adicionar rotas marcadas como VALIDADAS (mesmo sem dados numéricos)
+    if (rotasValidadas) {
+      for (const psmName in rotasValidadas) {
+        for (const week in rotasValidadas[psmName]) {
+          for (const route in rotasValidadas[psmName][week]) {
+            if (rotasValidadas[psmName][week][route]?.validada === true) {
+              const chave = `${psmName}|${week}|${route}`;
+              if (!rotasParaProcessar.has(chave)) {
+                rotasParaProcessar.set(chave, { psm: psmName, week, route });
+                console.log(`📌 Adicionando rota VALIDADA sem dados: ${chave}`);
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    console.log(`📊 Total de rotas para processar: ${rotasParaProcessar.size}`);
+    
+    // 3. Processar todas as rotas (com ou sem dados numéricos)
+    for (const [chave, { psm: psmName, week, route }] of rotasParaProcessar) {
+      const routeData = allData[psmName]?.[week]?.[route] || {
+        'Transporte': '',
+        'Indisponíveis': '',
+        'Total Reparadas': '',
+        'Reconhecidas': '',
+        'Dep. de Passagem de Cabo': '',
+        'Dep. de Licença': '',
+        'Dep. de Cutover': '',
+        'Fibras dependentes da ISISTEL': '',
+        'Fibras dependentes da FIBRASOL': '',
+        'Fibras dependentes da ANGLOBAL': ''
+      };
       
-      for (const week in allData[psmName]) {
-        for (const route in allData[psmName][week]) {
-          const routeData = allData[psmName][week][route];
-          const provincia = routesToProvinceMap[route] || '';
+      const provincia = routesToProvinceMap[route] || '';
+      const existente = mapaExistentes[chave];
           
-          // Só processar se tiver dados
-          const temDados = Object.values(routeData).some(val => val !== '' && val !== 0);
-          if (!temDados) continue;
-          
-          const chave = `${psmName}|${week}|${route}`;
-          const existente = mapaExistentes[chave];
-          
-          // Preparar dados base (campos numéricos)
+          // ✅ CORREÇÃO: Converter valores vazios para 0 e processar SEMPRE
+          // Se o registro existe no banco, sempre atualizar (mesmo que seja para zerar)
+          // Se não existe e todos valores são vazios/zero, não criar registro
           const dadosBase = {
             psm: psmName,
             week: week,
@@ -119,8 +176,19 @@ export const salvarTudoNoSupabase = async (allData, quarter, year, routesToProvi
             dep_anglobal: parseInt(routeData['Fibras dependentes da ANGLOBAL']) || 0,
           };
           
+          // Verificar se tem algum valor diferente de zero
+          const temDadosNaoZero = Object.entries(dadosBase).some(([key, val]) => {
+            // Ignorar campos de identificação
+            if (['psm', 'week', 'route', 'year', 'quarter', 'provincia'].includes(key)) return false;
+            return val !== 0;
+          });
+          
+          // ✅ Verificar se a rota foi marcada como testada ou validada
+          const foiTestada = rotasTestadas?.[psmName]?.[week]?.[route]?.testada === true;
+          const foiValidada = rotasValidadas?.[psmName]?.[week]?.[route]?.validada === true;
+          
           if (existente) {
-            // UPDATE: Preservar testada/validada do banco, EXCETO se mudou localmente
+            // ✅ UPDATE: Sempre atualizar registros existentes (mesmo que seja para zerar)
             const testeLocal = rotasTestadas?.[psmName]?.[week]?.[route]?.testada === true;
             const validaLocal = rotasValidadas?.[psmName]?.[week]?.[route]?.validada === true;
             
@@ -133,16 +201,23 @@ export const salvarTudoNoSupabase = async (allData, quarter, year, routesToProvi
               id: existente.id
             });
           } else {
-            // INSERT: Incluir testada/validada dos estados locais
-            paraInserir.push({
-              ...dadosBase,
-              testada: rotasTestadas?.[psmName]?.[week]?.[route]?.testada === true,
-              validada: rotasValidadas?.[psmName]?.[week]?.[route]?.validada === true,
-            });
+            // ✅ INSERT: Criar novo registro se:
+            // 1. Tiver pelo menos um valor numérico diferente de zero, OU
+            // 2. Foi marcada como testada, OU
+            // 3. Foi marcada como validada
+            if (temDadosNaoZero || foiTestada || foiValidada) {
+              paraInserir.push({
+                ...dadosBase,
+                testada: foiTestada,
+                validada: foiValidada,
+              });
+              
+              if (!temDadosNaoZero && (foiTestada || foiValidada)) {
+                console.log(`📌 Criando registro só com teste/validação: ${psmName} | ${week} | ${route}`);
+              }
+            }
           }
         }
-      }
-    }
     
     console.log(`📦 Para atualizar: ${paraAtualizar.length}`);
     console.log(`📦 Para inserir: ${paraInserir.length}`);

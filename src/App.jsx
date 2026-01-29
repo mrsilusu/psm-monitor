@@ -355,6 +355,8 @@ const PSMMonitorApp = () => {
 // ============================================================================
   // CARREGAR DADOS DO SUPABASE AO INICIAR
   // ============================================================================
+ 
+
   useEffect(() => {
     const carregarDadosDoSupabase = async () => {
       console.log('🔄 Carregando dados do Supabase...');
@@ -365,6 +367,17 @@ const PSMMonitorApp = () => {
       if (resultado.success && resultado.data && Object.keys(resultado.data).length > 0) {
         console.log('✅ Dados carregados do Supabase!', resultado.data);
         setData(resultado.data);
+        
+        // ✅ CORREÇÃO: Carregar também os estados de teste e validação
+        if (resultado.rotasTestadas && Object.keys(resultado.rotasTestadas).length > 0) {
+          console.log('✅ Rotas testadas carregadas do Supabase:', resultado.rotasTestadas);
+          setRotasTestadas(resultado.rotasTestadas);
+        }
+        
+        if (resultado.rotasValidadas && Object.keys(resultado.rotasValidadas).length > 0) {
+          console.log('✅ Rotas validadas carregadas do Supabase:', resultado.rotasValidadas);
+          setRotasValidadas(resultado.rotasValidadas);
+        }
       } else {
         console.log('⚠️ Sem dados no Supabase ou erro ao carregar');
         // Mantém dados do localStorage que já foram carregados no useState
@@ -374,6 +387,8 @@ const PSMMonitorApp = () => {
     // Executar carregamento
     carregarDadosDoSupabase();
   }, []); // Executar apenas uma vez ao montar
+
+ 
 
   // ESTADO: JUSTIFICATIVAS
   // Estrutura: { 'PSM_Rota': { seccao, regiao, transporteQ2, indisponiveis, delta, justificativa } }
@@ -5052,7 +5067,7 @@ useEffect(() => {
               onClick={() => setShowStatusDrilldown(false)}
             >
               <div 
-                className="bg-white rounded-lg shadow-2xl w-full max-w-4xl max-h-[50vh] overflow-hidden flex flex-col"
+                className="sticky top-0 z-10 bg-gradient-to-r from-blue-500 to-blue-600 text-white px-3 py-2 flex justify-between items-center"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-3 py-2 flex justify-between items-center">
@@ -5070,7 +5085,7 @@ useEffect(() => {
                   </button>
                 </div>
                 
-                <div className="flex-1 overflow-auto p-2">
+                <div className="flex-1 overflow-y-auto p-4 min-h-0">
                   {currentRotas.length > 0 ? (
                     <div className="grid grid-cols-4 gap-2">
                       {currentRotas.map((rota, idx) => {
@@ -5129,7 +5144,7 @@ useEffect(() => {
                 </div>
                 
                 {totalPages > 1 && (
-                  <div className="px-2 py-2 border-t border-gray-200 flex justify-between items-center">
+                  <div className="sticky bottom-0 z-10 bg-white px-2 py-2 border-t border-gray-200 flex justify-between items-center">
                     <button
                       onClick={() => setCurrentPageDrilldown(Math.max(0, currentPageDrilldown - 1))}
                       disabled={currentPageDrilldown === 0}
