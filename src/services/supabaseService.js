@@ -1,6 +1,6 @@
 // ============================================
 // SERVIÇO SUPABASE - PSM MONITOR (OTIMIZADO)
-// Versão com BATCH operations
+// Versão que preserva testada/validada entre dispositivos
 // ============================================
 
 import { supabase } from '../lib/supabase';
@@ -50,16 +50,40 @@ const mapSupabaseToLocalStorage = (supabaseData) => {
 };
 
 // ============================================
-// SALVAR TODOS OS DADOS (BATCH OTIMIZADO)
+// SALVAR TODOS OS DADOS (OTIMIZADO - PRESERVA TESTADA/VALIDADA)
 // ============================================
-export const salvarTudoNoSupabase = async (allData, quarter, year, routesToProvinceMap, rotasTestadas, rotasValidadas) =>  {
+export const salvarTudoNoSupabase = async (allData, quarter, year, routesToProvinceMap, rotasTestadas, rotasValidadas) => {
   try {
-    console.log('🚀 Iniciando salvamento BATCH no Supabase...');
+    console.log('🚀 Iniciando salvamento OTIMIZADO no Supabase...');
     
     const anoAtual = year || new Date().getFullYear();
-    const todosRegistros = [];
     
-    // 1. Coletar TODOS os dados primeiro
+    // 1. Buscar TODOS os registros existentes do ano de UMA VEZ
+    console.log('📥 Buscando registros existentes...');
+    const { data: registrosExistentes, error: fetchError } = await supabase
+      .from('psm_data')
+      .select('id, psm, week, route, testada, validada')
+      .eq('year', anoAtual);
+    
+    if (fetchError) {
+      console.error('⚠️ Erro ao buscar existentes:', fetchError);
+    }
+    
+    // Criar mapa de registros existentes para lookup rápido
+    const mapaExistentes = {};
+    if (registrosExistentes) {
+      registrosExistentes.forEach(reg => {
+        const chave = `${reg.psm}|${reg.week}|${reg.route}`;
+        mapaExistentes[chave] = reg;
+      });
+    }
+    
+    console.log(`📊 Encontrados ${Object.keys(mapaExistentes).length} registros existentes`);
+    
+    // 2. Preparar lotes de UPDATE e INSERT
+    const paraAtualizar = [];
+    const paraInserir = [];
+    
     for (const psmName of ['ISISTEL', 'FIBRASOL', 'ANGLOBAL']) {
       if (!allData[psmName]) continue;
       
@@ -68,83 +92,129 @@ export const salvarTudoNoSupabase = async (allData, quarter, year, routesToProvi
           const routeData = allData[psmName][week][route];
           const provincia = routesToProvinceMap[route] || '';
           
-          // Só adicionar se tiver pelo menos 1 campo preenchido
+          // Só processar se tiver dados
           const temDados = Object.values(routeData).some(val => val !== '' && val !== 0);
           if (!temDados) continue;
           
-          const registro = mapLocalStorageToSupabase(
-            psmName,
-            week,
-            route,
-            routeData,
-            quarter,
-            anoAtual,
-            provincia,
-            rotasTestadas,  
-            rotasValidadas  
-          );
+          const chave = `${psmName}|${week}|${route}`;
+          const existente = mapaExistentes[chave];
           
-          todosRegistros.push(registro);
+          // Preparar dados base (campos numéricos)
+          const dadosBase = {
+            psm: psmName,
+            week: week,
+            route: route,
+            year: anoAtual,
+            quarter: quarter || 'Q1',
+            provincia: provincia,
+            transporte: parseInt(routeData['Transporte']) || 0,
+            indisponiveis: parseInt(routeData['Indisponíveis']) || 0,
+            total_reparadas: parseInt(routeData['Total Reparadas']) || 0,
+            reconhecidas: parseInt(routeData['Reconhecidas']) || 0,
+            dep_passagem: parseInt(routeData['Dep. de Passagem de Cabo']) || 0,
+            dep_licenca: parseInt(routeData['Dep. de Licença']) || 0,
+            dep_cutover: parseInt(routeData['Dep. de Cutover']) || 0,
+            dep_isistel: parseInt(routeData['Fibras dependentes da ISISTEL']) || 0,
+            dep_fibrasol: parseInt(routeData['Fibras dependentes da FIBRASOL']) || 0,
+            dep_anglobal: parseInt(routeData['Fibras dependentes da ANGLOBAL']) || 0,
+          };
+          
+          if (existente) {
+            // UPDATE: Preservar testada/validada do banco, EXCETO se mudou localmente
+            const testeLocal = rotasTestadas?.[psmName]?.[week]?.[route]?.testada === true;
+            const validaLocal = rotasValidadas?.[psmName]?.[week]?.[route]?.validada === true;
+            
+            // Usar valores locais se existirem, senão preservar do banco
+            dadosBase.testada = testeLocal || existente.testada || false;
+            dadosBase.validada = validaLocal || existente.validada || false;
+            
+            paraAtualizar.push({
+              ...dadosBase,
+              id: existente.id
+            });
+          } else {
+            // INSERT: Incluir testada/validada dos estados locais
+            paraInserir.push({
+              ...dadosBase,
+              testada: rotasTestadas?.[psmName]?.[week]?.[route]?.testada === true,
+              validada: rotasValidadas?.[psmName]?.[week]?.[route]?.validada === true,
+            });
+          }
         }
       }
     }
     
-    if (todosRegistros.length === 0) {
-      console.log('⚠️ Nenhum dado para salvar');
-      return { success: true, count: 0 };
-    }
+    console.log(`📦 Para atualizar: ${paraAtualizar.length}`);
+    console.log(`📦 Para inserir: ${paraInserir.length}`);
     
-    console.log(`📦 Preparados ${todosRegistros.length} registros para salvar`);
-    
-    // 2. Apagar dados antigos do ano (para evitar duplicatas)
-    console.log('🗑️ Removendo dados antigos...');
-    const { error: deleteError } = await supabase
-      .from('psm_data')
-      .delete()
-      .eq('year', anoAtual);
-    
-    if (deleteError) {
-      console.error('⚠️ Erro ao apagar dados antigos:', deleteError);
-      // Continuar mesmo com erro, pois upsert pode lidar com isso
-    }
-    
-    // 3. Inserir TODOS de uma vez (BATCH)
-    console.log('💾 Inserindo dados em batch...');
-    const BATCH_SIZE = 100; // Supabase recomenda max 1000, usamos 100 para segurança
-    let totalInseridos = 0;
-    
-    for (let i = 0; i < todosRegistros.length; i += BATCH_SIZE) {
-      const batch = todosRegistros.slice(i, i + BATCH_SIZE);
+    // 3. Executar UPDATEs em batch
+    let totalAtualizado = 0;
+    if (paraAtualizar.length > 0) {
+      console.log('🔄 Atualizando registros existentes...');
+      const BATCH_SIZE = 50; // Reduzir para evitar timeout
       
-      const { data, error } = await supabase
-        .from('psm_data')
-        .insert(batch)
-        .select();
-      
-      if (error) {
-        console.error(`❌ Erro no batch ${i}-${i + BATCH_SIZE}:`, error);
-        // Continuar com próximo batch
-      } else {
-        totalInseridos += batch.length;
-        console.log(`✅ Batch ${Math.floor(i / BATCH_SIZE) + 1}: ${batch.length} registros salvos`);
-      }
-      
-      // Pequeno delay entre batches para não sobrecarregar
-      if (i + BATCH_SIZE < todosRegistros.length) {
-        await new Promise(resolve => setTimeout(resolve, 100));
+      for (let i = 0; i < paraAtualizar.length; i += BATCH_SIZE) {
+        const batch = paraAtualizar.slice(i, i + BATCH_SIZE);
+        
+        // Atualizar em paralelo (até 10 por vez)
+        const promises = batch.map(registro => {
+          const { id, ...dadosSemId } = registro;
+          return supabase
+            .from('psm_data')
+            .update(dadosSemId)
+            .eq('id', id);
+        });
+        
+        await Promise.all(promises);
+        totalAtualizado += batch.length;
+        
+        console.log(`✅ Atualizados ${Math.min(i + BATCH_SIZE, paraAtualizar.length)}/${paraAtualizar.length}`);
+        
+        // Pequeno delay entre batches
+        if (i + BATCH_SIZE < paraAtualizar.length) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
       }
     }
     
-    console.log(`✅ Salvamento completo! ${totalInseridos}/${todosRegistros.length} registros`);
+    // 4. Executar INSERTs em batch
+    let totalInserido = 0;
+    if (paraInserir.length > 0) {
+      console.log('➕ Inserindo novos registros...');
+      const BATCH_SIZE = 100;
+      
+      for (let i = 0; i < paraInserir.length; i += BATCH_SIZE) {
+        const batch = paraInserir.slice(i, i + BATCH_SIZE);
+        
+        const { data, error } = await supabase
+          .from('psm_data')
+          .insert(batch)
+          .select();
+        
+        if (error) {
+          console.error(`❌ Erro no INSERT batch ${i}:`, error);
+        } else {
+          totalInserido += batch.length;
+          console.log(`✅ Inseridos ${Math.min(i + BATCH_SIZE, paraInserir.length)}/${paraInserir.length}`);
+        }
+        
+        if (i + BATCH_SIZE < paraInserir.length) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      }
+    }
+    
+    console.log(`✅ Salvamento completo! ${totalAtualizado} atualizados, ${totalInserido} inseridos`);
     
     return { 
-      success: true, 
-      count: totalInseridos,
-      total: todosRegistros.length
+      success: true,
+      updated: totalAtualizado,
+      inserted: totalInserido,
+      total: totalAtualizado + totalInserido
     };
 
   } catch (error) {
-    console.error('❌ Erro no salvamento BATCH:', error);
+    console.error('❌ Erro no salvamento:', error);
     return { success: false, error };
   }
 };
@@ -170,32 +240,69 @@ export const lerTudoDoSupabase = async (year) => {
 
     if (!todosRegistros || todosRegistros.length === 0) {
       console.log('⚠️ Nenhum dado encontrado no Supabase para', anoAtual);
-      return { success: true, data: {} };
+      return { success: true, data: {}, rotasTestadas: {}, rotasValidadas: {} };
     }
 
     console.log(`📦 ${todosRegistros.length} registros encontrados`);
 
-    // Converter para formato localStorage
+    // Separar em 3 estruturas
     const allData = {};
+    const rotasTestadas = {};
+    const rotasValidadas = {};
     
     todosRegistros.forEach(row => {
-      // Inicializar estrutura se não existir
+      // Dados principais
       if (!allData[row.psm]) {
         allData[row.psm] = {};
       }
       if (!allData[row.psm][row.week]) {
         allData[row.psm][row.week] = {};
       }
-      
       allData[row.psm][row.week][row.route] = mapSupabaseToLocalStorage(row);
+      
+      // Rotas testadas
+      if (row.testada === true) {
+        if (!rotasTestadas[row.psm]) {
+          rotasTestadas[row.psm] = {};
+        }
+        if (!rotasTestadas[row.psm][row.week]) {
+          rotasTestadas[row.psm][row.week] = {};
+        }
+        rotasTestadas[row.psm][row.week][row.route] = { testada: true };
+      }
+      
+      // Rotas validadas
+      if (row.validada === true) {
+        if (!rotasValidadas[row.psm]) {
+          rotasValidadas[row.psm] = {};
+        }
+        if (!rotasValidadas[row.psm][row.week]) {
+          rotasValidadas[row.psm][row.week] = {};
+        }
+        rotasValidadas[row.psm][row.week][row.route] = { validada: true };
+      }
     });
 
     console.log('✅ Dados convertidos para formato local');
-    return { success: true, data: allData };
+    console.log(`📊 Testadas: ${Object.keys(rotasTestadas).length} PSMs`);
+    console.log(`📊 Validadas: ${Object.keys(rotasValidadas).length} PSMs`);
+    
+    return { 
+      success: true, 
+      data: allData,
+      rotasTestadas: rotasTestadas,
+      rotasValidadas: rotasValidadas
+    };
 
   } catch (error) {
     console.error('❌ Erro ao ler dados:', error);
-    return { success: false, error, data: {} };
+    return { 
+      success: false, 
+      error, 
+      data: {},
+      rotasTestadas: {},
+      rotasValidadas: {}
+    };
   }
 };
 

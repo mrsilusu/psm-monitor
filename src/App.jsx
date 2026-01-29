@@ -306,10 +306,10 @@ const PSMMonitorApp = () => {
       'Saurimo - Dala',
       'Saurimo - Lucapa',
       'Saurimo(Br_Muconda) - Muconda',
+      'Saurimo Norte -- IEIA',
       'Saurimo_CRT - IEIA',
       'Saurimo_Norte - Neto',
       'Stº António - Saurimo_sul',
-      'Terra_Nova - Saurimo_CRT',
       'Terra_Nova - Saurimo_CRT',
       'Zorro - Br_Capango_Sul'
     ]
@@ -399,15 +399,42 @@ const PSMMonitorApp = () => {
   const [showMobileWarning, setShowMobileWarning] = useState(true);
   
   // Estados para os filtros e menu
-  const [selectedOperator, setSelectedOperator] = useState('FIBRASOL');
-  const [selectedWeek, setSelectedWeek] = useState('W50');
-  const [selectedQuarter, setSelectedQuarter] = useState('Q3');
-  const [selectedYear, setSelectedYear] = useState('2025');
+  const [selectedOperator, setSelectedOperator] = useState(() => {
+  return localStorage.getItem('psm_selectedOperator') || 'FIBRASOL';
+  });
+
+  const [selectedWeek, setSelectedWeek] = useState(() => {
+  return localStorage.getItem('psm_selectedWeek') || 'W1';
+  });
+  const [selectedQuarter, setSelectedQuarter] = useState(() => {
+  return localStorage.getItem('psm_selectedQuarter') || 'Q1';
+  });
+  const [selectedYear, setSelectedYear] = useState(() => {
+  return parseInt(localStorage.getItem('psm_selectedYear')) || new Date().getFullYear();
+  });
   const [menuOpen, setMenuOpen] = useState(false);
   
   // Estados para modo apresentação
   const [presentationMode, setPresentationMode] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
+
+
+    //  useEffects para salvar filtros no localStorage 
+useEffect(() => {
+  localStorage.setItem('psm_selectedOperator', selectedOperator);
+}, [selectedOperator]);
+
+useEffect(() => {
+  localStorage.setItem('psm_selectedWeek', selectedWeek);
+}, [selectedWeek]);
+
+useEffect(() => {
+  localStorage.setItem('psm_selectedQuarter', selectedQuarter);
+}, [selectedQuarter]);
+
+useEffect(() => {
+  localStorage.setItem('psm_selectedYear', String(selectedYear));
+}, [selectedYear]);
   
   // v3.40.27: Estados para sino de alertas
   const [alertasAbertos, setAlertasAbertos] = useState(false);
@@ -1583,7 +1610,7 @@ const PSMMonitorApp = () => {
         return () => clearTimeout(timer);
       }
     }
-  }, [data, selectedQuarter]); // Adicionar selectedQuarter como dependência
+  }, [data, selectedQuarter, rotasTestadas, rotasValidadas]); // Adicionar selectedQuarter como dependência
 
   // useEffect #2: Salvar estado 'justificativas' no localStorage automaticamente
   useEffect(() => {
