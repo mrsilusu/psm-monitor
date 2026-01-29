@@ -96,10 +96,10 @@ export const salvarTudoNoSupabase = async (allData, quarter, year, routesToProvi
           const temDados = Object.values(routeData).some(val => val !== '' && val !== 0);
           if (!temDados) continue;
           
-          const chave = `${psmName}|${week}|${route}`;
-          const existente = mapaExistentes[chave];
-          
-          // Preparar dados base (campos numéricos)
+            const chave = `${psmName}|${week}|${route}`;
+            const existente = mapaExistentes[chave];
+
+          // Preparar dados base
           const dadosBase = {
             psm: psmName,
             week: week,
@@ -118,13 +118,12 @@ export const salvarTudoNoSupabase = async (allData, quarter, year, routesToProvi
             dep_fibrasol: parseInt(routeData['Fibras dependentes da FIBRASOL']) || 0,
             dep_anglobal: parseInt(routeData['Fibras dependentes da ANGLOBAL']) || 0,
           };
-          
+
           if (existente) {
-            // UPDATE: Preservar testada/validada do banco, EXCETO se mudou localmente
+            // ✅ UPDATE: SEMPRE atualizar (mesmo vazios → zero)
             const testeLocal = rotasTestadas?.[psmName]?.[week]?.[route]?.testada === true;
             const validaLocal = rotasValidadas?.[psmName]?.[week]?.[route]?.validada === true;
             
-            // Usar valores locais se existirem, senão preservar do banco
             dadosBase.testada = testeLocal || existente.testada || false;
             dadosBase.validada = validaLocal || existente.validada || false;
             
@@ -133,12 +132,17 @@ export const salvarTudoNoSupabase = async (allData, quarter, year, routesToProvi
               id: existente.id
             });
           } else {
-            // INSERT: Incluir testada/validada dos estados locais
-            paraInserir.push({
-              ...dadosBase,
-              testada: rotasTestadas?.[psmName]?.[week]?.[route]?.testada === true,
-              validada: rotasValidadas?.[psmName]?.[week]?.[route]?.validada === true,
-            });
+            // ✅ INSERT: Só se tiver algo
+            const temAlgumValor = Object.values(routeData).some(val => val !== '');
+            const temTestada = rotasTestadas?.[psmName]?.[week]?.[route]?.testada === true;
+            const temValidada = rotasValidadas?.[psmName]?.[week]?.[route]?.validada === true;
+            
+            if (temAlgumValor || temTestada || temValidada) {
+              paraInserir.push({
+                ...dadosBase,
+                testada: temTestada,
+                validada: temValidada,
+              });
           }
         }
       }
