@@ -84,16 +84,75 @@ export const salvarTudoNoSupabase = async (allData, quarter, year, routesToProvi
     const paraAtualizar = [];
     const paraInserir = [];
     
+    // ✅ CORREÇÃO: Criar um Set de todas as rotas que precisam ser processadas
+    // Inclui rotas de allData + rotas testadas + rotas validadas
+    const rotasParaProcessar = new Map(); // chave: "PSM|WEEK|ROUTE", valor: { psm, week, route }
+    
+    // Adicionar rotas de allData
     for (const psmName of ['ISISTEL', 'FIBRASOL', 'ANGLOBAL']) {
-      if (!allData[psmName]) continue;
+      if (allData[psmName]) {
+        for (const week in allData[psmName]) {
+          for (const route in allData[psmName][week]) {
+            const chave = `${psmName}|${week}|${route}`;
+            rotasParaProcessar.set(chave, { psm: psmName, week, route });
+          }
+        }
+      }
+    }
+    
+    // ✅ Adicionar rotas marcadas como TESTADAS (mesmo sem dados numéricos)
+    if (rotasTestadas) {
+      for (const psmName in rotasTestadas) {
+        for (const week in rotasTestadas[psmName]) {
+          for (const route in rotasTestadas[psmName][week]) {
+            if (rotasTestadas[psmName][week][route]?.testada === true) {
+              const chave = `${psmName}|${week}|${route}`;
+              if (!rotasParaProcessar.has(chave)) {
+                rotasParaProcessar.set(chave, { psm: psmName, week, route });
+                console.log(`📌 Adicionando rota TESTADA sem dados: ${chave}`);
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    // ✅ Adicionar rotas marcadas como VALIDADAS (mesmo sem dados numéricos)
+    if (rotasValidadas) {
+      for (const psmName in rotasValidadas) {
+        for (const week in rotasValidadas[psmName]) {
+          for (const route in rotasValidadas[psmName][week]) {
+            if (rotasValidadas[psmName][week][route]?.validada === true) {
+              const chave = `${psmName}|${week}|${route}`;
+              if (!rotasParaProcessar.has(chave)) {
+                rotasParaProcessar.set(chave, { psm: psmName, week, route });
+                console.log(`📌 Adicionando rota VALIDADA sem dados: ${chave}`);
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    console.log(`📊 Total de rotas para processar: ${rotasParaProcessar.size}`);
+    
+    // 3. Processar todas as rotas (com ou sem dados numéricos)
+    for (const [chave, { psm: psmName, week, route }] of rotasParaProcessar) {
+      const routeData = allData[psmName]?.[week]?.[route] || {
+        'Transporte': '',
+        'Indisponíveis': '',
+        'Total Reparadas': '',
+        'Reconhecidas': '',
+        'Dep. de Passagem de Cabo': '',
+        'Dep. de Licença': '',
+        'Dep. de Cutover': '',
+        'Fibras dependentes da ISISTEL': '',
+        'Fibras dependentes da FIBRASOL': '',
+        'Fibras dependentes da ANGLOBAL': ''
+      };
       
-      for (const week in allData[psmName]) {
-        for (const route in allData[psmName][week]) {
-          const routeData = allData[psmName][week][route];
-          const provincia = routesToProvinceMap[route] || '';
-          
-          const chave = `${psmName}|${week}|${route}`;
-          const existente = mapaExistentes[chave];
+      const provincia = routesToProvinceMap[route] || '';
+      const existente = mapaExistentes[chave];
           
           // ✅ CORREÇÃO: Converter valores vazios para 0 e processar SEMPRE
           // Se o registro existe no banco, sempre atualizar (mesmo que seja para zerar)
@@ -159,7 +218,6 @@ export const salvarTudoNoSupabase = async (allData, quarter, year, routesToProvi
             }
           }
         }
-      }
     }
     
     console.log(`📦 Para atualizar: ${paraAtualizar.length}`);
