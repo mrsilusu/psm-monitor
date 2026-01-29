@@ -5052,7 +5052,7 @@ useEffect(() => {
               onClick={() => setShowStatusDrilldown(false)}
             >
               <div 
-                className="bg-white rounded-lg shadow-2xl w-full max-w-4xl max-h-[99vh] overflow-hidden flex flex-col"
+                className="sticky top-0 z-10 bg-gradient-to-r from-blue-500 to-blue-600 text-white px-3 py-2 flex justify-between items-center"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-3 py-2 flex justify-between items-center">
@@ -5070,7 +5070,7 @@ useEffect(() => {
                   </button>
                 </div>
                 
-                <div className="flex-1 overflow-auto p-2">
+                <div className="flex-1 overflow-y-auto p-4 min-h-0">
                   {currentRotas.length > 0 ? (
                     <div className="grid grid-cols-4 gap-2">
                       {currentRotas.map((rota, idx) => {
@@ -5129,7 +5129,7 @@ useEffect(() => {
                 </div>
                 
                 {totalPages > 1 && (
-                  <div className="px-2 py-2 border-t border-gray-200 flex justify-between items-center">
+                  <div className="sticky bottom-0 z-10 bg-white px-2 py-2 border-t border-gray-200 flex justify-between items-center">
                     <button
                       onClick={() => setCurrentPageDrilldown(Math.max(0, currentPageDrilldown - 1))}
                       disabled={currentPageDrilldown === 0}
