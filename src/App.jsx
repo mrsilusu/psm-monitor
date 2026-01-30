@@ -396,7 +396,7 @@ const PSMMonitorApp = () => {
     
     // Executar carregamento
     carregarDadosDoSupabase();
-  }, [selectedYear]); // ✅ Recarregar quando mudar o ano!
+  }, [selectedYear]); // ✅ Recarregar quando mudar o ano! 
 
   // ESTADO: JUSTIFICATIVAS
   // Estrutura: { 'PSM_Rota': { seccao, regiao, transporteQ2, indisponiveis, delta, justificativa } }
