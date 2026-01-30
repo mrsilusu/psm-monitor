@@ -352,51 +352,6 @@ const PSMMonitorApp = () => {
     return initialData;
   });
 
-// ============================================================================
-  // CARREGAR DADOS DO SUPABASE AO INICIAR E QUANDO MUDAR O ANO
-  // ============================================================================
-  useEffect(() => {
-    const carregarDadosDoSupabase = async () => {
-      console.log('🔄 Carregando dados do Supabase para o ano:', selectedYear);
-      
-      const resultado = await lerTudoDoSupabase(selectedYear);
-      
-      if (resultado.success && resultado.data && Object.keys(resultado.data).length > 0) {
-        console.log('✅ Dados carregados do Supabase!', resultado.data);
-        setData(resultado.data);
-        
-        // ✅ CORREÇÃO: Carregar também os estados de teste e validação
-        if (resultado.rotasTestadas && Object.keys(resultado.rotasTestadas).length > 0) {
-          console.log('✅ Rotas testadas carregadas do Supabase:', resultado.rotasTestadas);
-          setRotasTestadas(resultado.rotasTestadas);
-        }
-        
-        if (resultado.rotasValidadas && Object.keys(resultado.rotasValidadas).length > 0) {
-          console.log('✅ Rotas validadas carregadas do Supabase:', resultado.rotasValidadas);
-          setRotasValidadas(resultado.rotasValidadas);
-        }
-      } else {
-        console.log('⚠️ Sem dados no Supabase para o ano', selectedYear);
-        // Limpar dados se não houver nada para o ano selecionado
-        setData({ ISISTEL: {}, FIBRASOL: {}, ANGLOBAL: {} });
-        setRotasTestadas({});
-        setRotasValidadas({});
-      }
-      
-      // ✅ Carregar justificativas do Supabase
-      const resultadoJust = await lerJustificativasDoSupabase(selectedYear);
-      if (resultadoJust.success && resultadoJust.data && Object.keys(resultadoJust.data).length > 0) {
-        console.log('✅ Justificativas carregadas do Supabase!', Object.keys(resultadoJust.data).length);
-        setJustificativas(resultadoJust.data);
-      } else {
-        console.log('⚠️ Sem justificativas no Supabase para o ano', selectedYear);
-        setJustificativas({});
-      }
-    };
-    
-    // Executar carregamento
-    carregarDadosDoSupabase();
-  }, [selectedYear]); // ✅ Recarregar quando mudar o ano! 
 
   // ESTADO: JUSTIFICATIVAS
   // Estrutura: { 'PSM_Rota': { seccao, regiao, transporteQ2, indisponiveis, delta, justificativa } }
@@ -458,6 +413,52 @@ useEffect(() => {
 useEffect(() => {
   localStorage.setItem('psm_selectedYear', String(selectedYear));
 }, [selectedYear]);
+
+// ============================================================================
+  // CARREGAR DADOS DO SUPABASE AO INICIAR E QUANDO MUDAR O ANO
+  // ============================================================================
+  useEffect(() => {
+    const carregarDadosDoSupabase = async () => {
+      console.log('🔄 Carregando dados do Supabase para o ano:', selectedYear);
+      
+      const resultado = await lerTudoDoSupabase(selectedYear);
+      
+      if (resultado.success && resultado.data && Object.keys(resultado.data).length > 0) {
+        console.log('✅ Dados carregados do Supabase!', resultado.data);
+        setData(resultado.data);
+        
+        // ✅ CORREÇÃO: Carregar também os estados de teste e validação
+        if (resultado.rotasTestadas && Object.keys(resultado.rotasTestadas).length > 0) {
+          console.log('✅ Rotas testadas carregadas do Supabase:', resultado.rotasTestadas);
+          setRotasTestadas(resultado.rotasTestadas);
+        }
+        
+        if (resultado.rotasValidadas && Object.keys(resultado.rotasValidadas).length > 0) {
+          console.log('✅ Rotas validadas carregadas do Supabase:', resultado.rotasValidadas);
+          setRotasValidadas(resultado.rotasValidadas);
+        }
+      } else {
+        console.log('⚠️ Sem dados no Supabase para o ano', selectedYear);
+        // Limpar dados se não houver nada para o ano selecionado
+        setData({ ISISTEL: {}, FIBRASOL: {}, ANGLOBAL: {} });
+        setRotasTestadas({});
+        setRotasValidadas({});
+      }
+      
+      // ✅ Carregar justificativas do Supabase
+      const resultadoJust = await lerJustificativasDoSupabase(selectedYear);
+      if (resultadoJust.success && resultadoJust.data && Object.keys(resultadoJust.data).length > 0) {
+        console.log('✅ Justificativas carregadas do Supabase!', Object.keys(resultadoJust.data).length);
+        setJustificativas(resultadoJust.data);
+      } else {
+        console.log('⚠️ Sem justificativas no Supabase para o ano', selectedYear);
+        setJustificativas({});
+      }
+    };
+    
+    // Executar carregamento
+    carregarDadosDoSupabase();
+  }, [selectedYear]); // ✅ Recarregar quando mudar o ano!
   
   // v3.40.27: Estados para sino de alertas
   const [alertasAbertos, setAlertasAbertos] = useState(false);
