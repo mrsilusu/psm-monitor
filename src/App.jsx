@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { BarChart3, TrendingUp, Users, AlertTriangle, CheckCircle, XCircle, Clock, MapPin, TrendingDown, Home, Upload, FileJson, Download, Calendar, BarChart, FileText, Menu, PieChart, DownloadCloud, Trash2, AlertCircle } from 'lucide-react';
 
-import { lerTudoDoSupabase, salvarTudoNoSupabase } from './services/supabaseService';
+import { lerTudoDoSupabase, salvarTudoNoSupabase, salvarJustificativasNoSupabase,lerJustificativasDoSupabase  } from './services/supabaseService';
 
 const PSMMonitorApp = () => {
   console.log("🚀 PSM Monitor v5.02.0 - LÓGICA Q1→Q3 CORRETA! ✅");
@@ -382,6 +382,16 @@ const PSMMonitorApp = () => {
         console.log('⚠️ Sem dados no Supabase ou erro ao carregar');
         // Mantém dados do localStorage que já foram carregados no useState
       }
+        // Carregar justificativas do Supabase
+      const resultadoJust = await lerJustificativasDoSupabase(anoAtual);
+      if (resultadoJust.success && resultadoJust.data && Object.keys(resultadoJust.data).length > 0) {
+        console.log('✅ Justificativas carregadas do Supabase!', Object.keys(resultadoJust.data).length);
+        setJustificativas(resultadoJust.data);
+      } else {
+        console.log('⚠️ Sem justificativas no Supabase ou erro ao carregar');
+      }
+
+    
     };
     
     // Executar carregamento
@@ -1627,16 +1637,37 @@ useEffect(() => {
     }
   }, [data, selectedQuarter, rotasTestadas, rotasValidadas]); // Adicionar selectedQuarter como dependência
 
-  // useEffect #2: Salvar estado 'justificativas' no localStorage automaticamente
+  // useEffect #2: Salvar estado 'justificativas' no localStorage E SUPABASE automaticamente
   useEffect(() => {
-    if (Object.keys(justificativas).length > 0) {
-      try {
-        window.localStorage.setItem('psm_justificativas_v1', JSON.stringify(justificativas));
-        console.log('✓ Justificativas salvas:', Object.keys(justificativas).length, 'registros');
-      } catch (error) {
-        console.error('Erro ao salvar justificativas:', error);
+  if (Object.keys(justificativas).length > 0) {
+    // 1. Salvar no localStorage (backup local + rápido)
+    try {                                                    // ← TRY só para localStorage
+      window.localStorage.setItem('psm_justificativas_v1', JSON.stringify(justificativas));
+      console.log('✓ Justificativas salvas no localStorage:', Object.keys(justificativas).length, 'registros');
+    } catch (error) {                                        // ← CATCH só para localStorage
+      console.error('Erro ao salvar justificativas no localStorage:', error);
+    }                                                        // ← TRY-CATCH fecha linha 1644
+    
+    // 2. Salvar no Supabase (compartilhado, com debounce)
+    clearTimeout(window.salvarJustificativasTimeout);      // ← FORA do try-catch
+    window.salvarJustificativasTimeout = setTimeout(async () => {
+      console.log('💾 Salvando justificativas no Supabase...');
+      
+      const anoAtual = new Date().getFullYear();
+      const resultado = await salvarJustificativasNoSupabase(justificativas, anoAtual);
+      
+      if (resultado.success) {
+        console.log('✅ Justificativas salvas no Supabase!');
+      } else {
+        console.error('❌ Erro ao salvar justificativas no Supabase:', resultado.error);
       }
-    }
+    }, 3000); // Espera 3 segundos sem mudanças antes de salvar
+  }                                                          // ← IF fecha linha 1660
+  
+  // Cleanup: limpar timeout quando componente desmontar ou justificativas mudarem
+  return () => {                                             
+    clearTimeout(window.salvarJustificativasTimeout);       
+  };                                                         
   }, [justificativas]); // Executar sempre que 'justificativas' mudar
 
   // useEffect #3: Log de inicialização (apenas uma vez)

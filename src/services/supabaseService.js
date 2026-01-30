@@ -383,5 +383,185 @@ export const lerTudoDoSupabase = async (year) => {
 
 export default {
   salvarTudoNoSupabase,
-  lerTudoDoSupabase
+  lerTudoDoSupabase,
+  salvarJustificativasNoSupabase,
+  lerJustificativasDoSupabase
+};
+
+// ============================================
+// SALVAR JUSTIFICATIVAS NO SUPABASE
+// ============================================
+export const salvarJustificativasNoSupabase = async (justificativas, year) => {
+  try {
+    console.log('🚀 Salvando justificativas no Supabase...');
+    
+    const anoAtual = year || new Date().getFullYear();
+    
+    if (!justificativas || Object.keys(justificativas).length === 0) {
+      console.log('⚠️ Nenhuma justificativa para salvar');
+      return { success: true, count: 0 };
+    }
+    
+    // 1. Buscar justificativas existentes do ano
+    const { data: existentes, error: fetchError } = await supabase
+      .from('psm_justificativas')
+      .select('id, psm, quarter, seccao')
+      .eq('year', anoAtual);
+    
+    if (fetchError) {
+      console.error('⚠️ Erro ao buscar justificativas existentes:', fetchError);
+    }
+    
+    // Criar mapa de existentes
+    const mapaExistentes = {};
+    if (existentes) {
+      existentes.forEach(reg => {
+        const chave = `${reg.psm}|${reg.quarter}|${reg.seccao}`;
+        mapaExistentes[chave] = reg;
+      });
+    }
+    
+    console.log(`📊 Encontradas ${Object.keys(mapaExistentes).length} justificativas existentes`);
+    
+    // 2. Preparar lotes de UPDATE e INSERT
+    const paraAtualizar = [];
+    const paraInserir = [];
+    
+    Object.entries(justificativas).forEach(([key, just]) => {
+      const chave = `${just.psm}|${just.quarter}|${just.seccao}`;
+      const existente = mapaExistentes[chave];
+      
+      const registro = {
+        psm: just.psm,
+        quarter: just.quarter,
+        year: anoAtual,
+        seccao: just.seccao,
+        regiao: just.regiao || '',
+        transporte: parseInt(just.transporte) || 0,
+        indisponiveis: parseInt(just.indisponiveis) || 0,
+        delta: parseInt(just.delta) || 0,
+        justificativa: just.justificativa || ''
+      };
+      
+      if (existente) {
+        paraAtualizar.push({ ...registro, id: existente.id });
+      } else {
+        paraInserir.push(registro);
+      }
+    });
+    
+    console.log(`📦 Para atualizar: ${paraAtualizar.length}`);
+    console.log(`📦 Para inserir: ${paraInserir.length}`);
+    
+    // 3. Executar UPDATEs
+    let totalAtualizado = 0;
+    if (paraAtualizar.length > 0) {
+      console.log('🔄 Atualizando justificativas existentes...');
+      
+      for (const registro of paraAtualizar) {
+        const { id, ...dadosSemId } = registro;
+        const { error } = await supabase
+          .from('psm_justificativas')
+          .update(dadosSemId)
+          .eq('id', id);
+        
+        if (error) {
+          console.error(`❌ Erro ao atualizar ${id}:`, error);
+        } else {
+          totalAtualizado++;
+        }
+      }
+      
+      console.log(`✅ Atualizadas: ${totalAtualizado}/${paraAtualizar.length}`);
+    }
+    
+    // 4. Executar INSERTs
+    let totalInserido = 0;
+    if (paraInserir.length > 0) {
+      console.log('➕ Inserindo novas justificativas...');
+      
+      const { data, error } = await supabase
+        .from('psm_justificativas')
+        .insert(paraInserir)
+        .select();
+      
+      if (error) {
+        console.error(`❌ Erro no INSERT:`, error);
+      } else {
+        totalInserido = data?.length || 0;
+        console.log(`✅ Inseridas: ${totalInserido}`);
+      }
+    }
+    
+    console.log(`✅ Salvamento completo! ${totalAtualizado} atualizadas, ${totalInserido} inseridas`);
+    
+    return {
+      success: true,
+      updated: totalAtualizado,
+      inserted: totalInserido,
+      total: totalAtualizado + totalInserido
+    };
+    
+  } catch (error) {
+    console.error('❌ Erro ao salvar justificativas:', error);
+    return { success: false, error };
+  }
+};
+
+// ============================================
+// LER JUSTIFICATIVAS DO SUPABASE
+// ============================================
+export const lerJustificativasDoSupabase = async (year) => {
+  try {
+    console.log('🚀 Carregando justificativas do Supabase...');
+    
+    const anoAtual = year || new Date().getFullYear();
+    
+    const { data: registros, error } = await supabase
+      .from('psm_justificativas')
+      .select('*')
+      .eq('year', anoAtual)
+      .order('psm', { ascending: true })
+      .order('quarter', { ascending: true });
+    
+    if (error) throw error;
+    
+    if (!registros || registros.length === 0) {
+      console.log('⚠️ Nenhuma justificativa encontrada no Supabase para', anoAtual);
+      return { success: true, data: {} };
+    }
+    
+    console.log(`📦 ${registros.length} justificativas encontradas`);
+    
+    // Converter para formato do App
+    const justificativas = {};
+    registros.forEach(reg => {
+      const key = `${reg.psm}_${reg.seccao}`;
+      justificativas[key] = {
+        seccao: reg.seccao,
+        regiao: reg.regiao,
+        transporte: reg.transporte,
+        indisponiveis: reg.indisponiveis,
+        delta: reg.delta,
+        justificativa: reg.justificativa,
+        psm: reg.psm,
+        quarter: reg.quarter
+      };
+    });
+    
+    console.log('✅ Justificativas convertidas para formato local');
+    
+    return {
+      success: true,
+      data: justificativas
+    };
+    
+  } catch (error) {
+    console.error('❌ Erro ao ler justificativas:', error);
+    return {
+      success: false,
+      error,
+      data: {}
+    };
+  }
 };
