@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { BarChart3, TrendingUp, Users, AlertTriangle, CheckCircle, XCircle, Clock, MapPin, TrendingDown, Home, Upload, FileJson, Download, Calendar, BarChart, FileText, Menu, PieChart, DownloadCloud, Trash2, AlertCircle } from 'lucide-react';
 
-import { lerTudoDoSupabase, salvarTudoNoSupabase, salvarJustificativasNoSupabase,lerJustificativasDoSupabase  } from './services/supabaseService';
+import { lerTudoDoSupabase, salvarTudoNoSupabase, salvarJustificativasNoSupabase, lerJustificativasDoSupabase } from './services/supabaseService';
 
 const PSMMonitorApp = () => {
   console.log("🚀 PSM Monitor v5.02.0 - LÓGICA Q1→Q3 CORRETA! ✅");
@@ -123,7 +123,7 @@ const PSMMonitorApp = () => {
     'Neto - Terra_Nova (Saurimo_Sul)': 'Lunda Sul',
     'Santo Antonio - Terra Nova': 'Lunda Sul',
     'Saurimo - Muconda': 'Lunda Sul',
-    'Saurimo - Lucapa(Camissombo)': 'Lunda Sul',
+    'Saurimo - Lucapa': 'Lunda Sul',
     'Saurimo - Dala': 'Lunda Sul',
     'Saurimo(Br_Muconda) - Muconda': 'Lunda Sul',
     'Saurimo Norte -- IEIA': 'Lunda Sul',
@@ -304,7 +304,7 @@ const PSMMonitorApp = () => {
       'Sacalunda - Dom_Bosco',
       'Santo Antonio - Terra Nova',
       'Saurimo - Dala',
-      'Saurimo - Lucapa(Camissombo)',
+      'Saurimo - Lucapa',
       'Saurimo(Br_Muconda) - Muconda',
       'Saurimo Norte -- IEIA',
       'Saurimo_CRT - IEIA',
@@ -352,53 +352,6 @@ const PSMMonitorApp = () => {
     return initialData;
   });
 
-// ============================================================================
-  // CARREGAR DADOS DO SUPABASE AO INICIAR
-  // ============================================================================
- 
-
-  useEffect(() => {
-    const carregarDadosDoSupabase = async () => {
-      console.log('🔄 Carregando dados do Supabase...');
-      
-      const anoAtual = new Date().getFullYear();
-      const resultado = await lerTudoDoSupabase(anoAtual);
-      
-      if (resultado.success && resultado.data && Object.keys(resultado.data).length > 0) {
-        console.log('✅ Dados carregados do Supabase!', resultado.data);
-        setData(resultado.data);
-        
-        // ✅ CORREÇÃO: Carregar também os estados de teste e validação
-        if (resultado.rotasTestadas && Object.keys(resultado.rotasTestadas).length > 0) {
-          console.log('✅ Rotas testadas carregadas do Supabase:', resultado.rotasTestadas);
-          setRotasTestadas(resultado.rotasTestadas);
-        }
-        
-        if (resultado.rotasValidadas && Object.keys(resultado.rotasValidadas).length > 0) {
-          console.log('✅ Rotas validadas carregadas do Supabase:', resultado.rotasValidadas);
-          setRotasValidadas(resultado.rotasValidadas);
-        }
-      } else {
-        console.log('⚠️ Sem dados no Supabase ou erro ao carregar');
-        // Mantém dados do localStorage que já foram carregados no useState
-      }
-        // Carregar justificativas do Supabase
-      const resultadoJust = await lerJustificativasDoSupabase(anoAtual);
-      if (resultadoJust.success && resultadoJust.data && Object.keys(resultadoJust.data).length > 0) {
-        console.log('✅ Justificativas carregadas do Supabase!', Object.keys(resultadoJust.data).length);
-        setJustificativas(resultadoJust.data);
-      } else {
-        console.log('⚠️ Sem justificativas no Supabase ou erro ao carregar');
-      }
-
-    
-    };
-    
-    // Executar carregamento
-    carregarDadosDoSupabase();
-  }, []); // Executar apenas uma vez ao montar
-
- 
 
   // ESTADO: JUSTIFICATIVAS
   // Estrutura: { 'PSM_Rota': { seccao, regiao, transporteQ2, indisponiveis, delta, justificativa } }
@@ -460,6 +413,52 @@ useEffect(() => {
 useEffect(() => {
   localStorage.setItem('psm_selectedYear', String(selectedYear));
 }, [selectedYear]);
+
+// ============================================================================
+  // CARREGAR DADOS DO SUPABASE AO INICIAR E QUANDO MUDAR O ANO
+  // ============================================================================
+  useEffect(() => {
+    const carregarDadosDoSupabase = async () => {
+      console.log('🔄 Carregando dados do Supabase para o ano:', selectedYear);
+      
+      const resultado = await lerTudoDoSupabase(selectedYear);
+      
+      if (resultado.success && resultado.data && Object.keys(resultado.data).length > 0) {
+        console.log('✅ Dados carregados do Supabase!', resultado.data);
+        setData(resultado.data);
+        
+        // ✅ CORREÇÃO: Carregar também os estados de teste e validação
+        if (resultado.rotasTestadas && Object.keys(resultado.rotasTestadas).length > 0) {
+          console.log('✅ Rotas testadas carregadas do Supabase:', resultado.rotasTestadas);
+          setRotasTestadas(resultado.rotasTestadas);
+        }
+        
+        if (resultado.rotasValidadas && Object.keys(resultado.rotasValidadas).length > 0) {
+          console.log('✅ Rotas validadas carregadas do Supabase:', resultado.rotasValidadas);
+          setRotasValidadas(resultado.rotasValidadas);
+        }
+      } else {
+        console.log('⚠️ Sem dados no Supabase para o ano', selectedYear);
+        // Limpar dados se não houver nada para o ano selecionado
+        setData({ ISISTEL: {}, FIBRASOL: {}, ANGLOBAL: {} });
+        setRotasTestadas({});
+        setRotasValidadas({});
+      }
+      
+      // ✅ Carregar justificativas do Supabase
+      const resultadoJust = await lerJustificativasDoSupabase(selectedYear);
+      if (resultadoJust.success && resultadoJust.data && Object.keys(resultadoJust.data).length > 0) {
+        console.log('✅ Justificativas carregadas do Supabase!', Object.keys(resultadoJust.data).length);
+        setJustificativas(resultadoJust.data);
+      } else {
+        console.log('⚠️ Sem justificativas no Supabase para o ano', selectedYear);
+        setJustificativas({});
+      }
+    };
+    
+    // Executar carregamento
+    carregarDadosDoSupabase();
+  }, [selectedYear]); // ✅ Recarregar quando mudar o ano!
   
   // v3.40.27: Estados para sino de alertas
   const [alertasAbertos, setAlertasAbertos] = useState(false);
@@ -1591,22 +1590,25 @@ useEffect(() => {
         // 2. Salvar no Supabase (compartilhado, com debounce)
         clearTimeout(window.salvarSupabaseTimeout);
         window.salvarSupabaseTimeout = setTimeout(async () => {
-          console.log('💾 Salvando no Supabase...');
+          console.log('💾 [DATA] Salvando no Supabase para o ano:', selectedYear);
           
-          const anoAtual = new Date().getFullYear();
           const resultado = await salvarTudoNoSupabase(
             data,
             selectedQuarter,
-            anoAtual,
+            selectedYear, // ✅ Usar ano selecionado
             routeToProvince,
             rotasTestadas,  
             rotasValidadas  
           );
           
           if (resultado.success) {
-            console.log('✅ Dados salvos no Supabase!');
+            console.log('✅ [DATA] Dados salvos no Supabase!', {
+              atualizados: resultado.updated,
+              inseridos: resultado.inserted,
+              ano: selectedYear
+            });
           } else {
-            console.error('❌ Erro ao salvar no Supabase:', resultado.error);
+            console.error('❌ [DATA] Erro ao salvar no Supabase:', resultado.error);
           }
         }, 5000); // Espera 5 segundos sem mudanças antes de salvar
         
@@ -1639,36 +1641,54 @@ useEffect(() => {
 
   // useEffect #2: Salvar estado 'justificativas' no localStorage E SUPABASE automaticamente
   useEffect(() => {
-  if (Object.keys(justificativas).length > 0) {
-    // 1. Salvar no localStorage (backup local + rápido)
-    try {                                                    // ← TRY só para localStorage
-      window.localStorage.setItem('psm_justificativas_v1', JSON.stringify(justificativas));
-      console.log('✓ Justificativas salvas no localStorage:', Object.keys(justificativas).length, 'registros');
-    } catch (error) {                                        // ← CATCH só para localStorage
-      console.error('Erro ao salvar justificativas no localStorage:', error);
-    }                                                        // ← TRY-CATCH fecha linha 1644
+    console.log('🔄 [JUSTIFICATIVAS] useEffect executado', {
+      quantidade: Object.keys(justificativas).length,
+      timestamp: new Date().toISOString()
+    });
     
-    // 2. Salvar no Supabase (compartilhado, com debounce)
-    clearTimeout(window.salvarJustificativasTimeout);      // ← FORA do try-catch
-    window.salvarJustificativasTimeout = setTimeout(async () => {
-      console.log('💾 Salvando justificativas no Supabase...');
-      
-      const anoAtual = new Date().getFullYear();
-      const resultado = await salvarJustificativasNoSupabase(justificativas, anoAtual);
-      
-      if (resultado.success) {
-        console.log('✅ Justificativas salvas no Supabase!');
-      } else {
-        console.error('❌ Erro ao salvar justificativas no Supabase:', resultado.error);
+    if (Object.keys(justificativas).length > 0) {
+      // 1. Salvar no localStorage (backup local + rápido)
+      try {
+        window.localStorage.setItem('psm_justificativas_v1', JSON.stringify(justificativas));
+        console.log('✓ [JUSTIFICATIVAS] Salvas no localStorage:', Object.keys(justificativas).length, 'registros');
+      } catch (error) {
+        console.error('❌ [JUSTIFICATIVAS] Erro ao salvar no localStorage:', error);
       }
-    }, 3000); // Espera 3 segundos sem mudanças antes de salvar
-  }                                                          // ← IF fecha linha 1660
-  
-  // Cleanup: limpar timeout quando componente desmontar ou justificativas mudarem
-  return () => {                                             
-    clearTimeout(window.salvarJustificativasTimeout);       
-  };                                                         
-  }, [justificativas]); // Executar sempre que 'justificativas' mudar
+      
+      // 2. Salvar no Supabase (compartilhado, com debounce)
+      clearTimeout(window.salvarJustificativasTimeout);
+      console.log('⏱️ [JUSTIFICATIVAS] Timeout iniciado - aguardando 3 segundos...');
+      
+      window.salvarJustificativasTimeout = setTimeout(async () => {
+        console.log('💾 [JUSTIFICATIVAS] Iniciando salvamento no Supabase para o ano:', selectedYear);
+        
+        try {
+          const resultado = await salvarJustificativasNoSupabase(justificativas, selectedYear);
+          
+          if (resultado.success) {
+            console.log('✅ [JUSTIFICATIVAS] Salvas no Supabase!', {
+              atualizadas: resultado.updated,
+              inseridas: resultado.inserted,
+              total: resultado.total,
+              ano: selectedYear
+            });
+          } else {
+            console.error('❌ [JUSTIFICATIVAS] Erro ao salvar:', resultado.error);
+          }
+        } catch (error) {
+          console.error('❌ [JUSTIFICATIVAS] Exceção ao salvar:', error);
+        }
+      }, 3000); // Espera 3 segundos sem mudanças antes de salvar
+    } else {
+      console.log('⚠️ [JUSTIFICATIVAS] Estado vazio - nada para salvar');
+    }
+    
+    // Cleanup: limpar timeout quando componente desmontar ou justificativas mudarem
+    return () => {
+      console.log('🧹 [JUSTIFICATIVAS] Limpando timeout');
+      clearTimeout(window.salvarJustificativasTimeout);
+    };
+  }, [justificativas, selectedYear]); // Executar sempre que 'justificativas' ou 'selectedYear' mudar
 
   // useEffect #3: Log de inicialização (apenas uma vez)
   useEffect(() => {
@@ -2566,6 +2586,10 @@ useEffect(() => {
       return;
     }
 
+    // ✅ CORREÇÃO: Converter vazio para string vazia (será tratado como 0 no save)
+    // O campo visual pode ficar vazio, mas ao salvar será convertido para 0
+    const valorFinal = value; // Mantém vazio no UI, será 0 no banco
+
     // ============================================================================
     // FASE 10: LÓGICA DE NEGÓCIO - REDUÇÃO AUTOMÁTICA DE FIBRAS DEPENDENTES
     // ============================================================================
@@ -2594,10 +2618,10 @@ useEffect(() => {
       // Obter valores atuais
       const currentData = newData[psm][week][route];
       const oldTotalReparadas = parseInt(currentData['Total Reparadas']) || 0;
-      const newTotalReparadas = category === 'Total Reparadas' ? (parseInt(value) || 0) : oldTotalReparadas;
+      const newTotalReparadas = category === 'Total Reparadas' ? (parseInt(valorFinal) || 0) : oldTotalReparadas;
       
       // LÓGICA DE NEGÓCIO: Redução Automática de Fibras Dependentes
-      if (category === 'Total Reparadas' && value !== '') {
+      if (category === 'Total Reparadas' && valorFinal !== '') {
         const diferenca = newTotalReparadas - oldTotalReparadas;
         
         if (diferenca > 0) {
@@ -2608,6 +2632,7 @@ useEffect(() => {
           
           currentData[fibrasDependentesKey] = newFibrasDep.toString();
 
+          console.log(`🔄 LÓGICA DE NEGÓCIO APLICADA:`);
           console.log(`   Total Reparadas: ${oldTotalReparadas} → ${newTotalReparadas} (+${diferenca})`);
           console.log(`   Fibras Dependentes: ${currentFibrasDep} → ${newFibrasDep} (-${diferenca})`);
 
@@ -2627,13 +2652,13 @@ useEffect(() => {
       }
 
       // Atualizar o valor específico
-      currentData[category] = value;
+      currentData[category] = valorFinal;
 
       return newData;
     });
 
     // Log de confirmação
-    console.log(`✓ Atualizado: ${route} -> ${category} = ${value || '(vazio)'}`);
+    console.log(`✓ Atualizado: ${route} -> ${category} = ${valorFinal || '(vazio → será salvo como 0)'}`);
   };
 
   /**
