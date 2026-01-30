@@ -154,9 +154,15 @@ export const salvarTudoNoSupabase = async (allData, quarter, year, routesToProvi
       const provincia = routesToProvinceMap[route] || '';
       const existente = mapaExistentes[chave];
           
-          // ✅ CORREÇÃO: Converter valores vazios para 0 e processar SEMPRE
+          // ✅ CORREÇÃO: Converter valores vazios para 0 EXPLICITAMENTE
           // Se o registro existe no banco, sempre atualizar (mesmo que seja para zerar)
-          // Se não existe e todos valores são vazios/zero, não criar registro
+          // Tratamento explícito de string vazia, null e undefined
+          const parseOrZero = (value) => {
+            if (value === '' || value === null || value === undefined) return 0;
+            const parsed = parseInt(value);
+            return isNaN(parsed) ? 0 : parsed;
+          };
+          
           const dadosBase = {
             psm: psmName,
             week: week,
@@ -164,16 +170,16 @@ export const salvarTudoNoSupabase = async (allData, quarter, year, routesToProvi
             year: anoAtual,
             quarter: quarter || 'Q1',
             provincia: provincia,
-            transporte: parseInt(routeData['Transporte']) || 0,
-            indisponiveis: parseInt(routeData['Indisponíveis']) || 0,
-            total_reparadas: parseInt(routeData['Total Reparadas']) || 0,
-            reconhecidas: parseInt(routeData['Reconhecidas']) || 0,
-            dep_passagem: parseInt(routeData['Dep. de Passagem de Cabo']) || 0,
-            dep_licenca: parseInt(routeData['Dep. de Licença']) || 0,
-            dep_cutover: parseInt(routeData['Dep. de Cutover']) || 0,
-            dep_isistel: parseInt(routeData['Fibras dependentes da ISISTEL']) || 0,
-            dep_fibrasol: parseInt(routeData['Fibras dependentes da FIBRASOL']) || 0,
-            dep_anglobal: parseInt(routeData['Fibras dependentes da ANGLOBAL']) || 0,
+            transporte: parseOrZero(routeData['Transporte']),
+            indisponiveis: parseOrZero(routeData['Indisponíveis']),
+            total_reparadas: parseOrZero(routeData['Total Reparadas']),
+            reconhecidas: parseOrZero(routeData['Reconhecidas']),
+            dep_passagem: parseOrZero(routeData['Dep. de Passagem de Cabo']),
+            dep_licenca: parseOrZero(routeData['Dep. de Licença']),
+            dep_cutover: parseOrZero(routeData['Dep. de Cutover']),
+            dep_isistel: parseOrZero(routeData['Fibras dependentes da ISISTEL']),
+            dep_fibrasol: parseOrZero(routeData['Fibras dependentes da FIBRASOL']),
+            dep_anglobal: parseOrZero(routeData['Fibras dependentes da ANGLOBAL']),
           };
           
           // Verificar se tem algum valor diferente de zero
@@ -195,6 +201,15 @@ export const salvarTudoNoSupabase = async (allData, quarter, year, routesToProvi
             // Usar valores locais se existirem, senão preservar do banco
             dadosBase.testada = testeLocal || existente.testada || false;
             dadosBase.validada = validaLocal || existente.validada || false;
+            
+            // 🔍 Log detalhado quando valores são zerados
+            const todosZero = dadosBase.transporte === 0 && 
+                             dadosBase.indisponiveis === 0 && 
+                             dadosBase.total_reparadas === 0;
+            
+            if (todosZero) {
+              console.log(`🔄 Atualizando para ZERO: ${psmName} | ${week} | ${route}`);
+            }
             
             paraAtualizar.push({
               ...dadosBase,
@@ -431,22 +446,28 @@ export const salvarJustificativasNoSupabase = async (justificativas, year) => {
       const chave = `${just.psm}|${just.quarter}|${just.seccao}`;
       const existente = mapaExistentes[chave];
       
+      // ✅ CORREÇÃO: Tratar valores vazios/null corretamente
+      // Se o valor for undefined, null ou string vazia, usar 0
+      // Mas SEMPRE criar o registro, mesmo se tudo for 0
       const registro = {
         psm: just.psm,
         quarter: just.quarter,
         year: anoAtual,
         seccao: just.seccao,
         regiao: just.regiao || '',
-        transporte: parseInt(just.transporte) || 0,
-        indisponiveis: parseInt(just.indisponiveis) || 0,
-        delta: parseInt(just.delta) || 0,
+        transporte: just.transporte === '' || just.transporte === null || just.transporte === undefined ? 0 : parseInt(just.transporte),
+        indisponiveis: just.indisponiveis === '' || just.indisponiveis === null || just.indisponiveis === undefined ? 0 : parseInt(just.indisponiveis),
+        delta: just.delta === '' || just.delta === null || just.delta === undefined ? 0 : parseInt(just.delta),
         justificativa: just.justificativa || ''
       };
       
       if (existente) {
+        // ✅ SEMPRE atualizar registros existentes, mesmo se valores forem 0
         paraAtualizar.push({ ...registro, id: existente.id });
+        console.log(`🔄 Atualizando: ${just.seccao} (T:${registro.transporte}, I:${registro.indisponiveis}, D:${registro.delta})`);
       } else {
         paraInserir.push(registro);
+        console.log(`➕ Inserindo: ${just.seccao} (T:${registro.transporte}, I:${registro.indisponiveis}, D:${registro.delta})`);
       }
     });
     
