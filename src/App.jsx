@@ -415,6 +415,15 @@ useEffect(() => {
   localStorage.setItem('psm_selectedYear', String(selectedYear));
 }, [selectedYear]);
 
+// Cleanup do timer do modal ao desmontar
+useEffect(() => {
+  return () => {
+    if (modalTimer) {
+      clearTimeout(modalTimer);
+    }
+  };
+}, [modalTimer]);
+
 // ============================================================================
   // CARREGAR DADOS DO SUPABASE AO INICIAR E QUANDO MUDAR O ANO
   // ============================================================================
@@ -991,6 +1000,7 @@ useEffect(() => {
   // Estados para modal de seleção de tipo de reparação
   const [showRepairTypeModal, setShowRepairTypeModal] = useState(false);
   const [pendingRepairData, setPendingRepairData] = useState(null);
+  const [modalTimer, setModalTimer] = useState(null);
   
   // Modal de drill-down de status
   const [showStatusDrilldown, setShowStatusDrilldown] = useState(false);
@@ -2646,18 +2656,30 @@ useEffect(() => {
           ].filter(item => item.valor > 0);
           
           if (tiposComValor.length > 1) {
-            // MÚLTIPLOS TIPOS → Abrir modal
-            console.log('❓ Múltiplos tipos. Abrindo modal...');
-            setPendingRepairData({
-              psm,
-              week,
-              route,
-              diferenca,
-              tiposDisponiveis: tiposComValor,
-              newData: newData
-            });
-            setShowRepairTypeModal(true);
-            return prevData;
+            // MÚLTIPLOS TIPOS → Atualizar Total Reparadas e preparar modal com delay
+            currentData[category] = valorFinal;
+            
+            // Cancelar timer anterior se existir
+            if (modalTimer) {
+              clearTimeout(modalTimer);
+            }
+            
+            // Aguardar 800ms antes de abrir modal (permite digitar número completo)
+            const timer = setTimeout(() => {
+              console.log('❓ Múltiplos tipos. Abrindo modal...');
+              setPendingRepairData({
+                psm,
+                week,
+                route,
+                diferenca,
+                tiposDisponiveis: tiposComValor,
+                newData: newData
+              });
+              setShowRepairTypeModal(true);
+            }, 800);
+            
+            setModalTimer(timer);
+            return newData;
             
           } else if (tiposComValor.length === 1) {
             // APENAS 1 TIPO → Aplicar automaticamente
@@ -2669,7 +2691,7 @@ useEffect(() => {
         }
       }
 
-      // Atualizar o valor específico
+      // Atualizar o valor específico (para outros casos)
       currentData[category] = valorFinal;
 
       return newData;
