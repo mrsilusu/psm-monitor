@@ -4,7 +4,7 @@ import { BarChart3, TrendingUp, Users, AlertTriangle, CheckCircle, XCircle, Cloc
 import { lerTudoDoSupabase, salvarTudoNoSupabase, salvarJustificativasNoSupabase, lerJustificativasDoSupabase } from './services/supabaseService';
 
 const PSMMonitorApp = () => {
-  console.log("🚀 PSM Monitor v5.02.0 - LÓGICA Q1→Q3 CORRETA! ✅");
+  console.log("🚀 PSM Monitor 5.03.7 - MENU COLAPSAVEL ! ✅");
   
   // ============================================================================
   // MAPEAMENTO DE ROTAS PARA PROVÍNCIAS
@@ -391,6 +391,7 @@ const PSMMonitorApp = () => {
   return parseInt(localStorage.getItem('psm_selectedYear')) || new Date().getFullYear();
   });
   const [menuOpen, setMenuOpen] = useState(false);
+  const [manualDataExpanded, setManualDataExpanded] = useState(true);
   
   // Estados para modo apresentação
   const [presentationMode, setPresentationMode] = useState(false);
@@ -10347,19 +10348,58 @@ Gerado por: PSM Monitor v3.42.03
             )}
           </div>
 
-          {/* Tabela de Introdução Manual - FASE 9: INPUTS CONTROLADOS */}
+            {/* Tabela de Introdução Manual - FASE 9: INPUTS CONTROLADOS */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 mt-6">
-            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors">
+            <div 
+              className="px-6 py-4 border-b border-gray-200 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"
+              onClick={() => setManualDataExpanded(!manualDataExpanded)}
+            >
               <div className="flex items-center space-x-3">
                 <FileText className="w-5 h-5 text-gray-600" />
-                <h2 className="text-lg font-semibold text-gray-800">📝 Introdução Manual dos Dados - {selectedOperator} {selectedWeek} {selectedQuarter} {selectedYear}</h2>
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-800">
+                    📝 Introdução Manual dos Dados - {selectedOperator} {selectedWeek} {selectedQuarter} {selectedYear}
+                  </h2>
+                  {!manualDataExpanded && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      {routesByPSM[selectedOperator].length} rotas disponíveis • Clique para expandir
+                    </p>
+                  )}
+                </div>
               </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                <span className="text-xs text-blue-600 font-medium">Editável</span>
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                  <span className="text-xs text-blue-600 font-medium">Editável</span>
+                </div>
+                <button 
+                  className="p-1 hover:bg-gray-200 rounded transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setManualDataExpanded(!manualDataExpanded);
+                  }}
+                  title={manualDataExpanded ? "Recolher seção" : "Expandir seção"}
+                >
+                  {manualDataExpanded ? (
+                    <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  )}
+                </button>
               </div>
             </div>
-            <div className="p-4">
+            
+            <div 
+              className={`transition-all duration-300 ease-in-out overflow-hidden ${
+                manualDataExpanded ? 'max-h-screen opacity-100' : 'max-h-0 opacity-0'
+              }`}
+            >
+              <div className="p-4">
+
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 mb-3">
                 <p className="text-xs text-blue-800">
                   💡 <strong>Dica:</strong> Digite valores numéricos. Salvamento automático.
@@ -10497,6 +10537,7 @@ Gerado por: PSM Monitor v3.42.03
         </div>
       </div>
     </div>
+  </div>
   );
 };
 
