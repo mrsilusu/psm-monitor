@@ -1002,6 +1002,7 @@ useEffect(() => {
   const [showRepairTypeModal, setShowRepairTypeModal] = useState(false);
   const [pendingRepairData, setPendingRepairData] = useState(null);
   const modalTimerRef = useRef(null);
+  const valorOriginalRef = useRef(null); // Guarda valor antes de começar a editar
   
   // Modal de drill-down de status
   const [showStatusDrilldown, setShowStatusDrilldown] = useState(false);
@@ -2642,11 +2643,29 @@ useEffect(() => {
         
         if (diferenca > 0) {
           // Total Reparadas AUMENTOU → Verificar tipos disponíveis
-          const reconhecidas = parseInt(currentData['Reconhecidas']) || 0;
-          const depPassagem = parseInt(currentData['Dep. de Passagem de Cabo']) || 0;
-          const depLicenca = parseInt(currentData['Dep. de Licença']) || 0;
-          const depCutover = parseInt(currentData['Dep. de Cutover']) || 0;
-          const fibrasDependentes = parseInt(currentData[`Fibras dependentes da ${psm}`]) || 0;
+          // Buscar valores na semana atual, ou nas anteriores se não houver
+          let reconhecidas = parseInt(currentData['Reconhecidas']) || 0;
+          let depPassagem = parseInt(currentData['Dep. de Passagem de Cabo']) || 0;
+          let depLicenca = parseInt(currentData['Dep. de Licença']) || 0;
+          let depCutover = parseInt(currentData['Dep. de Cutover']) || 0;
+          let fibrasDependentes = parseInt(currentData[`Fibras dependentes da ${psm}`]) || 0;
+          
+          // Se não houver valores na semana atual, buscar nas anteriores
+          if (reconhecidas === 0) {
+            reconhecidas = buscarValorAnterior(psm, week, route, 'Reconhecidas');
+          }
+          if (depPassagem === 0) {
+            depPassagem = buscarValorAnterior(psm, week, route, 'Dep. de Passagem de Cabo');
+          }
+          if (depLicenca === 0) {
+            depLicenca = buscarValorAnterior(psm, week, route, 'Dep. de Licença');
+          }
+          if (depCutover === 0) {
+            depCutover = buscarValorAnterior(psm, week, route, 'Dep. de Cutover');
+          }
+          if (fibrasDependentes === 0) {
+            fibrasDependentes = buscarValorAnterior(psm, week, route, `Fibras dependentes da ${psm}`);
+          }
           
           const tiposComValor = [
             { tipo: 'Reconhecidas', valor: reconhecidas },
@@ -2658,6 +2677,12 @@ useEffect(() => {
           
           if (tiposComValor.length > 1) {
             // MÚLTIPLOS TIPOS → Preparar dados (modal abrirá no onBlur)
+            
+            // Guardar valor original na PRIMEIRA mudança
+            if (!pendingRepairData) {
+              valorOriginalRef.current = oldTotalReparadas;
+            }
+            
             currentData[category] = valorFinal;
             
             setPendingRepairData({
@@ -2665,12 +2690,12 @@ useEffect(() => {
               week,
               route,
               diferenca,
-              valorAnterior: oldTotalReparadas,
+              valorAnterior: valorOriginalRef.current, // Usar valor guardado
               tiposDisponiveis: tiposComValor,
               newData: newData
             });
             
-            console.log('⏳ Múltiplos tipos. Modal abrirá ao sair do campo.');
+            console.log(`⏳ Múltiplos tipos. Original: ${valorOriginalRef.current}, Novo: ${newTotalReparadas}`);
             return newData;
             
           } else if (tiposComValor.length === 1) {
@@ -2711,12 +2736,17 @@ useEffect(() => {
       const updatedData = JSON.parse(JSON.stringify(prevData));
       const currentData = updatedData[psm][week][route];
       
-      const valorAtual = parseInt(currentData[tipoSelecionado]) || 0;
-      const novoValor = valorAtual - descontoAplicado;
+      // Se valor não existe na semana atual, buscar da anterior
+      let valorAtual = parseInt(currentData[tipoSelecionado]) || 0;
+      if (valorAtual === 0 && valorDisponivel > 0) {
+        // Valor veio de semana anterior, copiar para atual antes de descontar
+        valorAtual = valorDisponivel;
+      }
       
+      const novoValor = valorAtual - descontoAplicado;
       currentData[tipoSelecionado] = novoValor.toString();
       
-      console.log(`✅ ${tipoSelecionado}: ${valorAtual}→${novoValor} (desconto: ${descontoAplicado})`);
+      console.log(`✅ ${tipoSelecionado}: ${valorAtual}→${novoValor} (desconto: ${descontoAplicado}) [Semana: ${week}]`);
       
       return updatedData;
     });
@@ -2747,12 +2777,14 @@ useEffect(() => {
         console.log(`⚠️ Todos os tipos esgotados. Ainda restam ${reparacoesRestantes} reparações não distribuídas.`);
         setShowRepairTypeModal(false);
         setPendingRepairData(null);
+        valorOriginalRef.current = null;
       }
     } else {
       // Todas as reparações foram distribuídas
       console.log('✅ Todas as reparações distribuídas!');
       setShowRepairTypeModal(false);
       setPendingRepairData(null);
+      valorOriginalRef.current = null;
     }
   };
 
@@ -2775,6 +2807,7 @@ useEffect(() => {
     
     setShowRepairTypeModal(false);
     setPendingRepairData(null);
+    valorOriginalRef.current = null;
   };
 
   const handleBlurTotalReparadas = () => {
@@ -2783,6 +2816,34 @@ useEffect(() => {
       console.log('❓ Abrindo modal...');
       setShowRepairTypeModal(true);
     }
+  };
+
+  /**
+   * Busca o último valor conhecido de um tipo em semanas anteriores
+   * @param {string} psm - PSM
+   * @param {string} week - Semana atual
+   * @param {string} route - Rota
+   * @param {string} tipo - Tipo de indisponibilidade
+   * @returns {number} Último valor conhecido ou 0
+   */
+  const buscarValorAnterior = (psm, week, route, tipo) => {
+    if (!data[psm]) return 0;
+    
+    // Obter número da semana atual
+    const weekNum = parseInt(week.replace('W', ''));
+    
+    // Buscar de trás para frente até encontrar valor
+    for (let w = weekNum - 1; w >= 1; w--) {
+      const semanaAnterior = `W${w}`;
+      const valor = parseInt(data[psm]?.[semanaAnterior]?.[route]?.[tipo]) || 0;
+      
+      if (valor > 0) {
+        console.log(`🔍 Encontrado ${tipo}=${valor} em ${semanaAnterior}`);
+        return valor;
+      }
+    }
+    
+    return 0;
   };
 
   /**
