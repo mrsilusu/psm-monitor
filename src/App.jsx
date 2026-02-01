@@ -2639,8 +2639,8 @@ useEffect(() => {
 
       // Obter valores atuais
       const currentData = newData[psm][week][route];
-      const oldTotalReparadas = parseInt(currentData['Total Reparadas']) || 0;
-      const newTotalReparadas = category === 'Total Reparadas' ? (parseInt(valorFinal) || 0) : oldTotalReparadas;
+      const oldTotalReparadas = parseInt(currentData['Total Reparadas'], 10) || 0;
+      const newTotalReparadas = category === 'Total Reparadas' ? (parseInt(valorFinal, 10) || 0) : oldTotalReparadas;
       
       // LÓGICA DE NEGÓCIO: SELEÇÃO DO TIPO DE REPARAÇÃO
       if (category === 'Total Reparadas' && valorFinal !== '') {
@@ -2649,11 +2649,11 @@ useEffect(() => {
         if (diferenca > 0) {
           // Total Reparadas AUMENTOU → Verificar tipos disponíveis
           // Buscar valores ORIGINAIS na semana atual, ou nas anteriores se não houver
-          let reconhecidasOriginal = parseInt(currentData['Reconhecidas']) || 0;
-          let depPassagemOriginal = parseInt(currentData['Dep. de Passagem de Cabo']) || 0;
-          let depLicencaOriginal = parseInt(currentData['Dep. de Licença']) || 0;
-          let depCutoverOriginal = parseInt(currentData['Dep. de Cutover']) || 0;
-          let fibrasDependentesOriginal = parseInt(currentData[`Fibras dependentes da ${psm}`]) || 0;
+          let reconhecidasOriginal = parseInt(currentData['Reconhecidas'], 10) || 0;
+          let depPassagemOriginal = parseInt(currentData['Dep. de Passagem de Cabo'], 10) || 0;
+          let depLicencaOriginal = parseInt(currentData['Dep. de Licença'], 10) || 0;
+          let depCutoverOriginal = parseInt(currentData['Dep. de Cutover'], 10) || 0;
+          let fibrasDependentesOriginal = parseInt(currentData[`Fibras dependentes da ${psm}`], 10) || 0;
           
           // Se não houver valores na semana atual, buscar nas anteriores
           if (reconhecidasOriginal === 0) {
@@ -2880,7 +2880,7 @@ useEffect(() => {
     // Buscar de trás para frente DENTRO DO TRIMESTRE
     for (let w = weekNum - 1; w >= semanaMinima; w--) {
       const semanaAnterior = `W${w}`;
-      const valor = parseInt(data[psm]?.[semanaAnterior]?.[route]?.[tipo]) || 0;
+      const valor = parseInt(data[psm]?.[semanaAnterior]?.[route]?.[tipo], 10) || 0;
       
       if (valor > 0) {
         console.log(`✅ Encontrado ${tipo}=${valor} em ${semanaAnterior} (${selectedQuarter})`);
@@ -2909,11 +2909,19 @@ useEffect(() => {
   };
 
   /**
-   * V5.06.0: Obtém valor REDUZIDO para Dashboard Executivo
+   * V5.06.2: Obtém valor REDUZIDO para Dashboard Executivo
    * Calcula: Valor Original - Distribuição de Reparações
+   * Se não houver valor na semana, busca nas anteriores
    */
   const getValorReduzido = (psm, week, route, tipo) => {
-    const original = parseInt(data[psm]?.[week]?.[route]?.[tipo]) || 0;
+    // Tentar pegar valor da semana atual
+    let original = parseInt(data[psm]?.[week]?.[route]?.[tipo], 10) || 0;
+    
+    // Se não houver, buscar em semanas anteriores
+    if (original === 0) {
+      original = buscarValorAnterior(psm, week, route, tipo);
+    }
+    
     const desconto = distribuicaoReparacoes[psm]?.[week]?.[route]?.[tipo] || 0;
     return Math.max(0, original - desconto);
   };
@@ -2923,7 +2931,7 @@ useEffect(() => {
    * Retorna valor sem aplicar desconto de reparações
    */
   const getValorOriginal = (psm, week, route, tipo) => {
-    return parseInt(data[psm]?.[week]?.[route]?.[tipo]) || 0;
+    return parseInt(data[psm]?.[week]?.[route]?.[tipo], 10) || 0;
   };
 
   // ============================================================================
