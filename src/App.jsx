@@ -988,6 +988,10 @@ useEffect(() => {
   const [showModal, setShowModal] = useState(false);
   const [selectedRota, setSelectedRota] = useState(null);
   
+  // Estados para modal de seleção de tipo de reparação
+  const [showRepairTypeModal, setShowRepairTypeModal] = useState(false);
+  const [pendingRepairData, setPendingRepairData] = useState(null);
+  
   // Modal de drill-down de status
   const [showStatusDrilldown, setShowStatusDrilldown] = useState(false);
   const [selectedStatusDrilldown, setSelectedStatusDrilldown] = useState(null);
@@ -2621,34 +2625,47 @@ useEffect(() => {
       const oldTotalReparadas = parseInt(currentData['Total Reparadas']) || 0;
       const newTotalReparadas = category === 'Total Reparadas' ? (parseInt(valorFinal) || 0) : oldTotalReparadas;
       
-      // LÓGICA DE NEGÓCIO: Redução Automática de Fibras Dependentes
+      // LÓGICA DE NEGÓCIO: SELEÇÃO DO TIPO DE REPARAÇÃO
       if (category === 'Total Reparadas' && valorFinal !== '') {
         const diferenca = newTotalReparadas - oldTotalReparadas;
         
         if (diferenca > 0) {
-          // Total Reparadas AUMENTOU → Reduzir Fibras Dependentes
-          const fibrasDependentesKey = `Fibras dependentes da ${psm}`;
-          const currentFibrasDep = parseInt(currentData[fibrasDependentesKey]) || 0;
-          const newFibrasDep = Math.max(0, currentFibrasDep - diferenca); // Não pode ficar negativo
+          // Total Reparadas AUMENTOU → Verificar tipos disponíveis
+          const reconhecidas = parseInt(currentData['Reconhecidas']) || 0;
+          const depPassagem = parseInt(currentData['Dep. de Passagem de Cabo']) || 0;
+          const depLicenca = parseInt(currentData['Dep. de Licença']) || 0;
+          const depCutover = parseInt(currentData['Dep. de Cutover']) || 0;
+          const fibrasDependentes = parseInt(currentData[`Fibras dependentes da ${psm}`]) || 0;
           
-          currentData[fibrasDependentesKey] = newFibrasDep.toString();
-
-          console.log(`🔄 LÓGICA DE NEGÓCIO APLICADA:`);
-          console.log(`   Total Reparadas: ${oldTotalReparadas} → ${newTotalReparadas} (+${diferenca})`);
-          console.log(`   Fibras Dependentes: ${currentFibrasDep} → ${newFibrasDep} (-${diferenca})`);
-
-        } else if (diferenca < 0) {
-          // Total Reparadas DIMINUIU → Aumentar Fibras Dependentes
-          const fibrasDependentesKey = `Fibras dependentes da ${psm}`;
-          const currentFibrasDep = parseInt(currentData[fibrasDependentesKey]) || 0;
-          const newFibrasDep = currentFibrasDep + Math.abs(diferenca);
+          const tiposComValor = [
+            { tipo: 'Reconhecidas', valor: reconhecidas },
+            { tipo: 'Dep. de Passagem de Cabo', valor: depPassagem },
+            { tipo: 'Dep. de Licença', valor: depLicenca },
+            { tipo: 'Dep. de Cutover', valor: depCutover },
+            { tipo: `Fibras dependentes da ${psm}`, valor: fibrasDependentes }
+          ].filter(item => item.valor > 0);
           
-          currentData[fibrasDependentesKey] = newFibrasDep.toString();
-          
-          console.log('🔄 LÓGICA DE NEGÓCIO APLICADA (REVERSA):');
-          console.log(`   Total Reparadas: ${oldTotalReparadas} → ${newTotalReparadas} (${diferenca})`);
-          console.log(`   Fibras Dependentes: ${currentFibrasDep} → ${newFibrasDep} (+${Math.abs(diferenca)})`);
-
+          if (tiposComValor.length > 1) {
+            // MÚLTIPLOS TIPOS → Abrir modal
+            console.log('❓ Múltiplos tipos. Abrindo modal...');
+            setPendingRepairData({
+              psm,
+              week,
+              route,
+              diferenca,
+              tiposDisponiveis: tiposComValor,
+              newData: newData
+            });
+            setShowRepairTypeModal(true);
+            return prevData;
+            
+          } else if (tiposComValor.length === 1) {
+            // APENAS 1 TIPO → Aplicar automaticamente
+            const tipoUnico = tiposComValor[0];
+            const novoValor = Math.max(0, tipoUnico.valor - diferenca);
+            currentData[tipoUnico.tipo] = novoValor.toString();
+            console.log(`🔄 Auto: ${tipoUnico.tipo} ${tipoUnico.valor}→${novoValor}`);
+          }
         }
       }
 
@@ -2660,6 +2677,29 @@ useEffect(() => {
 
     // Log de confirmação
     console.log(`✓ Atualizado: ${route} -> ${category} = ${valorFinal || '(vazio → será salvo como 0)'}`);
+  };
+
+  const aplicarReparacaoPorTipo = (tipoSelecionado) => {
+    if (!pendingRepairData) return;
+    
+    const { psm, week, route, diferenca, newData } = pendingRepairData;
+    
+    setData(() => {
+      const updatedData = JSON.parse(JSON.stringify(newData));
+      const currentData = updatedData[psm][week][route];
+      
+      const valorAtual = parseInt(currentData[tipoSelecionado]) || 0;
+      const novoValor = Math.max(0, valorAtual - diferenca);
+      
+      currentData[tipoSelecionado] = novoValor.toString();
+      
+      console.log(`✅ Reparação: ${tipoSelecionado} ${valorAtual}→${novoValor}`);
+      
+      return updatedData;
+    });
+    
+    setShowRepairTypeModal(false);
+    setPendingRepairData(null);
   };
 
   /**
@@ -10537,6 +10577,102 @@ Gerado por: PSM Monitor v3.42.03
         </div>
       </div>
     </div>
+    
+    {/* MODAL: Seleção do Tipo de Reparação */}
+    {showRepairTypeModal && pendingRepairData && (
+      <div 
+        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+        onClick={() => {
+          setShowRepairTypeModal(false);
+          setPendingRepairData(null);
+        }}
+      >
+        <div 
+          className="bg-white rounded-xl shadow-2xl w-full max-w-2xl"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white px-6 py-4 rounded-t-xl">
+            <h2 className="text-xl font-bold">🔧 Selecione o Tipo de Reparação</h2>
+            <p className="text-sm text-purple-100 mt-1">
+              Rota: {pendingRepairData.route} • {pendingRepairData.week}
+            </p>
+          </div>
+          
+          <div className="p-6">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+              <p className="text-sm text-blue-900">
+                <strong>Total de Reparações:</strong> {pendingRepairData.diferenca} fibra(s)
+              </p>
+              <p className="text-xs text-blue-700 mt-2">
+                💡 Esta rota tem múltiplos tipos de indisponibilidade. Selecione qual foi reparado.
+              </p>
+            </div>
+            
+            <div className="space-y-3">
+              {pendingRepairData.tiposDisponiveis.map((item, idx) => {
+                const cores = {
+                  'Reconhecidas': 'from-teal-500 to-teal-600',
+                  'Dep. de Passagem de Cabo': 'from-blue-500 to-blue-600',
+                  'Dep. de Licença': 'from-orange-500 to-orange-600',
+                  'Dep. de Cutover': 'from-purple-500 to-purple-600'
+                };
+                
+                const icones = {
+                  'Reconhecidas': '🤝',
+                  'Dep. de Passagem de Cabo': '🧵',
+                  'Dep. de Licença': '📄',
+                  'Dep. de Cutover': '✂️'
+                };
+                
+                const cor = cores[item.tipo] || 'from-gray-600 to-gray-700';
+                const icone = icones[item.tipo] || '⏳';
+                const nome = item.tipo.includes('Fibras dependentes') 
+                  ? `Fibras Dependentes ${pendingRepairData.psm}`
+                  : item.tipo;
+                
+                return (
+                  <button
+                    key={idx}
+                    onClick={() => aplicarReparacaoPorTipo(item.tipo)}
+                    className={`w-full bg-gradient-to-r ${cor} hover:opacity-90 text-white rounded-lg p-4 shadow-md transition-all`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <span className="text-2xl">{icone}</span>
+                        <div className="text-left">
+                          <p className="font-semibold text-lg">{nome}</p>
+                          <p className="text-xs opacity-90">Atual: {item.valor}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm opacity-90">Após:</p>
+                        <p className="text-2xl font-bold">
+                          {Math.max(0, item.valor - pendingRepairData.diferenca)}
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          
+          <div className="px-6 py-4 bg-gray-50 rounded-b-xl flex justify-between items-center">
+            <p className="text-xs text-gray-600">Clique no tipo que foi reparado</p>
+            <button
+              onClick={() => {
+                setShowRepairTypeModal(false);
+                setPendingRepairData(null);
+              }}
+              className="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    
   </div>
   );
 };
