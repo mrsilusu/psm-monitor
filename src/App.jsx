@@ -2673,6 +2673,7 @@ useEffect(() => {
                 week,
                 route,
                 diferenca,
+                valorAnterior: oldTotalReparadas, // Guardar valor antigo para reverter
                 tiposDisponiveis: tiposComValor,
                 newData: newData
               });
@@ -2717,6 +2718,27 @@ useEffect(() => {
       currentData[tipoSelecionado] = novoValor.toString();
       
       console.log(`✅ Reparação: ${tipoSelecionado} ${valorAtual}→${novoValor}`);
+      
+      return updatedData;
+    });
+    
+    setShowRepairTypeModal(false);
+    setPendingRepairData(null);
+  };
+
+  const cancelarModal = () => {
+    if (!pendingRepairData) return;
+    
+    const { psm, week, route, valorAnterior } = pendingRepairData;
+    
+    // Reverter Total Reparadas para o valor anterior
+    setData(prevData => {
+      const updatedData = JSON.parse(JSON.stringify(prevData));
+      const currentData = updatedData[psm][week][route];
+      
+      currentData['Total Reparadas'] = valorAnterior.toString();
+      
+      console.log(`❌ Modal cancelado. Total Reparadas revertido para: ${valorAnterior}`);
       
       return updatedData;
     });
@@ -10605,10 +10627,7 @@ Gerado por: PSM Monitor v3.42.03
     {showRepairTypeModal && pendingRepairData && (
       <div 
         className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-        onClick={() => {
-          setShowRepairTypeModal(false);
-          setPendingRepairData(null);
-        }}
+        onClick={cancelarModal}
       >
         <div 
           className="bg-white rounded-xl shadow-2xl w-full max-w-2xl"
@@ -10683,10 +10702,7 @@ Gerado por: PSM Monitor v3.42.03
           <div className="px-6 py-4 bg-gray-50 rounded-b-xl flex justify-between items-center">
             <p className="text-xs text-gray-600">Clique no tipo que foi reparado</p>
             <button
-              onClick={() => {
-                setShowRepairTypeModal(false);
-                setPendingRepairData(null);
-              }}
+              onClick={cancelarModal}
               className="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg"
             >
               Cancelar
