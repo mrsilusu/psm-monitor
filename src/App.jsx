@@ -2648,29 +2648,38 @@ useEffect(() => {
         
         if (diferenca > 0) {
           // Total Reparadas AUMENTOU → Verificar tipos disponíveis
-          // Buscar valores na semana atual, ou nas anteriores se não houver
-          let reconhecidas = parseInt(currentData['Reconhecidas']) || 0;
-          let depPassagem = parseInt(currentData['Dep. de Passagem de Cabo']) || 0;
-          let depLicenca = parseInt(currentData['Dep. de Licença']) || 0;
-          let depCutover = parseInt(currentData['Dep. de Cutover']) || 0;
-          let fibrasDependentes = parseInt(currentData[`Fibras dependentes da ${psm}`]) || 0;
+          // Buscar valores ORIGINAIS na semana atual, ou nas anteriores se não houver
+          let reconhecidasOriginal = parseInt(currentData['Reconhecidas']) || 0;
+          let depPassagemOriginal = parseInt(currentData['Dep. de Passagem de Cabo']) || 0;
+          let depLicencaOriginal = parseInt(currentData['Dep. de Licença']) || 0;
+          let depCutoverOriginal = parseInt(currentData['Dep. de Cutover']) || 0;
+          let fibrasDependentesOriginal = parseInt(currentData[`Fibras dependentes da ${psm}`]) || 0;
           
           // Se não houver valores na semana atual, buscar nas anteriores
-          if (reconhecidas === 0) {
-            reconhecidas = buscarValorAnterior(psm, week, route, 'Reconhecidas');
+          if (reconhecidasOriginal === 0) {
+            reconhecidasOriginal = buscarValorAnterior(psm, week, route, 'Reconhecidas');
           }
-          if (depPassagem === 0) {
-            depPassagem = buscarValorAnterior(psm, week, route, 'Dep. de Passagem de Cabo');
+          if (depPassagemOriginal === 0) {
+            depPassagemOriginal = buscarValorAnterior(psm, week, route, 'Dep. de Passagem de Cabo');
           }
-          if (depLicenca === 0) {
-            depLicenca = buscarValorAnterior(psm, week, route, 'Dep. de Licença');
+          if (depLicencaOriginal === 0) {
+            depLicencaOriginal = buscarValorAnterior(psm, week, route, 'Dep. de Licença');
           }
-          if (depCutover === 0) {
-            depCutover = buscarValorAnterior(psm, week, route, 'Dep. de Cutover');
+          if (depCutoverOriginal === 0) {
+            depCutoverOriginal = buscarValorAnterior(psm, week, route, 'Dep. de Cutover');
           }
-          if (fibrasDependentes === 0) {
-            fibrasDependentes = buscarValorAnterior(psm, week, route, `Fibras dependentes da ${psm}`);
+          if (fibrasDependentesOriginal === 0) {
+            fibrasDependentesOriginal = buscarValorAnterior(psm, week, route, `Fibras dependentes da ${psm}`);
           }
+          
+          // V5.06.1: Subtrair distribuição JÁ EXISTENTE para obter disponível
+          const distAtual = distribuicaoReparacoes[psm]?.[week]?.[route] || {};
+          
+          const reconhecidas = Math.max(0, reconhecidasOriginal - (distAtual['Reconhecidas'] || 0));
+          const depPassagem = Math.max(0, depPassagemOriginal - (distAtual['Dep. de Passagem de Cabo'] || 0));
+          const depLicenca = Math.max(0, depLicencaOriginal - (distAtual['Dep. de Licença'] || 0));
+          const depCutover = Math.max(0, depCutoverOriginal - (distAtual['Dep. de Cutover'] || 0));
+          const fibrasDependentes = Math.max(0, fibrasDependentesOriginal - (distAtual[`Fibras dependentes da ${psm}`] || 0));
           
           const tiposComValor = [
             { tipo: 'Reconhecidas', valor: reconhecidas },
@@ -2704,24 +2713,32 @@ useEffect(() => {
             return newData;
             
           } else if (tiposComValor.length === 1) {
-            // V5.06.0: APENAS 1 TIPO → Registrar distribuição (não modificar data)
+            // V5.06.1: APENAS 1 TIPO → Registrar distribuição e propagar
             const tipoUnico = tiposComValor[0];
             const descontoAplicado = Math.min(tipoUnico.valor, diferenca);
             
-            // Registrar distribuição
+            // Registrar distribuição e propagar até fim do trimestre
             setDistribuicaoReparacoes(prev => {
               const updated = JSON.parse(JSON.stringify(prev));
               if (!updated[psm]) updated[psm] = {};
-              if (!updated[psm][week]) updated[psm][week] = {};
-              if (!updated[psm][week][route]) updated[psm][week][route] = {};
               
-              const atual = updated[psm][week][route][tipoUnico.tipo] || 0;
-              updated[psm][week][route][tipoUnico.tipo] = atual + descontoAplicado;
+              const trimestreAtual = quarterConfig[selectedQuarter];
+              const weekNum = parseInt(week.replace('W', ''));
+              
+              // Propagar da semana atual até o fim do trimestre
+              for (let w = weekNum; w <= trimestreAtual.end; w++) {
+                const semana = `W${w}`;
+                if (!updated[psm][semana]) updated[psm][semana] = {};
+                if (!updated[psm][semana][route]) updated[psm][semana][route] = {};
+                
+                const atual = updated[psm][semana][route][tipoUnico.tipo] || 0;
+                updated[psm][semana][route][tipoUnico.tipo] = atual + descontoAplicado;
+              }
               
               return updated;
             });
             
-            console.log(`🔄 Auto: ${tipoUnico.tipo} desconto ${descontoAplicado} registrado`);
+            console.log(`🔄 Auto: ${tipoUnico.tipo} desconto ${descontoAplicado} propagado de ${week} até W${quarterConfig[selectedQuarter].end}`);
           }
         }
       }
@@ -2749,17 +2766,26 @@ useEffect(() => {
     const descontoAplicado = Math.min(valorDisponivel, diferenca);
     const reparacoesRestantes = diferenca - descontoAplicado;
     
-    // V5.06.0: Registrar distribuição (NÃO modificar data)
+    // V5.06.1: Registrar distribuição da semana atual até fim do trimestre
     setDistribuicaoReparacoes(prevDist => {
       const updated = JSON.parse(JSON.stringify(prevDist));
       if (!updated[psm]) updated[psm] = {};
-      if (!updated[psm][week]) updated[psm][week] = {};
-      if (!updated[psm][week][route]) updated[psm][week][route] = {};
       
-      const atual = updated[psm][week][route][tipoSelecionado] || 0;
-      updated[psm][week][route][tipoSelecionado] = atual + descontoAplicado;
+      // Obter semanas do trimestre
+      const trimestreAtual = quarterConfig[selectedQuarter];
+      const weekNum = parseInt(week.replace('W', ''));
       
-      console.log(`✅ ${tipoSelecionado}: desconto ${descontoAplicado} registrado (total: ${atual + descontoAplicado}) [${week}]`);
+      // Propagar da semana atual até o fim do trimestre
+      for (let w = weekNum; w <= trimestreAtual.end; w++) {
+        const semana = `W${w}`;
+        if (!updated[psm][semana]) updated[psm][semana] = {};
+        if (!updated[psm][semana][route]) updated[psm][semana][route] = {};
+        
+        const atual = updated[psm][semana][route][tipoSelecionado] || 0;
+        updated[psm][semana][route][tipoSelecionado] = atual + descontoAplicado;
+      }
+      
+      console.log(`✅ ${tipoSelecionado}: desconto ${descontoAplicado} propagado de ${week} até W${trimestreAtual.end}`);
       
       return updated;
     });
@@ -3080,31 +3106,39 @@ useEffect(() => {
       });
     });
     
-    // V5.06.0: CÁLCULO COM DISTRIBUIÇÃO DE REPARAÇÕES (sem prioridades fixas)
-    // Usa valores reduzidos baseados em distribuicaoReparacoes
-    console.log(`📊 V5.06.0: Calculando Dashboard com distribuição de reparações`);
+    // V5.06.1: CÁLCULO COM DISTRIBUIÇÃO - Usar ÚLTIMA semana de cada rota
+    console.log(`📊 V5.06.1: Calculando Dashboard (última semana de cada rota)`);
     
-    Object.keys(routeValuesAteSelecao).forEach(route => {
-      const values = routeValuesAteSelecao[route];
+    routesToProcess.forEach(route => {
+      // Buscar última semana com dados para esta rota
+      let ultimaSemana = null;
+      for (let i = weeksAteSelecao.length - 1; i >= 0; i--) {
+        const week = weeksAteSelecao[i];
+        const routeData = data[selectedOperator]?.[week]?.[route];
+        if (routeData) {
+          ultimaSemana = week;
+          break;
+        }
+      }
       
-      // Para cada semana até a selecionada, calcular valores reduzidos
-      weeksAteSelecao.forEach(week => {
-        // Usar getValorReduzido para cada tipo
-        const reconhecidasReduzido = getValorReduzido(selectedOperator, week, route, 'Reconhecidas');
-        const depPassagemReduzido = getValorReduzido(selectedOperator, week, route, 'Dep. de Passagem de Cabo');
-        const depLicencaReduzido = getValorReduzido(selectedOperator, week, route, 'Dep. de Licença');
-        const depCutoverReduzido = getValorReduzido(selectedOperator, week, route, 'Dep. de Cutover');
-        const fibrasDepReduzido = getValorReduzido(selectedOperator, week, route, `Fibras dependentes da ${selectedOperator}`);
+      if (ultimaSemana) {
+        // Usar valores reduzidos da última semana
+        const reconhecidasReduzido = getValorReduzido(selectedOperator, ultimaSemana, route, 'Reconhecidas');
+        const depPassagemReduzido = getValorReduzido(selectedOperator, ultimaSemana, route, 'Dep. de Passagem de Cabo');
+        const depLicencaReduzido = getValorReduzido(selectedOperator, ultimaSemana, route, 'Dep. de Licença');
+        const depCutoverReduzido = getValorReduzido(selectedOperator, ultimaSemana, route, 'Dep. de Cutover');
+        const fibrasDepReduzido = getValorReduzido(selectedOperator, ultimaSemana, route, `Fibras dependentes da ${selectedOperator}`);
         
         stats.reconhecidasSum += reconhecidasReduzido;
         stats.depPassagensSum += depPassagemReduzido;
         stats.depLicencaSum += depLicencaReduzido;
         stats.depCutoverSum += depCutoverReduzido;
-        stats.fibrasDependentesLast += fibrasDepReduzido; // Soma acumulada
-      });
-      
-      // Total Reparadas é o original (não tem redução)
-      stats.totalReparadasSum += values.totalReparadas;
+        stats.fibrasDependentesLast += fibrasDepReduzido;
+        
+        // Total Reparadas ACUMULA todas as semanas
+        const values = routeValuesAteSelecao[route];
+        stats.totalReparadasSum += values.totalReparadas;
+      }
     });
     
     // Indisponíveis = soma dos reduzidos
