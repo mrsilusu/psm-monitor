@@ -5306,7 +5306,7 @@ useEffect(() => {
             
             <div className="sticky top-0 bg-gradient-to-r from-orange-500 to-red-600 text-white px-5 py-3 flex justify-between items-center rounded-t-xl">
               <div>
-                <h2 className="text-xl font-bold">Detalhes da Rota Crítica</h2>
+                <h2 className="text-xl font-bold">Detalhes da Rota</h2>
                 <p className="text-sm mt-0.5">{selectedRota.name}</p>
               </div>
               <button onClick={() => setShowModal(false)} className="text-3xl leading-none hover:bg-white/20 px-3 py-1 rounded">×</button>
