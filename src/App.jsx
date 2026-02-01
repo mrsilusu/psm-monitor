@@ -2819,7 +2819,7 @@ useEffect(() => {
   };
 
   /**
-   * Busca o último valor conhecido de um tipo em semanas anteriores
+   * Busca o último valor conhecido de um tipo em semanas anteriores DO MESMO TRIMESTRE
    * @param {string} psm - PSM
    * @param {string} week - Semana atual
    * @param {string} route - Rota
@@ -2832,17 +2832,24 @@ useEffect(() => {
     // Obter número da semana atual
     const weekNum = parseInt(week.replace('W', ''));
     
-    // Buscar de trás para frente até encontrar valor
-    for (let w = weekNum - 1; w >= 1; w--) {
+    // Determinar limites do trimestre atual
+    const trimestreAtual = quarterConfig[selectedQuarter];
+    const semanaMinima = trimestreAtual.start;
+    
+    console.log(`🔍 Buscando ${tipo} em ${selectedQuarter} (W${semanaMinima}-W${weekNum-1})`);
+    
+    // Buscar de trás para frente DENTRO DO TRIMESTRE
+    for (let w = weekNum - 1; w >= semanaMinima; w--) {
       const semanaAnterior = `W${w}`;
       const valor = parseInt(data[psm]?.[semanaAnterior]?.[route]?.[tipo]) || 0;
       
       if (valor > 0) {
-        console.log(`🔍 Encontrado ${tipo}=${valor} em ${semanaAnterior}`);
+        console.log(`✅ Encontrado ${tipo}=${valor} em ${semanaAnterior} (${selectedQuarter})`);
         return valor;
       }
     }
     
+    console.log(`⚠️ ${tipo} não encontrado em ${selectedQuarter}`);
     return 0;
   };
 
@@ -10730,29 +10737,31 @@ Gerado por: PSM Monitor v3.42.03
         onClick={cancelarModal}
       >
         <div 
-          className="bg-white rounded-xl shadow-2xl w-full max-w-2xl"
+          className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white px-6 py-4 rounded-t-xl">
-            <h2 className="text-xl font-bold">🔧 Selecione o Tipo de Reparação</h2>
-            <p className="text-sm text-purple-100 mt-1">
-              Rota: {pendingRepairData.route} • {pendingRepairData.week}
+          {/* Header fixo */}
+          <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white px-4 py-3 rounded-t-xl flex-shrink-0">
+            <h2 className="text-lg font-bold">🔧 Tipo de Reparação</h2>
+            <p className="text-xs text-purple-100 mt-0.5">
+              {pendingRepairData.route} • {pendingRepairData.week}
             </p>
           </div>
           
-          <div className="p-6">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+          {/* Conteúdo com scroll */}
+          <div className="overflow-y-auto flex-1 p-4">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
               <p className="text-sm text-blue-900">
-                <strong>Reparações a distribuir:</strong> {pendingRepairData.diferenca} fibra(s)
+                <strong>A distribuir:</strong> {pendingRepairData.diferenca} fibra(s)
               </p>
-              <p className="text-xs text-blue-700 mt-2">
+              <p className="text-xs text-blue-700 mt-1">
                 💡 {pendingRepairData.tiposDisponiveis.length > 1 
-                  ? 'Selecione o tipo que foi reparado. Pode distribuir entre múltiplos tipos.' 
-                  : 'Último tipo disponível.'}
+                  ? 'Selecione o tipo reparado' 
+                  : 'Último tipo disponível'}
               </p>
             </div>
             
-            <div className="space-y-3">
+            <div className="space-y-2">
               {pendingRepairData.tiposDisponiveis.map((item, idx) => {
                 const cores = {
                   'Reconhecidas': 'from-teal-500 to-teal-600',
@@ -10771,30 +10780,30 @@ Gerado por: PSM Monitor v3.42.03
                 const cor = cores[item.tipo] || 'from-gray-600 to-gray-700';
                 const icone = icones[item.tipo] || '⏳';
                 const nome = item.tipo.includes('Fibras dependentes') 
-                  ? `Fibras Dependentes ${pendingRepairData.psm}`
+                  ? `Fibras Dep. ${pendingRepairData.psm}`
                   : item.tipo;
                 
                 return (
                   <button
                     key={idx}
                     onClick={() => aplicarReparacaoPorTipo(item.tipo)}
-                    className={`w-full bg-gradient-to-r ${cor} hover:opacity-90 text-white rounded-lg p-4 shadow-md transition-all`}
+                    className={`w-full bg-gradient-to-r ${cor} hover:opacity-90 text-white rounded-lg p-3 shadow-md transition-all`}
                   >
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <span className="text-2xl">{icone}</span>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-xl">{icone}</span>
                         <div className="text-left">
-                          <p className="font-semibold text-lg">{nome}</p>
+                          <p className="font-semibold text-sm">{nome}</p>
                           <p className="text-xs opacity-90">Atual: {item.valor}</p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-sm opacity-90">Desconto:</p>
-                        <p className="text-2xl font-bold">
+                        <p className="text-xs opacity-90">Desconto:</p>
+                        <p className="text-lg font-bold">
                           -{Math.min(item.valor, pendingRepairData.diferenca)}
                         </p>
-                        <p className="text-xs opacity-75 mt-1">
-                          Ficará: {Math.max(0, item.valor - pendingRepairData.diferenca)}
+                        <p className="text-[10px] opacity-75">
+                          → {Math.max(0, item.valor - pendingRepairData.diferenca)}
                         </p>
                       </div>
                     </div>
@@ -10804,11 +10813,12 @@ Gerado por: PSM Monitor v3.42.03
             </div>
           </div>
           
-          <div className="px-6 py-4 bg-gray-50 rounded-b-xl flex justify-between items-center">
-            <p className="text-xs text-gray-600">Clique no tipo que foi reparado</p>
+          {/* Footer fixo */}
+          <div className="px-4 py-3 bg-gray-50 rounded-b-xl flex justify-between items-center flex-shrink-0 border-t">
+            <p className="text-xs text-gray-600">Clique no tipo</p>
             <button
               onClick={cancelarModal}
-              className="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg"
+              className="px-3 py-1.5 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg text-sm"
             >
               Cancelar
             </button>
