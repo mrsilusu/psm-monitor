@@ -2657,30 +2657,20 @@ useEffect(() => {
           ].filter(item => item.valor > 0);
           
           if (tiposComValor.length > 1) {
-            // MÚLTIPLOS TIPOS → Atualizar Total Reparadas e preparar modal com delay
+            // MÚLTIPLOS TIPOS → Preparar dados (modal abrirá no onBlur)
             currentData[category] = valorFinal;
             
-            // Cancelar timer anterior se existir
-            if (modalTimerRef.current) {
-              clearTimeout(modalTimerRef.current);
-            }
+            setPendingRepairData({
+              psm,
+              week,
+              route,
+              diferenca,
+              valorAnterior: oldTotalReparadas,
+              tiposDisponiveis: tiposComValor,
+              newData: newData
+            });
             
-            // Aguardar 800ms antes de abrir modal (permite digitar número completo)
-            modalTimerRef.current = setTimeout(() => {
-              console.log('❓ Múltiplos tipos. Abrindo modal...');
-              setPendingRepairData({
-                psm,
-                week,
-                route,
-                diferenca,
-                valorAnterior: oldTotalReparadas, // Guardar valor antigo para reverter
-                tiposDisponiveis: tiposComValor,
-                newData: newData
-              });
-              setShowRepairTypeModal(true);
-              modalTimerRef.current = null;
-            }, 800);
-            
+            console.log('⏳ Múltiplos tipos. Modal abrirá ao sair do campo.');
             return newData;
             
           } else if (tiposComValor.length === 1) {
@@ -2706,24 +2696,64 @@ useEffect(() => {
   const aplicarReparacaoPorTipo = (tipoSelecionado) => {
     if (!pendingRepairData) return;
     
-    const { psm, week, route, diferenca, newData } = pendingRepairData;
+    const { psm, week, route, diferenca, tiposDisponiveis } = pendingRepairData;
     
-    setData(() => {
-      const updatedData = JSON.parse(JSON.stringify(newData));
+    // Encontrar valor atual do tipo selecionado
+    const tipoAtual = tiposDisponiveis.find(t => t.tipo === tipoSelecionado);
+    if (!tipoAtual) return;
+    
+    const valorDisponivel = tipoAtual.valor;
+    const descontoAplicado = Math.min(valorDisponivel, diferenca);
+    const reparacoesRestantes = diferenca - descontoAplicado;
+    
+    // Aplicar desconto no tipo selecionado
+    setData(prevData => {
+      const updatedData = JSON.parse(JSON.stringify(prevData));
       const currentData = updatedData[psm][week][route];
       
       const valorAtual = parseInt(currentData[tipoSelecionado]) || 0;
-      const novoValor = Math.max(0, valorAtual - diferenca);
+      const novoValor = valorAtual - descontoAplicado;
       
       currentData[tipoSelecionado] = novoValor.toString();
       
-      console.log(`✅ Reparação: ${tipoSelecionado} ${valorAtual}→${novoValor}`);
+      console.log(`✅ ${tipoSelecionado}: ${valorAtual}→${novoValor} (desconto: ${descontoAplicado})`);
       
       return updatedData;
     });
     
-    setShowRepairTypeModal(false);
-    setPendingRepairData(null);
+    // Verificar se ainda há reparações restantes
+    if (reparacoesRestantes > 0) {
+      // Atualizar tipos disponíveis (remover tipos zerados)
+      const tiposAtualizados = tiposDisponiveis
+        .map(t => {
+          if (t.tipo === tipoSelecionado) {
+            return { ...t, valor: t.valor - descontoAplicado };
+          }
+          return t;
+        })
+        .filter(t => t.valor > 0);
+      
+      if (tiposAtualizados.length > 0) {
+        // Atualizar pendingRepairData com reparações restantes
+        setPendingRepairData({
+          ...pendingRepairData,
+          diferenca: reparacoesRestantes,
+          tiposDisponiveis: tiposAtualizados
+        });
+        console.log(`⚠️ Restam ${reparacoesRestantes} reparações. Selecione outro tipo.`);
+        // Modal permanece aberto
+      } else {
+        // Todos os tipos esgotados mas ainda sobram reparações
+        console.log(`⚠️ Todos os tipos esgotados. Ainda restam ${reparacoesRestantes} reparações não distribuídas.`);
+        setShowRepairTypeModal(false);
+        setPendingRepairData(null);
+      }
+    } else {
+      // Todas as reparações foram distribuídas
+      console.log('✅ Todas as reparações distribuídas!');
+      setShowRepairTypeModal(false);
+      setPendingRepairData(null);
+    }
   };
 
   const cancelarModal = () => {
@@ -2745,6 +2775,14 @@ useEffect(() => {
     
     setShowRepairTypeModal(false);
     setPendingRepairData(null);
+  };
+
+  const handleBlurTotalReparadas = () => {
+    // Abrir modal se houver dados pendentes e modal ainda não estiver aberto
+    if (pendingRepairData && !showRepairTypeModal) {
+      console.log('❓ Abrindo modal...');
+      setShowRepairTypeModal(true);
+    }
   };
 
   /**
@@ -10552,6 +10590,7 @@ Gerado por: PSM Monitor v3.42.03
                             type="text" 
                             value={getInputValue(selectedOperator, selectedWeek, route, 'Total Reparadas')}
                             onChange={(e) => handleInputChange(selectedOperator, selectedWeek, route, 'Total Reparadas', e.target.value)}
+                            onBlur={handleBlurTotalReparadas}
                             className="w-full text-center border border-green-300 rounded px-2 py-1 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 hover:border-green-500 transition-colors bg-white" 
                             placeholder="-"
                             maxLength="4"
@@ -10643,10 +10682,12 @@ Gerado por: PSM Monitor v3.42.03
           <div className="p-6">
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
               <p className="text-sm text-blue-900">
-                <strong>Total de Reparações:</strong> {pendingRepairData.diferenca} fibra(s)
+                <strong>Reparações a distribuir:</strong> {pendingRepairData.diferenca} fibra(s)
               </p>
               <p className="text-xs text-blue-700 mt-2">
-                💡 Esta rota tem múltiplos tipos de indisponibilidade. Selecione qual foi reparado.
+                💡 {pendingRepairData.tiposDisponiveis.length > 1 
+                  ? 'Selecione o tipo que foi reparado. Pode distribuir entre múltiplos tipos.' 
+                  : 'Último tipo disponível.'}
               </p>
             </div>
             
@@ -10687,9 +10728,12 @@ Gerado por: PSM Monitor v3.42.03
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-sm opacity-90">Após:</p>
+                        <p className="text-sm opacity-90">Desconto:</p>
                         <p className="text-2xl font-bold">
-                          {Math.max(0, item.valor - pendingRepairData.diferenca)}
+                          -{Math.min(item.valor, pendingRepairData.diferenca)}
+                        </p>
+                        <p className="text-xs opacity-75 mt-1">
+                          Ficará: {Math.max(0, item.valor - pendingRepairData.diferenca)}
                         </p>
                       </div>
                     </div>
