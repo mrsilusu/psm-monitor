@@ -4,7 +4,7 @@ import { BarChart3, TrendingUp, Users, AlertTriangle, CheckCircle, XCircle, Cloc
 import { lerTudoDoSupabase, salvarTudoNoSupabase, salvarJustificativasNoSupabase, lerJustificativasDoSupabase } from './services/supabaseService';
 
 const PSMMonitorApp = () => {
-  console.log("🚀 PSM Monitor v5.02.0 - LÓGICA Q1→Q3 CORRETA! ✅");
+  console.log("🚀 PSM Monitor 5.03.7 - MENU COLAPSAVEL ! ✅");
   
   // ============================================================================
   // MAPEAMENTO DE ROTAS PARA PROVÍNCIAS
@@ -391,6 +391,7 @@ const PSMMonitorApp = () => {
   return parseInt(localStorage.getItem('psm_selectedYear')) || new Date().getFullYear();
   });
   const [menuOpen, setMenuOpen] = useState(false);
+  const [manualDataExpanded, setManualDataExpanded] = useState(true);
   
   // Estados para modo apresentação
   const [presentationMode, setPresentationMode] = useState(false);
