@@ -418,11 +418,12 @@ useEffect(() => {
 // Cleanup do timer do modal ao desmontar
 useEffect(() => {
   return () => {
-    if (modalTimer) {
-      clearTimeout(modalTimer);
+    if (modalTimerRef.current) {
+      clearTimeout(modalTimerRef.current);
+      modalTimerRef.current = null;
     }
   };
-}, [modalTimer]);
+}, []);
 
 // ============================================================================
   // CARREGAR DADOS DO SUPABASE AO INICIAR E QUANDO MUDAR O ANO
@@ -1000,7 +1001,7 @@ useEffect(() => {
   // Estados para modal de seleção de tipo de reparação
   const [showRepairTypeModal, setShowRepairTypeModal] = useState(false);
   const [pendingRepairData, setPendingRepairData] = useState(null);
-  const [modalTimer, setModalTimer] = useState(null);
+  const modalTimerRef = useRef(null);
   
   // Modal de drill-down de status
   const [showStatusDrilldown, setShowStatusDrilldown] = useState(false);
@@ -2660,12 +2661,12 @@ useEffect(() => {
             currentData[category] = valorFinal;
             
             // Cancelar timer anterior se existir
-            if (modalTimer) {
-              clearTimeout(modalTimer);
+            if (modalTimerRef.current) {
+              clearTimeout(modalTimerRef.current);
             }
             
             // Aguardar 800ms antes de abrir modal (permite digitar número completo)
-            const timer = setTimeout(() => {
+            modalTimerRef.current = setTimeout(() => {
               console.log('❓ Múltiplos tipos. Abrindo modal...');
               setPendingRepairData({
                 psm,
@@ -2676,9 +2677,9 @@ useEffect(() => {
                 newData: newData
               });
               setShowRepairTypeModal(true);
+              modalTimerRef.current = null;
             }, 800);
             
-            setModalTimer(timer);
             return newData;
             
           } else if (tiposComValor.length === 1) {
