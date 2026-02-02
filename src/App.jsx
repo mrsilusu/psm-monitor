@@ -355,7 +355,19 @@ const PSMMonitorApp = () => {
   // ESTADO: DISTRIBUIÇÃO DE REPARAÇÕES (V5.06.0)
   // Estrutura: { PSM: { Week: { Rota: { 'Reconhecidas': 10, 'Dep. Cutover': 5 } } } }
   // Guarda QUANTO foi descontado de cada tipo de indisponibilidade
-  const [distribuicaoReparacoes, setDistribuicaoReparacoes] = useState({});
+  const [distribuicaoReparacoes, setDistribuicaoReparacoes] = useState(() => {
+    const saved = window.localStorage.getItem('psm_distribuicao_reparacoes_v1');
+    if (saved) {
+      try {
+        console.log('📥 [DISTRIBUIÇÃO] Carregado do localStorage');
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error('❌ [DISTRIBUIÇÃO] Erro ao carregar:', e);
+        return {};
+      }
+    }
+    return {};
+  });
 
 
   // ESTADO: JUSTIFICATIVAS
@@ -1712,6 +1724,18 @@ useEffect(() => {
     };
   }, [justificativas, selectedYear]); // Executar sempre que 'justificativas' ou 'selectedYear' mudar
 
+  // useEffect #2.5: Salvar estado 'distribuicaoReparacoes' no localStorage
+  useEffect(() => {
+    if (Object.keys(distribuicaoReparacoes).length > 0) {
+      try {
+        window.localStorage.setItem('psm_distribuicao_reparacoes_v1', JSON.stringify(distribuicaoReparacoes));
+        console.log('💾 [DISTRIBUIÇÃO] Salvo no localStorage');
+      } catch (error) {
+        console.error('❌ [DISTRIBUIÇÃO] Erro ao salvar:', error);
+      }
+    }
+  }, [distribuicaoReparacoes]);
+
   // useEffect #3: Log de inicialização (apenas uma vez)
   useEffect(() => {
 
@@ -2725,7 +2749,7 @@ useEffect(() => {
             return newData;
             
           } else if (tiposComValor.length === 1) {
-            // V5.06.1: APENAS 1 TIPO → Registrar distribuição e propagar
+            // V5.06.4: APENAS 1 TIPO → Registrar distribuição e propagar
             const tipoUnico = tiposComValor[0];
             const descontoAplicado = Math.min(tipoUnico.valor, diferenca);
             
@@ -2735,7 +2759,7 @@ useEffect(() => {
               if (!updated[psm]) updated[psm] = {};
               
               const trimestreAtual = quarterConfig[selectedQuarter];
-              const weekNum = parseInt(week.replace('W', ''));
+              const weekNum = parseInt(week.replace('W', ''), 10);
               
               // Propagar da semana atual até o fim do trimestre
               for (let w = weekNum; w <= trimestreAtual.end; w++) {
@@ -2743,8 +2767,8 @@ useEffect(() => {
                 if (!updated[psm][semana]) updated[psm][semana] = {};
                 if (!updated[psm][semana][route]) updated[psm][semana][route] = {};
                 
-                const atual = updated[psm][semana][route][tipoUnico.tipo] || 0;
-                updated[psm][semana][route][tipoUnico.tipo] = atual + descontoAplicado;
+                // V5.06.4: SUBSTITUIR (não somar) - o desconto total é 'descontoAplicado'
+                updated[psm][semana][route][tipoUnico.tipo] = descontoAplicado;
               }
               
               return updated;
@@ -2785,7 +2809,7 @@ useEffect(() => {
       
       // Obter semanas do trimestre
       const trimestreAtual = quarterConfig[selectedQuarter];
-      const weekNum = parseInt(week.replace('W', ''));
+      const weekNum = parseInt(week.replace('W', ''), 10);
       
       // Propagar da semana atual até o fim do trimestre
       for (let w = weekNum; w <= trimestreAtual.end; w++) {
