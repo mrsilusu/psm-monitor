@@ -2674,7 +2674,36 @@ useEffect(() => {
       });
       
       // LÓGICA DE NEGÓCIO: SELEÇÃO DO TIPO DE REPARAÇÃO
-      if (category === 'Total Reparadas' && valorFinal !== '') {
+      if (category === 'Total Reparadas') {
+        // V5.06.5: Se campo estiver VAZIO, limpar distribuição
+        if (valorFinal === '' || valorFinal === '0') {
+          console.log('🧹 Campo vazio/zerado - limpando distribuição');
+          
+          setDistribuicaoReparacoes(prev => {
+            const updated = JSON.parse(JSON.stringify(prev));
+            
+            // Limpar distribuição desta rota em todas as semanas do trimestre
+            const trimestreAtual = quarterConfig[selectedQuarter];
+            const weekNum = parseInt(week.replace('W', ''), 10);
+            
+            for (let w = weekNum; w <= trimestreAtual.end; w++) {
+              const semana = `W${w}`;
+              if (updated[psm]?.[semana]?.[route]) {
+                delete updated[psm][semana][route];
+              }
+            }
+            
+            return updated;
+          });
+          
+          // Limpar valorOriginalRef para próxima edição
+          valorOriginalRef.current = null;
+          setPendingRepairData(null);
+          
+          currentData[category] = valorFinal;
+          return newData;
+        }
+        
         // V5.06.3: Calcular diferença baseada no VALOR ORIGINAL (antes de editar)
         // Se é a primeira mudança, guardar o valor original
         if (!pendingRepairData && valorOriginalRef.current === null) {
@@ -3063,12 +3092,12 @@ useEffect(() => {
         const routeData = data[selectedOperator]?.[week]?.[route];
         if (routeData) {
           // Pegar último valor diferente de zero
-          const indispVal = parseInt(routeData['Indisponíveis']) || 0;
-          const reconhVal = parseInt(routeData['Reconhecidas']) || 0;
-          const depPassVal = parseInt(routeData['Dep. de Passagem de Cabo']) || 0;
-          const depLicVal = parseInt(routeData['Dep. de Licença']) || 0;
-          const depCutVal = parseInt(routeData['Dep. de Cutover']) || 0;
-          const fibrasVal = parseInt(routeData[`Fibras dependentes da ${selectedOperator}`]) || 0;
+          const indispVal = parseInt(routeData['Indisponíveis'], 10) || 0;
+          const reconhVal = parseInt(routeData['Reconhecidas'], 10) || 0;
+          const depPassVal = parseInt(routeData['Dep. de Passagem de Cabo'], 10) || 0;
+          const depLicVal = parseInt(routeData['Dep. de Licença'], 10) || 0;
+          const depCutVal = parseInt(routeData['Dep. de Cutover'], 10) || 0;
+          const fibrasVal = parseInt(routeData[`Fibras dependentes da ${selectedOperator}`], 10) || 0;
           
           if (indispVal > 0) routeLastValues[route].indisponiveis = indispVal;
           if (reconhVal > 0) routeLastValues[route].reconhecidas = reconhVal;
@@ -3078,7 +3107,7 @@ useEffect(() => {
           if (fibrasVal > 0) routeLastValues[route].fibrasDep = fibrasVal;
           
           // Total Reparadas ACUMULA (soma)
-          const reparadasVal = parseInt(routeData['Total Reparadas']) || 0;
+          const reparadasVal = parseInt(routeData['Total Reparadas'], 10) || 0;
           routeLastValues[route].totalReparadas += reparadasVal;
         }
       });
