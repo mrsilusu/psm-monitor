@@ -2682,15 +2682,9 @@ useEffect(() => {
           setDistribuicaoReparacoes(prev => {
             const updated = JSON.parse(JSON.stringify(prev));
             
-            // Limpar distribuição desta rota em todas as semanas do trimestre
-            const trimestreAtual = quarterConfig[selectedQuarter];
-            const weekNum = parseInt(week.replace('W', ''), 10);
-            
-            for (let w = weekNum; w <= trimestreAtual.end; w++) {
-              const semana = `W${w}`;
-              if (updated[psm]?.[semana]?.[route]) {
-                delete updated[psm][semana][route];
-              }
+            // V5.07.0: Limpar APENAS a semana atual (não futuras)
+            if (updated[psm]?.[week]?.[route]) {
+              delete updated[psm][week][route];
             }
             
             return updated;
@@ -2782,28 +2776,20 @@ useEffect(() => {
             const tipoUnico = tiposComValor[0];
             const descontoAplicado = Math.min(tipoUnico.valor, diferenca);
             
-            // Registrar distribuição e propagar até fim do trimestre
+            // V5.07.0: Registrar distribuição APENAS na semana atual (não propagar)
             setDistribuicaoReparacoes(prev => {
               const updated = JSON.parse(JSON.stringify(prev));
               if (!updated[psm]) updated[psm] = {};
+              if (!updated[psm][week]) updated[psm][week] = {};
+              if (!updated[psm][week][route]) updated[psm][week][route] = {};
               
-              const trimestreAtual = quarterConfig[selectedQuarter];
-              const weekNum = parseInt(week.replace('W', ''), 10);
-              
-              // Propagar da semana atual até o fim do trimestre
-              for (let w = weekNum; w <= trimestreAtual.end; w++) {
-                const semana = `W${w}`;
-                if (!updated[psm][semana]) updated[psm][semana] = {};
-                if (!updated[psm][semana][route]) updated[psm][semana][route] = {};
-                
-                // V5.06.4: SUBSTITUIR (não somar) - o desconto total é 'descontoAplicado'
-                updated[psm][semana][route][tipoUnico.tipo] = descontoAplicado;
-              }
+              // Guardar desconto APENAS desta semana
+              updated[psm][week][route][tipoUnico.tipo] = descontoAplicado;
               
               return updated;
             });
             
-            console.log(`🔄 Auto: ${tipoUnico.tipo} desconto ${descontoAplicado} propagado de ${week} até W${quarterConfig[selectedQuarter].end}`);
+            console.log(`🔄 Auto: ${tipoUnico.tipo} desconto ${descontoAplicado} registrado em ${week}`);
           }
         }
       }
@@ -2831,26 +2817,18 @@ useEffect(() => {
     const descontoAplicado = Math.min(valorDisponivel, diferenca);
     const reparacoesRestantes = diferenca - descontoAplicado;
     
-    // V5.06.1: Registrar distribuição da semana atual até fim do trimestre
+    // V5.07.0: Registrar distribuição APENAS na semana atual
     setDistribuicaoReparacoes(prevDist => {
       const updated = JSON.parse(JSON.stringify(prevDist));
       if (!updated[psm]) updated[psm] = {};
+      if (!updated[psm][week]) updated[psm][week] = {};
+      if (!updated[psm][week][route]) updated[psm][week][route] = {};
       
-      // Obter semanas do trimestre
-      const trimestreAtual = quarterConfig[selectedQuarter];
-      const weekNum = parseInt(week.replace('W', ''), 10);
+      // Somar ao desconto já existente desta semana (distribuição sequencial)
+      const atual = updated[psm][week][route][tipoSelecionado] || 0;
+      updated[psm][week][route][tipoSelecionado] = atual + descontoAplicado;
       
-      // Propagar da semana atual até o fim do trimestre
-      for (let w = weekNum; w <= trimestreAtual.end; w++) {
-        const semana = `W${w}`;
-        if (!updated[psm][semana]) updated[psm][semana] = {};
-        if (!updated[psm][semana][route]) updated[psm][semana][route] = {};
-        
-        const atual = updated[psm][semana][route][tipoSelecionado] || 0;
-        updated[psm][semana][route][tipoSelecionado] = atual + descontoAplicado;
-      }
-      
-      console.log(`✅ ${tipoSelecionado}: desconto ${descontoAplicado} propagado de ${week} até W${trimestreAtual.end}`);
+      console.log(`✅ ${tipoSelecionado}: +${descontoAplicado} em ${week} (total: ${atual + descontoAplicado})`);
       
       return updated;
     });
@@ -2978,12 +2956,11 @@ useEffect(() => {
   };
 
   /**
-   * V5.06.2: Obtém valor REDUZIDO para Dashboard Executivo
-   * Calcula: Valor Original - Distribuição de Reparações
-   * Se não houver valor na semana, busca nas anteriores
+   * V5.07.0: Obtém valor REDUZIDO para Dashboard Executivo
+   * Calcula: Valor Original - Desconto ACUMULADO de todas as semanas até a atual
    */
   const getValorReduzido = (psm, week, route, tipo) => {
-    // Tentar pegar valor da semana atual
+    // Pegar valor original
     let original = parseInt(data[psm]?.[week]?.[route]?.[tipo], 10) || 0;
     
     // Se não houver, buscar em semanas anteriores
@@ -2991,8 +2968,18 @@ useEffect(() => {
       original = buscarValorAnterior(psm, week, route, tipo);
     }
     
-    const desconto = distribuicaoReparacoes[psm]?.[week]?.[route]?.[tipo] || 0;
-    return Math.max(0, original - desconto);
+    // V5.07.0: SOMAR descontos de TODAS as semanas até a atual (acumulativo)
+    const weekNum = parseInt(week.replace('W', ''), 10);
+    const trimestreAtual = quarterConfig[selectedQuarter];
+    
+    let descontoAcumulado = 0;
+    for (let w = trimestreAtual.start; w <= weekNum; w++) {
+      const semana = `W${w}`;
+      const descontoDaSemana = distribuicaoReparacoes[psm]?.[semana]?.[route]?.[tipo] || 0;
+      descontoAcumulado += descontoDaSemana;
+    }
+    
+    return Math.max(0, original - descontoAcumulado);
   };
 
   /**
