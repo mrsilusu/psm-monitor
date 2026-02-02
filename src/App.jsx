@@ -5,7 +5,7 @@ import { lerTudoDoSupabase, salvarTudoNoSupabase, salvarJustificativasNoSupabase
 import { salvarDistribuicaoNoSupabase, carregarDistribuicaoDoSupabase, limparDistribuicaoNoSupabase } from './services/supabaseDistribuicaoService';
 
 const PSMMonitorApp = () => {
-  console.log("🚀 PSM Monitor 5.08.0 - PERSISTÊNCIA DISTRIBUIÇÃO ! ✅");
+  console.log("🚀 PSM Monitor 5.08.1 - SALVAMENTO IMEDIATO ! ✅");
   
   // ============================================================================
   // MAPEAMENTO DE ROTAS PARA PROVÍNCIAS
@@ -1725,7 +1725,7 @@ useEffect(() => {
     };
   }, [justificativas, selectedYear]); // Executar sempre que 'justificativas' ou 'selectedYear' mudar
 
-  // useEffect #2.5: Salvar estado 'distribuicaoReparacoes' no localStorage E SUPABASE
+  // useEffect #2.5: Salvar estado 'distribuicaoReparacoes' no localStorage E SUPABASE IMEDIATAMENTE
   useEffect(() => {
     if (Object.keys(distribuicaoReparacoes).length > 0) {
       // 1. Salvar no localStorage (imediato)
@@ -1733,13 +1733,12 @@ useEffect(() => {
         window.localStorage.setItem('psm_distribuicao_reparacoes_v1', JSON.stringify(distribuicaoReparacoes));
         console.log('💾 [DISTRIBUIÇÃO] Salvo no localStorage');
       } catch (error) {
-        console.error('❌ [DISTRIBUIÇÃO] Erro ao salvar:', error);
+        console.error('❌ [DISTRIBUIÇÃO] Erro ao salvar no localStorage:', error);
       }
       
-      // 2. Salvar no Supabase (com debounce)
-      clearTimeout(window.salvarDistribuicaoTimeout);
-      window.salvarDistribuicaoTimeout = setTimeout(async () => {
-        console.log('💾 [DISTRIBUIÇÃO] Salvando no Supabase...');
+      // 2. Salvar no Supabase IMEDIATAMENTE (sem debounce)
+      const salvarImediatamente = async () => {
+        console.log('💾 [DISTRIBUIÇÃO] Salvando no Supabase IMEDIATAMENTE...');
         
         const resultado = await salvarDistribuicaoNoSupabase(
           distribuicaoReparacoes,
@@ -1752,15 +1751,10 @@ useEffect(() => {
         } else {
           console.error('❌ [DISTRIBUIÇÃO] Erro ao salvar no Supabase:', resultado.error);
         }
-      }, 3000); // 3 segundos de debounce
+      };
+      
+      salvarImediatamente();
     }
-    
-    // Cleanup
-    return () => {
-      if (window.salvarDistribuicaoTimeout) {
-        clearTimeout(window.salvarDistribuicaoTimeout);
-      }
-    };
   }, [distribuicaoReparacoes, selectedQuarter, selectedYear]);
 
   // useEffect #2.6: Carregar distribuição do Supabase quando mudar quarter/year
