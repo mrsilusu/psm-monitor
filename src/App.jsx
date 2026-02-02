@@ -2,9 +2,10 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { BarChart3, TrendingUp, Users, AlertTriangle, CheckCircle, XCircle, Clock, MapPin, TrendingDown, Home, Upload, FileJson, Download, Calendar, BarChart, FileText, Menu, PieChart, DownloadCloud, Trash2, AlertCircle } from 'lucide-react';
 
 import { lerTudoDoSupabase, salvarTudoNoSupabase, salvarJustificativasNoSupabase, lerJustificativasDoSupabase } from './services/supabaseService';
+import { salvarDistribuicaoNoSupabase, carregarDistribuicaoDoSupabase, limparDistribuicaoNoSupabase } from './services/supabaseDistribuicaoService';
 
 const PSMMonitorApp = () => {
-  console.log("🚀 PSM Monitor 5.03.7 - MENU COLAPSAVEL ! ✅");
+  console.log("🚀 PSM Monitor 5.08.1 - SALVAMENTO IMEDIATO ! ✅");
   
   // ============================================================================
   // MAPEAMENTO DE ROTAS PARA PROVÍNCIAS
@@ -352,6 +353,23 @@ const PSMMonitorApp = () => {
     return initialData;
   });
 
+  // ESTADO: DISTRIBUIÇÃO DE REPARAÇÕES (V5.06.0)
+  // Estrutura: { PSM: { Week: { Rota: { 'Reconhecidas': 10, 'Dep. Cutover': 5 } } } }
+  // Guarda QUANTO foi descontado de cada tipo de indisponibilidade
+  const [distribuicaoReparacoes, setDistribuicaoReparacoes] = useState(() => {
+    const saved = window.localStorage.getItem('psm_distribuicao_reparacoes_v1');
+    if (saved) {
+      try {
+        console.log('📥 [DISTRIBUIÇÃO] Carregado do localStorage');
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error('❌ [DISTRIBUIÇÃO] Erro ao carregar:', e);
+        return {};
+      }
+    }
+    return {};
+  });
+
 
   // ESTADO: JUSTIFICATIVAS
   // Estrutura: { 'PSM_Rota': { seccao, regiao, transporteQ2, indisponiveis, delta, justificativa } }
@@ -414,6 +432,16 @@ useEffect(() => {
 useEffect(() => {
   localStorage.setItem('psm_selectedYear', String(selectedYear));
 }, [selectedYear]);
+
+// Cleanup do timer do modal ao desmontar
+useEffect(() => {
+  return () => {
+    if (modalTimerRef.current) {
+      clearTimeout(modalTimerRef.current);
+      modalTimerRef.current = null;
+    }
+  };
+}, []);
 
 // ============================================================================
   // CARREGAR DADOS DO SUPABASE AO INICIAR E QUANDO MUDAR O ANO
@@ -987,6 +1015,12 @@ useEffect(() => {
   // FASE 1: Estados do modal
   const [showModal, setShowModal] = useState(false);
   const [selectedRota, setSelectedRota] = useState(null);
+  
+  // Estados para modal de seleção de tipo de reparação
+  const [showRepairTypeModal, setShowRepairTypeModal] = useState(false);
+  const [pendingRepairData, setPendingRepairData] = useState(null);
+  const modalTimerRef = useRef(null);
+  const valorOriginalRef = useRef(null); // Guarda valor antes de começar a editar
   
   // Modal de drill-down de status
   const [showStatusDrilldown, setShowStatusDrilldown] = useState(false);
@@ -1690,6 +1724,57 @@ useEffect(() => {
       clearTimeout(window.salvarJustificativasTimeout);
     };
   }, [justificativas, selectedYear]); // Executar sempre que 'justificativas' ou 'selectedYear' mudar
+
+  // useEffect #2.5: Salvar estado 'distribuicaoReparacoes' no localStorage E SUPABASE IMEDIATAMENTE
+  useEffect(() => {
+    if (Object.keys(distribuicaoReparacoes).length > 0) {
+      // 1. Salvar no localStorage (imediato)
+      try {
+        window.localStorage.setItem('psm_distribuicao_reparacoes_v1', JSON.stringify(distribuicaoReparacoes));
+        console.log('💾 [DISTRIBUIÇÃO] Salvo no localStorage');
+      } catch (error) {
+        console.error('❌ [DISTRIBUIÇÃO] Erro ao salvar no localStorage:', error);
+      }
+      
+      // 2. Salvar no Supabase IMEDIATAMENTE (sem debounce)
+      const salvarImediatamente = async () => {
+        console.log('💾 [DISTRIBUIÇÃO] Salvando no Supabase IMEDIATAMENTE...');
+        
+        const resultado = await salvarDistribuicaoNoSupabase(
+          distribuicaoReparacoes,
+          selectedQuarter,
+          selectedYear
+        );
+        
+        if (resultado.success) {
+          console.log('✅ [DISTRIBUIÇÃO] Salvo no Supabase');
+        } else {
+          console.error('❌ [DISTRIBUIÇÃO] Erro ao salvar no Supabase:', resultado.error);
+        }
+      };
+      
+      salvarImediatamente();
+    }
+  }, [distribuicaoReparacoes, selectedQuarter, selectedYear]);
+
+  // useEffect #2.6: Carregar distribuição do Supabase quando mudar quarter/year
+  useEffect(() => {
+    const carregarDistribuicaoInicial = async () => {
+      console.log('📥 [DISTRIBUIÇÃO] Carregando do Supabase...');
+      
+      const distrib = await carregarDistribuicaoDoSupabase(
+        selectedQuarter,
+        selectedYear
+      );
+      
+      if (Object.keys(distrib).length > 0) {
+        setDistribuicaoReparacoes(distrib);
+        console.log('✅ [DISTRIBUIÇÃO] Carregada do Supabase');
+      }
+    };
+    
+    carregarDistribuicaoInicial();
+  }, [selectedQuarter, selectedYear]);
 
   // useEffect #3: Log de inicialização (apenas uma vez)
   useEffect(() => {
@@ -2618,41 +2703,165 @@ useEffect(() => {
 
       // Obter valores atuais
       const currentData = newData[psm][week][route];
-      const oldTotalReparadas = parseInt(currentData['Total Reparadas']) || 0;
-      const newTotalReparadas = category === 'Total Reparadas' ? (parseInt(valorFinal) || 0) : oldTotalReparadas;
+      const currentTotalReparadas = parseInt(currentData['Total Reparadas'], 10) || 0;
+      const newTotalReparadas = category === 'Total Reparadas' ? (parseInt(valorFinal, 10) || 0) : currentTotalReparadas;
       
-      // LÓGICA DE NEGÓCIO: Redução Automática de Fibras Dependentes
-      if (category === 'Total Reparadas' && valorFinal !== '') {
-        const diferenca = newTotalReparadas - oldTotalReparadas;
+      console.log(`📝 INPUT CHANGE:`, {
+        category,
+        valorFinal,
+        currentTotalReparadas,
+        newTotalReparadas
+      });
+      
+      // LÓGICA DE NEGÓCIO: SELEÇÃO DO TIPO DE REPARAÇÃO
+      if (category === 'Total Reparadas') {
+        // V5.06.5: Se campo estiver VAZIO, limpar distribuição
+        if (valorFinal === '' || valorFinal === '0') {
+          console.log('🧹 Campo vazio/zerado - limpando distribuição');
+          
+          setDistribuicaoReparacoes(prev => {
+            const updated = JSON.parse(JSON.stringify(prev));
+            
+            // V5.07.0: Limpar APENAS a semana atual (não futuras)
+            if (updated[psm]?.[week]?.[route]) {
+              delete updated[psm][week][route];
+              
+              // V5.08.0: Limpar também no Supabase
+              limparDistribuicaoNoSupabase(psm, week, route, selectedQuarter, selectedYear);
+            }
+            
+            return updated;
+          });
+          
+          // Limpar valorOriginalRef para próxima edição
+          valorOriginalRef.current = null;
+          setPendingRepairData(null);
+          
+          currentData[category] = valorFinal;
+          return newData;
+        }
+        
+        // V5.06.3: Calcular diferença baseada no VALOR ORIGINAL (antes de editar)
+        // Se é a primeira mudança, guardar o valor original
+        if (!pendingRepairData && valorOriginalRef.current === null) {
+          valorOriginalRef.current = currentTotalReparadas;
+        }
+        
+        // Diferença = novo valor - valor ORIGINAL (não o valor anterior de cada tecla)
+        const valorOriginal = valorOriginalRef.current !== null ? valorOriginalRef.current : currentTotalReparadas;
+        const diferenca = newTotalReparadas - valorOriginal;
+        
+        console.log(`🔢 DIFERENÇA: ${diferenca} (novo: ${newTotalReparadas} - original: ${valorOriginal})`);
         
         if (diferenca > 0) {
-          // Total Reparadas AUMENTOU → Reduzir Fibras Dependentes
-          const fibrasDependentesKey = `Fibras dependentes da ${psm}`;
-          const currentFibrasDep = parseInt(currentData[fibrasDependentesKey]) || 0;
-          const newFibrasDep = Math.max(0, currentFibrasDep - diferenca); // Não pode ficar negativo
+          // Total Reparadas AUMENTOU → Verificar tipos disponíveis
+          // Buscar valores ORIGINAIS na semana atual, ou nas anteriores se não houver
+          let reconhecidasOriginal = parseInt(currentData['Reconhecidas'], 10) || 0;
+          let depPassagemOriginal = parseInt(currentData['Dep. de Passagem de Cabo'], 10) || 0;
+          let depLicencaOriginal = parseInt(currentData['Dep. de Licença'], 10) || 0;
+          let depCutoverOriginal = parseInt(currentData['Dep. de Cutover'], 10) || 0;
+          let fibrasDependentesOriginal = parseInt(currentData[`Fibras dependentes da ${psm}`], 10) || 0;
           
-          currentData[fibrasDependentesKey] = newFibrasDep.toString();
-
-          console.log(`🔄 LÓGICA DE NEGÓCIO APLICADA:`);
-          console.log(`   Total Reparadas: ${oldTotalReparadas} → ${newTotalReparadas} (+${diferenca})`);
-          console.log(`   Fibras Dependentes: ${currentFibrasDep} → ${newFibrasDep} (-${diferenca})`);
-
-        } else if (diferenca < 0) {
-          // Total Reparadas DIMINUIU → Aumentar Fibras Dependentes
-          const fibrasDependentesKey = `Fibras dependentes da ${psm}`;
-          const currentFibrasDep = parseInt(currentData[fibrasDependentesKey]) || 0;
-          const newFibrasDep = currentFibrasDep + Math.abs(diferenca);
+          // Se não houver valores na semana atual, buscar nas anteriores
+          if (reconhecidasOriginal === 0) {
+            reconhecidasOriginal = buscarValorAnterior(psm, week, route, 'Reconhecidas');
+          }
+          if (depPassagemOriginal === 0) {
+            depPassagemOriginal = buscarValorAnterior(psm, week, route, 'Dep. de Passagem de Cabo');
+          }
+          if (depLicencaOriginal === 0) {
+            depLicencaOriginal = buscarValorAnterior(psm, week, route, 'Dep. de Licença');
+          }
+          if (depCutoverOriginal === 0) {
+            depCutoverOriginal = buscarValorAnterior(psm, week, route, 'Dep. de Cutover');
+          }
+          if (fibrasDependentesOriginal === 0) {
+            fibrasDependentesOriginal = buscarValorAnterior(psm, week, route, `Fibras dependentes da ${psm}`);
+          }
           
-          currentData[fibrasDependentesKey] = newFibrasDep.toString();
+          // V5.07.1: Subtrair distribuição ACUMULADA (todas semanas até atual)
+          const weekNum = parseInt(week.replace('W', ''), 10);
+          const trimestreAtual = quarterConfig[selectedQuarter];
           
-          console.log('🔄 LÓGICA DE NEGÓCIO APLICADA (REVERSA):');
-          console.log(`   Total Reparadas: ${oldTotalReparadas} → ${newTotalReparadas} (${diferenca})`);
-          console.log(`   Fibras Dependentes: ${currentFibrasDep} → ${newFibrasDep} (+${Math.abs(diferenca)})`);
-
+          // Somar descontos de TODAS as semanas até a atual
+          let descontoAcumuladoReconh = 0;
+          let descontoAcumuladoDepPass = 0;
+          let descontoAcumuladoDepLic = 0;
+          let descontoAcumuladoDepCut = 0;
+          let descontoAcumuladoFibras = 0;
+          
+          for (let w = trimestreAtual.start; w <= weekNum; w++) {
+            const semana = `W${w}`;
+            const distDaSemana = distribuicaoReparacoes[psm]?.[semana]?.[route] || {};
+            descontoAcumuladoReconh += distDaSemana['Reconhecidas'] || 0;
+            descontoAcumuladoDepPass += distDaSemana['Dep. de Passagem de Cabo'] || 0;
+            descontoAcumuladoDepLic += distDaSemana['Dep. de Licença'] || 0;
+            descontoAcumuladoDepCut += distDaSemana['Dep. de Cutover'] || 0;
+            descontoAcumuladoFibras += distDaSemana[`Fibras dependentes da ${psm}`] || 0;
+          }
+          
+          const reconhecidas = Math.max(0, reconhecidasOriginal - descontoAcumuladoReconh);
+          const depPassagem = Math.max(0, depPassagemOriginal - descontoAcumuladoDepPass);
+          const depLicenca = Math.max(0, depLicencaOriginal - descontoAcumuladoDepLic);
+          const depCutover = Math.max(0, depCutoverOriginal - descontoAcumuladoDepCut);
+          const fibrasDependentes = Math.max(0, fibrasDependentesOriginal - descontoAcumuladoFibras);
+          
+          console.log(`📊 Modal - Valores disponíveis:`, {
+            reconhecidas: `${reconhecidasOriginal} - ${descontoAcumuladoReconh} = ${reconhecidas}`,
+            depPassagem: `${depPassagemOriginal} - ${descontoAcumuladoDepPass} = ${depPassagem}`,
+            fibrasDep: `${fibrasDependentesOriginal} - ${descontoAcumuladoFibras} = ${fibrasDependentes}`
+          });
+          
+          const tiposComValor = [
+            { tipo: 'Reconhecidas', valor: reconhecidas },
+            { tipo: 'Dep. de Passagem de Cabo', valor: depPassagem },
+            { tipo: 'Dep. de Licença', valor: depLicenca },
+            { tipo: 'Dep. de Cutover', valor: depCutover },
+            { tipo: `Fibras dependentes da ${psm}`, valor: fibrasDependentes }
+          ].filter(item => item.valor > 0);
+          
+          if (tiposComValor.length > 1) {
+            // MÚLTIPLOS TIPOS → Preparar dados (modal abrirá no onBlur)
+            
+            currentData[category] = valorFinal;
+            
+            setPendingRepairData({
+              psm,
+              week,
+              route,
+              diferenca,
+              valorAnterior: valorOriginalRef.current, // Já foi guardado no início
+              tiposDisponiveis: tiposComValor,
+              newData: newData
+            });
+            
+            console.log(`⏳ Múltiplos tipos. Original: ${valorOriginalRef.current}, Novo: ${newTotalReparadas}`);
+            return newData;
+            
+          } else if (tiposComValor.length === 1) {
+            // V5.06.4: APENAS 1 TIPO → Registrar distribuição e propagar
+            const tipoUnico = tiposComValor[0];
+            const descontoAplicado = Math.min(tipoUnico.valor, diferenca);
+            
+            // V5.07.0: Registrar distribuição APENAS na semana atual (não propagar)
+            setDistribuicaoReparacoes(prev => {
+              const updated = JSON.parse(JSON.stringify(prev));
+              if (!updated[psm]) updated[psm] = {};
+              if (!updated[psm][week]) updated[psm][week] = {};
+              if (!updated[psm][week][route]) updated[psm][week][route] = {};
+              
+              // Guardar desconto APENAS desta semana
+              updated[psm][week][route][tipoUnico.tipo] = descontoAplicado;
+              
+              return updated;
+            });
+            
+            console.log(`🔄 Auto: ${tipoUnico.tipo} desconto ${descontoAplicado} registrado em ${week}`);
+          }
         }
       }
 
-      // Atualizar o valor específico
+      // Atualizar o valor específico (para outros casos)
       currentData[category] = valorFinal;
 
       return newData;
@@ -2660,6 +2869,141 @@ useEffect(() => {
 
     // Log de confirmação
     console.log(`✓ Atualizado: ${route} -> ${category} = ${valorFinal || '(vazio → será salvo como 0)'}`);
+  };
+
+  const aplicarReparacaoPorTipo = (tipoSelecionado) => {
+    if (!pendingRepairData) return;
+    
+    const { psm, week, route, diferenca, tiposDisponiveis } = pendingRepairData;
+    
+    // Encontrar valor atual do tipo selecionado
+    const tipoAtual = tiposDisponiveis.find(t => t.tipo === tipoSelecionado);
+    if (!tipoAtual) return;
+    
+    const valorDisponivel = tipoAtual.valor;
+    const descontoAplicado = Math.min(valorDisponivel, diferenca);
+    const reparacoesRestantes = diferenca - descontoAplicado;
+    
+    // V5.07.0: Registrar distribuição APENAS na semana atual
+    setDistribuicaoReparacoes(prevDist => {
+      const updated = JSON.parse(JSON.stringify(prevDist));
+      if (!updated[psm]) updated[psm] = {};
+      if (!updated[psm][week]) updated[psm][week] = {};
+      if (!updated[psm][week][route]) updated[psm][week][route] = {};
+      
+      // Somar ao desconto já existente desta semana (distribuição sequencial)
+      const atual = updated[psm][week][route][tipoSelecionado] || 0;
+      updated[psm][week][route][tipoSelecionado] = atual + descontoAplicado;
+      
+      console.log(`✅ ${tipoSelecionado}: +${descontoAplicado} em ${week} (total: ${atual + descontoAplicado})`);
+      
+      return updated;
+    });
+    
+    // Verificar se ainda há reparações restantes
+    if (reparacoesRestantes > 0) {
+      // Atualizar tipos disponíveis (remover tipos zerados)
+      const tiposAtualizados = tiposDisponiveis
+        .map(t => {
+          if (t.tipo === tipoSelecionado) {
+            return { ...t, valor: t.valor - descontoAplicado };
+          }
+          return t;
+        })
+        .filter(t => t.valor > 0);
+      
+      if (tiposAtualizados.length > 0) {
+        // Atualizar pendingRepairData com reparações restantes
+        setPendingRepairData({
+          ...pendingRepairData,
+          diferenca: reparacoesRestantes,
+          tiposDisponiveis: tiposAtualizados
+        });
+        console.log(`⚠️ Restam ${reparacoesRestantes} reparações. Selecione outro tipo.`);
+        // Modal permanece aberto
+      } else {
+        // Todos os tipos esgotados mas ainda sobram reparações
+        console.log(`⚠️ Todos os tipos esgotados. Ainda restam ${reparacoesRestantes} reparações não distribuídas.`);
+        setShowRepairTypeModal(false);
+        setPendingRepairData(null);
+        valorOriginalRef.current = null;
+      }
+    } else {
+      // Todas as reparações foram distribuídas
+      console.log('✅ Todas as reparações distribuídas!');
+      setShowRepairTypeModal(false);
+      setPendingRepairData(null);
+      valorOriginalRef.current = null;
+    }
+  };
+
+  const cancelarModal = () => {
+    if (!pendingRepairData) return;
+    
+    const { psm, week, route, valorAnterior } = pendingRepairData;
+    
+    // Reverter Total Reparadas para o valor anterior
+    setData(prevData => {
+      const updatedData = JSON.parse(JSON.stringify(prevData));
+      const currentData = updatedData[psm][week][route];
+      
+      currentData['Total Reparadas'] = valorAnterior.toString();
+      
+      console.log(`❌ Modal cancelado. Total Reparadas revertido para: ${valorAnterior}`);
+      
+      return updatedData;
+    });
+    
+    setShowRepairTypeModal(false);
+    setPendingRepairData(null);
+    valorOriginalRef.current = null;
+  };
+
+  const handleBlurTotalReparadas = () => {
+    // Abrir modal se houver dados pendentes e modal ainda não estiver aberto
+    if (pendingRepairData && !showRepairTypeModal) {
+      console.log('❓ Abrindo modal com dados:', {
+        diferenca: pendingRepairData.diferenca,
+        tiposDisponiveis: pendingRepairData.tiposDisponiveis,
+        week: pendingRepairData.week
+      });
+      setShowRepairTypeModal(true);
+    }
+  };
+
+  /**
+   * Busca o último valor conhecido de um tipo em semanas anteriores DO MESMO TRIMESTRE
+   * @param {string} psm - PSM
+   * @param {string} week - Semana atual
+   * @param {string} route - Rota
+   * @param {string} tipo - Tipo de indisponibilidade
+   * @returns {number} Último valor conhecido ou 0
+   */
+  const buscarValorAnterior = (psm, week, route, tipo) => {
+    if (!data[psm]) return 0;
+    
+    // Obter número da semana atual
+    const weekNum = parseInt(week.replace('W', ''));
+    
+    // Determinar limites do trimestre atual
+    const trimestreAtual = quarterConfig[selectedQuarter];
+    const semanaMinima = trimestreAtual.start;
+    
+    console.log(`🔍 Buscando ${tipo} em ${selectedQuarter} (W${semanaMinima}-W${weekNum-1})`);
+    
+    // Buscar de trás para frente DENTRO DO TRIMESTRE
+    for (let w = weekNum - 1; w >= semanaMinima; w--) {
+      const semanaAnterior = `W${w}`;
+      const valor = parseInt(data[psm]?.[semanaAnterior]?.[route]?.[tipo], 10) || 0;
+      
+      if (valor > 0) {
+        console.log(`✅ Encontrado ${tipo}=${valor} em ${semanaAnterior} (${selectedQuarter})`);
+        return valor;
+      }
+    }
+    
+    console.log(`⚠️ ${tipo} não encontrado em ${selectedQuarter}`);
+    return 0;
   };
 
   /**
@@ -2676,6 +3020,41 @@ useEffect(() => {
     } catch (e) {
       return '';
     }
+  };
+
+  /**
+   * V5.07.0: Obtém valor REDUZIDO para Dashboard Executivo
+   * Calcula: Valor Original - Desconto ACUMULADO de todas as semanas até a atual
+   */
+  const getValorReduzido = (psm, week, route, tipo) => {
+    // Pegar valor original
+    let original = parseInt(data[psm]?.[week]?.[route]?.[tipo], 10) || 0;
+    
+    // Se não houver, buscar em semanas anteriores
+    if (original === 0) {
+      original = buscarValorAnterior(psm, week, route, tipo);
+    }
+    
+    // V5.07.0: SOMAR descontos de TODAS as semanas até a atual (acumulativo)
+    const weekNum = parseInt(week.replace('W', ''), 10);
+    const trimestreAtual = quarterConfig[selectedQuarter];
+    
+    let descontoAcumulado = 0;
+    for (let w = trimestreAtual.start; w <= weekNum; w++) {
+      const semana = `W${w}`;
+      const descontoDaSemana = distribuicaoReparacoes[psm]?.[semana]?.[route]?.[tipo] || 0;
+      descontoAcumulado += descontoDaSemana;
+    }
+    
+    return Math.max(0, original - descontoAcumulado);
+  };
+
+  /**
+   * V5.06.0: Obtém valor ORIGINAL para Cards Header
+   * Retorna valor sem aplicar desconto de reparações
+   */
+  const getValorOriginal = (psm, week, route, tipo) => {
+    return parseInt(data[psm]?.[week]?.[route]?.[tipo], 10) || 0;
   };
 
   // ============================================================================
@@ -2767,12 +3146,12 @@ useEffect(() => {
         const routeData = data[selectedOperator]?.[week]?.[route];
         if (routeData) {
           // Pegar último valor diferente de zero
-          const indispVal = parseInt(routeData['Indisponíveis']) || 0;
-          const reconhVal = parseInt(routeData['Reconhecidas']) || 0;
-          const depPassVal = parseInt(routeData['Dep. de Passagem de Cabo']) || 0;
-          const depLicVal = parseInt(routeData['Dep. de Licença']) || 0;
-          const depCutVal = parseInt(routeData['Dep. de Cutover']) || 0;
-          const fibrasVal = parseInt(routeData[`Fibras dependentes da ${selectedOperator}`]) || 0;
+          const indispVal = parseInt(routeData['Indisponíveis'], 10) || 0;
+          const reconhVal = parseInt(routeData['Reconhecidas'], 10) || 0;
+          const depPassVal = parseInt(routeData['Dep. de Passagem de Cabo'], 10) || 0;
+          const depLicVal = parseInt(routeData['Dep. de Licença'], 10) || 0;
+          const depCutVal = parseInt(routeData['Dep. de Cutover'], 10) || 0;
+          const fibrasVal = parseInt(routeData[`Fibras dependentes da ${selectedOperator}`], 10) || 0;
           
           if (indispVal > 0) routeLastValues[route].indisponiveis = indispVal;
           if (reconhVal > 0) routeLastValues[route].reconhecidas = reconhVal;
@@ -2782,7 +3161,7 @@ useEffect(() => {
           if (fibrasVal > 0) routeLastValues[route].fibrasDep = fibrasVal;
           
           // Total Reparadas ACUMULA (soma)
-          const reparadasVal = parseInt(routeData['Total Reparadas']) || 0;
+          const reparadasVal = parseInt(routeData['Total Reparadas'], 10) || 0;
           routeLastValues[route].totalReparadas += reparadasVal;
         }
       });
@@ -2858,78 +3237,56 @@ useEffect(() => {
       });
     });
     
-    // v3.40.70: APLICAR REDUÇÃO POR PRIORIDADE (mesma lógica da Distribuição por Status)
-    // Somar os valores LÍQUIDOS após aplicar redução por prioridade - PARA GRUPO 2
-    // USA routeValuesAteSelecao (até semana selecionada)
-    Object.values(routeValuesAteSelecao).forEach(values => {
-      // Calcular indisponíveis originais (soma das subcategorias)
-      const indisponiveisOriginais = values.reconhecidas + values.depPassagem + 
-                                      values.depLicenca + values.depCutover + values.fibrasDep;
+    // V5.06.1: CÁLCULO COM DISTRIBUIÇÃO - Usar ÚLTIMA semana de cada rota
+    console.log(`📊 V5.06.1: Calculando Dashboard (última semana de cada rota)`);
+    
+    routesToProcess.forEach(route => {
+      // Buscar última semana com dados para esta rota
+      let ultimaSemana = null;
+      for (let i = weeksAteSelecao.length - 1; i >= 0; i--) {
+        const week = weeksAteSelecao[i];
+        const routeData = data[selectedOperator]?.[week]?.[route];
+        if (routeData) {
+          ultimaSemana = week;
+          break;
+        }
+      }
       
-      // Se reparadas >= indisponíveis originais → ZERA TUDO (100% reparadas)
-      if (values.totalReparadas >= indisponiveisOriginais) {
-        // Tudo foi reparado: só conta reparadas
+      if (ultimaSemana) {
+        // Usar valores reduzidos da última semana
+        const reconhecidasReduzido = getValorReduzido(selectedOperator, ultimaSemana, route, 'Reconhecidas');
+        const depPassagemReduzido = getValorReduzido(selectedOperator, ultimaSemana, route, 'Dep. de Passagem de Cabo');
+        const depLicencaReduzido = getValorReduzido(selectedOperator, ultimaSemana, route, 'Dep. de Licença');
+        const depCutoverReduzido = getValorReduzido(selectedOperator, ultimaSemana, route, 'Dep. de Cutover');
+        const fibrasDepReduzido = getValorReduzido(selectedOperator, ultimaSemana, route, `Fibras dependentes da ${selectedOperator}`);
+        
+        stats.reconhecidasSum += reconhecidasReduzido;
+        stats.depPassagensSum += depPassagemReduzido;
+        stats.depLicencaSum += depLicencaReduzido;
+        stats.depCutoverSum += depCutoverReduzido;
+        stats.fibrasDependentesLast += fibrasDepReduzido;
+        
+        // Total Reparadas ACUMULA todas as semanas
+        const values = routeValuesAteSelecao[route];
         stats.totalReparadasSum += values.totalReparadas;
-        stats.indisponiveisSum += 0; // Zerado
-        // Subcategorias zeradas (não adiciona nada)
-      } else {
-        // Ainda há indisponíveis: subtrair por ORDEM DE PRIORIDADE
-        // PRIORIDADE: 1.Dep.PSM → 2.Dep.Cutover → 3.Dep.Licença → 4.Dep.Passagem → 5.Reconhecidas
-        
-        let reparadasRestantes = values.totalReparadas;
-        let fibrasDep_liquido = values.fibrasDep;
-        let depCutover_liquido = values.depCutover;
-        let depLicenca_liquido = values.depLicenca;
-        let depPassagem_liquido = values.depPassagem;
-        let reconhecidas_liquido = values.reconhecidas;
-        
-        // 1. PRIORIDADE MÁXIMA: Dep. PSM
-        if (reparadasRestantes > 0 && fibrasDep_liquido > 0) {
-          const reduzir = Math.min(reparadasRestantes, fibrasDep_liquido);
-          fibrasDep_liquido -= reduzir;
-          reparadasRestantes -= reduzir;
-        }
-        
-        // 2. Dep. Cutover
-        if (reparadasRestantes > 0 && depCutover_liquido > 0) {
-          const reduzir = Math.min(reparadasRestantes, depCutover_liquido);
-          depCutover_liquido -= reduzir;
-          reparadasRestantes -= reduzir;
-        }
-        
-        // 3. Dep. Licença
-        if (reparadasRestantes > 0 && depLicenca_liquido > 0) {
-          const reduzir = Math.min(reparadasRestantes, depLicenca_liquido);
-          depLicenca_liquido -= reduzir;
-          reparadasRestantes -= reduzir;
-        }
-        
-        // 4. Dep. Passagem
-        if (reparadasRestantes > 0 && depPassagem_liquido > 0) {
-          const reduzir = Math.min(reparadasRestantes, depPassagem_liquido);
-          depPassagem_liquido -= reduzir;
-          reparadasRestantes -= reduzir;
-        }
-        
-        // 5. ÚLTIMA PRIORIDADE: Reconhecidas
-        if (reparadasRestantes > 0 && reconhecidas_liquido > 0) {
-          const reduzir = Math.min(reparadasRestantes, reconhecidas_liquido);
-          reconhecidas_liquido -= reduzir;
-          reparadasRestantes -= reduzir;
-        }
-        
-        const indisponiveisLiquidos = fibrasDep_liquido + depCutover_liquido + 
-                                       depLicenca_liquido + depPassagem_liquido + reconhecidas_liquido;
-        
-        stats.totalReparadasSum += values.totalReparadas;
-        stats.indisponiveisSum += indisponiveisLiquidos;
-        stats.fibrasDependentesLast += fibrasDep_liquido;
-        stats.depCutoverSum += depCutover_liquido;
-        stats.depLicencaSum += depLicenca_liquido;
-        stats.depPassagensSum += depPassagem_liquido;
-        stats.reconhecidasSum += reconhecidas_liquido;
       }
     });
+    
+    // Indisponíveis = soma dos reduzidos
+    stats.indisponiveisSum = stats.reconhecidasSum + stats.depPassagensSum + 
+                             stats.depLicencaSum + stats.depCutoverSum + 
+                             stats.fibrasDependentesLast;
+    
+    console.log(`✅ Dashboard calculado:`, {
+      reconhecidas: stats.reconhecidasSum,
+      depPassagens: stats.depPassagensSum,
+      depLicenca: stats.depLicencaSum,
+      depCutover: stats.depCutoverSum,
+      fibrasDep: stats.fibrasDependentesLast,
+      totalReparadas: stats.totalReparadasSum,
+      indisponiveis: stats.indisponiveisSum
+    });
+
 
     console.log(`  ✓ Soma Fibras Dependentes (último valor de cada rota): ${stats.fibrasDependentesLast}`);
 
@@ -4328,62 +4685,10 @@ useEffect(() => {
       });
       weekStats.totalReparadas = reparadasDaSemana;  // v3.40.79: Semanal!
       
-      // v3.40.78: Aplicar REDUÇÃO POR PRIORIDADE (mesma lógica Grupo 2)
-      Object.values(routeLastValues).forEach(values => {
-        const indisponiveisOriginais = values.reconhecidas + values.depPassagem + 
-                                        values.depLicenca + values.depCutover + values.fibrasDep;
-        
-        // Se reparadas >= indisponíveis → ZERA TUDO
-        if (values.totalReparadas >= indisponiveisOriginais) {
-          // Tudo zerado (não adiciona nada aos indisponíveis)
-        } else {
-          // Aplicar redução por ORDEM DE PRIORIDADE
-          let reparadasRestantes = values.totalReparadas;
-          let fibrasDep_liquido = values.fibrasDep;
-          let depCutover_liquido = values.depCutover;
-          let depLicenca_liquido = values.depLicenca;
-          let depPassagem_liquido = values.depPassagem;
-          let reconhecidas_liquido = values.reconhecidas;
-          
-          // 1. PRIORIDADE MÁXIMA: Dep. PSM
-          if (reparadasRestantes > 0 && fibrasDep_liquido > 0) {
-            const reduzir = Math.min(reparadasRestantes, fibrasDep_liquido);
-            fibrasDep_liquido -= reduzir;
-            reparadasRestantes -= reduzir;
-          }
-          
-          // 2. Dep. Cutover
-          if (reparadasRestantes > 0 && depCutover_liquido > 0) {
-            const reduzir = Math.min(reparadasRestantes, depCutover_liquido);
-            depCutover_liquido -= reduzir;
-            reparadasRestantes -= reduzir;
-          }
-          
-          // 3. Dep. Licença
-          if (reparadasRestantes > 0 && depLicenca_liquido > 0) {
-            const reduzir = Math.min(reparadasRestantes, depLicenca_liquido);
-            depLicenca_liquido -= reduzir;
-            reparadasRestantes -= reduzir;
-          }
-          
-          // 4. Dep. Passagem
-          if (reparadasRestantes > 0 && depPassagem_liquido > 0) {
-            const reduzir = Math.min(reparadasRestantes, depPassagem_liquido);
-            depPassagem_liquido -= reduzir;
-            reparadasRestantes -= reduzir;
-          }
-          
-          // 5. Reconhecidas
-          if (reparadasRestantes > 0 && reconhecidas_liquido > 0) {
-            const reduzir = Math.min(reparadasRestantes, reconhecidas_liquido);
-            reconhecidas_liquido -= reduzir;
-            reparadasRestantes -= reduzir;
-          }
-          
-          // v3.40.80: Indisponíveis JÁ calculado acima (valores ORIGINAIS do Grupo 1)
-          // Aqui só acumula Fibras Dep REDUZIDO
-          weekStats.fibrasDep += fibrasDep_liquido;  // Grupo 2 (reduzido)
-        }
+      // V5.07.1: Usar getValorReduzido (mesma lógica do Dashboard)
+      routesToProcess.forEach(route => {
+        const fibrasDepReduzido = getValorReduzido(selectedOperator, week, route, `Fibras dependentes da ${selectedOperator}`);
+        weekStats.fibrasDep += fibrasDepReduzido;
       });
 
       trends.push(weekStats);
@@ -4442,108 +4747,40 @@ useEffect(() => {
       fibrasDep: 0
     };
 
-    // Para cada rota, calcular indisponíveis LÍQUIDOS (após reparações)
+    // Para cada rota, calcular valores usando getValorReduzido
     routesToProcess.forEach(route => {
       let ultimoTransporte = 0;
-      let somaReparadas = 0; // Total Reparadas ACUMULA
-      let ultimoReconhecidas = 0;
-      let ultimoDepPassagem = 0;
-      let ultimoDepLicenca = 0;
-      let ultimoDepCutover = 0;
-      let ultimoFibrasDep = 0;
+      let somaReparadas = 0;
       
-      // Percorrer semanas do quadrimestre em ordem
+      // Percorrer semanas para pegar último transporte e somar reparadas
       quarterWeeks.forEach(week => {
         const routeData = data[selectedOperator]?.[week]?.[route];
         if (routeData) {
-          // Pegar último valor diferente de zero
-          const transVal = parseInt(routeData['Transporte']) || 0;
-          const reconhVal = parseInt(routeData['Reconhecidas']) || 0;
-          const depPassVal = parseInt(routeData['Dep. de Passagem de Cabo']) || 0;
-          const depLicVal = parseInt(routeData['Dep. de Licença']) || 0;
-          const depCutVal = parseInt(routeData['Dep. de Cutover']) || 0;
-          const fibrasVal = parseInt(routeData[`Fibras dependentes da ${selectedOperator}`]) || 0;
-          
+          const transVal = parseInt(routeData['Transporte'], 10) || 0;
           if (transVal > 0) ultimoTransporte = transVal;
-          if (reconhVal > 0) ultimoReconhecidas = reconhVal;
-          if (depPassVal > 0) ultimoDepPassagem = depPassVal;
-          if (depLicVal > 0) ultimoDepLicenca = depLicVal;
-          if (depCutVal > 0) ultimoDepCutover = depCutVal;
-          if (fibrasVal > 0) ultimoFibrasDep = fibrasVal;
           
-          // Total Reparadas SEMPRE soma
-          somaReparadas += parseInt(routeData['Total Reparadas']) || 0;
+          somaReparadas += parseInt(routeData['Total Reparadas'], 10) || 0;
         }
       });
       
-      // LÓGICA CORRETA: Indisponíveis = soma das subcategorias
-      const indisponiveisOriginais = ultimoReconhecidas + ultimoDepPassagem + 
-                                      ultimoDepLicenca + ultimoDepCutover + ultimoFibrasDep;
+      // V5.07.1: Usar getValorReduzido para ÚLTIMA semana (valores acumulativos)
+      const ultimaSemana = quarterWeeks[quarterWeeks.length - 1];
+      const reconhecidasReduzido = getValorReduzido(selectedOperator, ultimaSemana, route, 'Reconhecidas');
+      const depPassagemReduzido = getValorReduzido(selectedOperator, ultimaSemana, route, 'Dep. de Passagem de Cabo');
+      const depLicencaReduzido = getValorReduzido(selectedOperator, ultimaSemana, route, 'Dep. de Licença');
+      const depCutoverReduzido = getValorReduzido(selectedOperator, ultimaSemana, route, 'Dep. de Cutover');
+      const fibrasDepReduzido = getValorReduzido(selectedOperator, ultimaSemana, route, `Fibras dependentes da ${selectedOperator}`);
       
-      // Se reparadas >= indisponíveis originais → ZERA TUDO (100% reparadas)
-      if (somaReparadas >= indisponiveisOriginais) {
-        // Tudo foi reparado: só conta reparadas
-        totals.totalReparadas += somaReparadas;
-        totals.indisponiveis += 0; // Zerado
-        // Subcategorias zeradas (não adiciona nada)
-      } else {
-        // Ainda há indisponíveis: subtrair por ORDEM DE PRIORIDADE
-        // PRIORIDADE: 1.Dep.PSM → 2.Dep.Cutover → 3.Dep.Licença → 4.Dep.Passagem → 5.Reconhecidas
-        
-        let reparadasRestantes = somaReparadas;
-        let fibrasDep_liquido = ultimoFibrasDep;
-        let depCutover_liquido = ultimoDepCutover;
-        let depLicenca_liquido = ultimoDepLicenca;
-        let depPassagem_liquido = ultimoDepPassagem;
-        let reconhecidas_liquido = ultimoReconhecidas;
-        
-        // 1. PRIORIDADE MÁXIMA: Dep. PSM (FIBRASOL)
-        if (reparadasRestantes > 0 && fibrasDep_liquido > 0) {
-          const reduzir = Math.min(reparadasRestantes, fibrasDep_liquido);
-          fibrasDep_liquido -= reduzir;
-          reparadasRestantes -= reduzir;
-        }
-        
-        // 2. Dep. Cutover
-        if (reparadasRestantes > 0 && depCutover_liquido > 0) {
-          const reduzir = Math.min(reparadasRestantes, depCutover_liquido);
-          depCutover_liquido -= reduzir;
-          reparadasRestantes -= reduzir;
-        }
-        
-        // 3. Dep. Licença
-        if (reparadasRestantes > 0 && depLicenca_liquido > 0) {
-          const reduzir = Math.min(reparadasRestantes, depLicenca_liquido);
-          depLicenca_liquido -= reduzir;
-          reparadasRestantes -= reduzir;
-        }
-        
-        // 4. Dep. Passagem
-        if (reparadasRestantes > 0 && depPassagem_liquido > 0) {
-          const reduzir = Math.min(reparadasRestantes, depPassagem_liquido);
-          depPassagem_liquido -= reduzir;
-          reparadasRestantes -= reduzir;
-        }
-        
-        // 5. ÚLTIMA PRIORIDADE: Reconhecidas
-        if (reparadasRestantes > 0 && reconhecidas_liquido > 0) {
-          const reduzir = Math.min(reparadasRestantes, reconhecidas_liquido);
-          reconhecidas_liquido -= reduzir;
-          reparadasRestantes -= reduzir;
-        }
-        
-        const indisponiveisLiquidos = fibrasDep_liquido + depCutover_liquido + 
-                                       depLicenca_liquido + depPassagem_liquido + reconhecidas_liquido;
-        
-        totals.totalReparadas += somaReparadas;
-        totals.indisponiveis += indisponiveisLiquidos;
-        totals.fibrasDep += fibrasDep_liquido;
-        totals.depCutover += depCutover_liquido;
-        totals.depLicenca += depLicenca_liquido;
-        totals.depPassagem += depPassagem_liquido;
-        totals.reconhecidas += reconhecidas_liquido;
-      }
+      const indisponiveisLiquidos = reconhecidasReduzido + depPassagemReduzido + 
+                                     depLicencaReduzido + depCutoverReduzido + fibrasDepReduzido;
       
+      totals.totalReparadas += somaReparadas;
+      totals.indisponiveis += indisponiveisLiquidos;
+      totals.fibrasDep += fibrasDepReduzido;
+      totals.depCutover += depCutoverReduzido;
+      totals.depLicenca += depLicencaReduzido;
+      totals.depPassagem += depPassagemReduzido;
+      totals.reconhecidas += reconhecidasReduzido;
       totals.transporte += ultimoTransporte;
     });
 
@@ -7171,14 +7408,28 @@ Gerado por: PSM Monitor v3.42.03
                     
                     console.log(`  💡 ${prov} INDISPONIBILIDADE LÍQUIDA: ${indisponibilidadeLiquida} (${indisponiveis} - ${reparadas})`);
                     
-                    // v3.40.73: CALCULAR DUAS EFETIVIDADES
+                    // V5.07.1: CALCULAR DUAS EFETIVIDADES COM VALORES REDUZIDOS
                     
                     // 1. Efetividade Global (ATUAL - já existia)
                     const efetividadeGlobal = indisponiveis > 0 ? ((reparadas / indisponiveis) * 100) : 0;
                     
-                    // 2. Efetividade PSM (NOVA LÓGICA RIGOROSA v3.49.25)
-                    // Indisponíveis do PSM = Fibras Dependentes do PSM
-                    const fibrasDependentesPSM = indisponiveis - (reconhecidas + depPassagem + depLicenca + depCutover);
+                    // 2. Efetividade PSM (USAR VALORES REDUZIDOS DO DASHBOARD)
+                    // V5.07.1: Calcular Fibras Dependentes usando valores REDUZIDOS
+                    let reconhecidasReduzido = 0;
+                    let depPassagemReduzido = 0;
+                    let depLicencaReduzido = 0;
+                    let depCutoverReduzido = 0;
+                    
+                    rotasProv.forEach(route => {
+                      reconhecidasReduzido += getValorReduzido(selectedOperator, selectedWeek, route, 'Reconhecidas');
+                      depPassagemReduzido += getValorReduzido(selectedOperator, selectedWeek, route, 'Dep. de Passagem de Cabo');
+                      depLicencaReduzido += getValorReduzido(selectedOperator, selectedWeek, route, 'Dep. de Licença');
+                      depCutoverReduzido += getValorReduzido(selectedOperator, selectedWeek, route, 'Dep. de Cutover');
+                    });
+                    
+                    // Fibras Dependentes = Indisponibilidade Líquida - outras categorias REDUZIDAS
+                    const fibrasDependentesPSM = Math.max(0, indisponibilidadeLiquida - 
+                      (reconhecidasReduzido + depPassagemReduzido + depLicencaReduzido + depCutoverReduzido));
                     
                     // REGRA: Só conta reparações DEPOIS de reparar TODAS as fibras dependentes do PSM
                     let efetividadePSM = 0;
@@ -7194,7 +7445,7 @@ Gerado por: PSM Monitor v3.42.03
                       // Não há fibras dependentes do PSM (todos os problemas são de outras causas)
                       // Neste caso: 0% porque não contribui para o PSM
                       efetividadePSM = 0;
-                      console.log(`  📊 ${prov} Efetividade PSM: 0% (sem fibras dependentes do PSM) - outras causas: ${reconhecidas + depPassagem + depLicenca + depCutover}`);
+                      console.log(`  📊 ${prov} Efetividade PSM: 0% (sem fibras dependentes do PSM) - outras causas: ${reconhecidasReduzido + depPassagemReduzido + depLicencaReduzido + depCutoverReduzido}`);
                     }
                     
                     console.log(`  📊 ${prov} Efetividade Global: ${efetividadeGlobal.toFixed(1)}% (${reparadas}/${indisponiveis})`);
@@ -10467,6 +10718,7 @@ Gerado por: PSM Monitor v3.42.03
                             type="text" 
                             value={getInputValue(selectedOperator, selectedWeek, route, 'Total Reparadas')}
                             onChange={(e) => handleInputChange(selectedOperator, selectedWeek, route, 'Total Reparadas', e.target.value)}
+                            onBlur={handleBlurTotalReparadas}
                             className="w-full text-center border border-green-300 rounded px-2 py-1 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 hover:border-green-500 transition-colors bg-white" 
                             placeholder="-"
                             maxLength="4"
@@ -10537,6 +10789,104 @@ Gerado por: PSM Monitor v3.42.03
         </div>
       </div>
     </div>
+    
+    {/* MODAL: Seleção do Tipo de Reparação */}
+    {showRepairTypeModal && pendingRepairData && (
+      <div 
+        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+        onClick={cancelarModal}
+      >
+        <div 
+          className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header fixo */}
+          <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white px-4 py-3 rounded-t-xl flex-shrink-0">
+            <h2 className="text-lg font-bold">🔧 Tipo de Reparação</h2>
+            <p className="text-xs text-purple-100 mt-0.5">
+              {pendingRepairData.route} • {pendingRepairData.week}
+            </p>
+          </div>
+          
+          {/* Conteúdo com scroll */}
+          <div className="overflow-y-auto flex-1 p-4">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
+              <p className="text-sm text-blue-900">
+                <strong>A distribuir:</strong> {pendingRepairData.diferenca} fibra(s)
+              </p>
+              <p className="text-xs text-blue-700 mt-1">
+                💡 {pendingRepairData.tiposDisponiveis.length > 1 
+                  ? 'Selecione o tipo reparado' 
+                  : 'Último tipo disponível'}
+              </p>
+            </div>
+            
+            <div className="space-y-2">
+              {pendingRepairData.tiposDisponiveis.map((item, idx) => {
+                const cores = {
+                  'Reconhecidas': 'from-teal-500 to-teal-600',
+                  'Dep. de Passagem de Cabo': 'from-blue-500 to-blue-600',
+                  'Dep. de Licença': 'from-orange-500 to-orange-600',
+                  'Dep. de Cutover': 'from-purple-500 to-purple-600'
+                };
+                
+                const icones = {
+                  'Reconhecidas': '🤝',
+                  'Dep. de Passagem de Cabo': '🧵',
+                  'Dep. de Licença': '📄',
+                  'Dep. de Cutover': '✂️'
+                };
+                
+                const cor = cores[item.tipo] || 'from-gray-600 to-gray-700';
+                const icone = icones[item.tipo] || '⏳';
+                const nome = item.tipo.includes('Fibras dependentes') 
+                  ? `Fibras Dep. ${pendingRepairData.psm}`
+                  : item.tipo;
+                
+                return (
+                  <button
+                    key={idx}
+                    onClick={() => aplicarReparacaoPorTipo(item.tipo)}
+                    className={`w-full bg-gradient-to-r ${cor} hover:opacity-90 text-white rounded-lg p-3 shadow-md transition-all`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <span className="text-xl">{icone}</span>
+                        <div className="text-left">
+                          <p className="font-semibold text-sm">{nome}</p>
+                          <p className="text-xs opacity-90">Atual: {item.valor}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs opacity-90">Desconto:</p>
+                        <p className="text-lg font-bold">
+                          -{Math.min(item.valor, pendingRepairData.diferenca)}
+                        </p>
+                        <p className="text-[10px] opacity-75">
+                          → {Math.max(0, item.valor - pendingRepairData.diferenca)}
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          
+          {/* Footer fixo */}
+          <div className="px-4 py-3 bg-gray-50 rounded-b-xl flex justify-between items-center flex-shrink-0 border-t">
+            <p className="text-xs text-gray-600">Clique no tipo</p>
+            <button
+              onClick={cancelarModal}
+              className="px-3 py-1.5 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg text-sm"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    
   </div>
   );
 };
