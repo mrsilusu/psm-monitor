@@ -2639,12 +2639,29 @@ useEffect(() => {
 
       // Obter valores atuais
       const currentData = newData[psm][week][route];
-      const oldTotalReparadas = parseInt(currentData['Total Reparadas'], 10) || 0;
-      const newTotalReparadas = category === 'Total Reparadas' ? (parseInt(valorFinal, 10) || 0) : oldTotalReparadas;
+      const currentTotalReparadas = parseInt(currentData['Total Reparadas'], 10) || 0;
+      const newTotalReparadas = category === 'Total Reparadas' ? (parseInt(valorFinal, 10) || 0) : currentTotalReparadas;
+      
+      console.log(`📝 INPUT CHANGE:`, {
+        category,
+        valorFinal,
+        currentTotalReparadas,
+        newTotalReparadas
+      });
       
       // LÓGICA DE NEGÓCIO: SELEÇÃO DO TIPO DE REPARAÇÃO
       if (category === 'Total Reparadas' && valorFinal !== '') {
-        const diferenca = newTotalReparadas - oldTotalReparadas;
+        // V5.06.3: Calcular diferença baseada no VALOR ORIGINAL (antes de editar)
+        // Se é a primeira mudança, guardar o valor original
+        if (!pendingRepairData && valorOriginalRef.current === null) {
+          valorOriginalRef.current = currentTotalReparadas;
+        }
+        
+        // Diferença = novo valor - valor ORIGINAL (não o valor anterior de cada tecla)
+        const valorOriginal = valorOriginalRef.current !== null ? valorOriginalRef.current : currentTotalReparadas;
+        const diferenca = newTotalReparadas - valorOriginal;
+        
+        console.log(`🔢 DIFERENÇA: ${diferenca} (novo: ${newTotalReparadas} - original: ${valorOriginal})`);
         
         if (diferenca > 0) {
           // Total Reparadas AUMENTOU → Verificar tipos disponíveis
@@ -2692,11 +2709,6 @@ useEffect(() => {
           if (tiposComValor.length > 1) {
             // MÚLTIPLOS TIPOS → Preparar dados (modal abrirá no onBlur)
             
-            // Guardar valor original na PRIMEIRA mudança
-            if (!pendingRepairData) {
-              valorOriginalRef.current = oldTotalReparadas;
-            }
-            
             currentData[category] = valorFinal;
             
             setPendingRepairData({
@@ -2704,7 +2716,7 @@ useEffect(() => {
               week,
               route,
               diferenca,
-              valorAnterior: valorOriginalRef.current, // Usar valor guardado
+              valorAnterior: valorOriginalRef.current, // Já foi guardado no início
               tiposDisponiveis: tiposComValor,
               newData: newData
             });
@@ -2852,7 +2864,11 @@ useEffect(() => {
   const handleBlurTotalReparadas = () => {
     // Abrir modal se houver dados pendentes e modal ainda não estiver aberto
     if (pendingRepairData && !showRepairTypeModal) {
-      console.log('❓ Abrindo modal...');
+      console.log('❓ Abrindo modal com dados:', {
+        diferenca: pendingRepairData.diferenca,
+        tiposDisponiveis: pendingRepairData.tiposDisponiveis,
+        week: pendingRepairData.week
+      });
       setShowRepairTypeModal(true);
     }
   };
