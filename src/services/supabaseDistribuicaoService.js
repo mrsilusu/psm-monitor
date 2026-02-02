@@ -1,14 +1,18 @@
 import { supabase } from '../lib/supabase';
 
 /**
- * V5.08.0: Salvar distribuição de reparações no Supabase
+ * V5.08.2: Salvar distribuição de reparações no Supabase (OTIMIZADO)
  * @param {Object} distribuicao - Objeto com distribuições
  * @param {string} quarter - Trimestre (Q1, Q2, Q3)
  * @param {number|string} year - Ano
  * @returns {Promise<{success: boolean, error?: any}>}
  */
 export const salvarDistribuicaoNoSupabase = async (distribuicao, quarter, year) => {
+  const startTime = Date.now();
+  
   try {
+    console.log('🔄 [DISTRIBUIÇÃO] Iniciando salvamento...');
+    
     const registros = [];
     
     // Converter objeto para array de registros
@@ -38,48 +42,68 @@ export const salvarDistribuicaoNoSupabase = async (distribuicao, quarter, year) 
       return { success: true };
     }
     
-    console.log(`💾 [DISTRIBUIÇÃO] Salvando ${registros.length} registros no Supabase...`);
+    console.log(`💾 [DISTRIBUIÇÃO] Salvando ${registros.length} registros...`);
+    console.log('📊 [DISTRIBUIÇÃO] Registros:', JSON.stringify(registros, null, 2));
     
-    // Upsert (insert ou update se já existir)
+    // Upsert com onConflict otimizado
     const { data, error } = await supabase
       .from('psm_distribuicao_reparacoes')
       .upsert(registros, { 
         onConflict: 'psm,week,route,tipo,year,quarter',
         ignoreDuplicates: false
-      });
+      })
+      .select(); // V5.08.2: Adicionar .select() para confirmar salvamento
     
-    if (error) throw error;
+    if (error) {
+      console.error('❌ [DISTRIBUIÇÃO] Erro do Supabase:', error);
+      throw error;
+    }
     
-    console.log(`✅ [DISTRIBUIÇÃO] ${registros.length} registros salvos no Supabase`);
-    return { success: true };
+    const duration = Date.now() - startTime;
+    console.log(`✅ [DISTRIBUIÇÃO] ${registros.length} registros salvos em ${duration}ms`);
+    console.log('📊 [DISTRIBUIÇÃO] Dados salvos:', data);
+    
+    return { success: true, data, duration };
   } catch (error) {
-    console.error('❌ [DISTRIBUIÇÃO] Erro ao salvar no Supabase:', error);
+    const duration = Date.now() - startTime;
+    console.error(`❌ [DISTRIBUIÇÃO] Erro após ${duration}ms:`, error);
+    console.error('❌ [DISTRIBUIÇÃO] Stack:', error.stack);
     return { success: false, error };
   }
 };
 
 /**
- * V5.08.0: Carregar distribuição de reparações do Supabase
+ * V5.08.2: Carregar distribuição de reparações do Supabase (OTIMIZADO)
  * @param {string} quarter - Trimestre (Q1, Q2, Q3)
  * @param {number|string} year - Ano
  * @returns {Promise<Object>} - Objeto com distribuições
  */
 export const carregarDistribuicaoDoSupabase = async (quarter, year) => {
+  const startTime = Date.now();
+  
   try {
-    console.log(`📥 [DISTRIBUIÇÃO] Carregando do Supabase (${quarter} ${year})...`);
+    console.log(`🔄 [DISTRIBUIÇÃO] Iniciando carregamento (${quarter} ${year})...`);
     
     const { data, error } = await supabase
       .from('psm_distribuicao_reparacoes')
       .select('*')
       .eq('year', parseInt(year, 10))
-      .eq('quarter', quarter);
+      .eq('quarter', quarter)
+      .order('created_at', { ascending: false }); // V5.08.2: Ordenar por mais recente
     
-    if (error) throw error;
+    if (error) {
+      console.error('❌ [DISTRIBUIÇÃO] Erro do Supabase:', error);
+      throw error;
+    }
     
     if (!data || data.length === 0) {
-      console.log('📝 [DISTRIBUIÇÃO] Nenhuma distribuição encontrada no Supabase');
+      const duration = Date.now() - startTime;
+      console.log(`📝 [DISTRIBUIÇÃO] Nenhum registro encontrado (${duration}ms)`);
       return {};
     }
+    
+    console.log(`📊 [DISTRIBUIÇÃO] ${data.length} registros encontrados`);
+    console.log('📊 [DISTRIBUIÇÃO] Primeiros registros:', JSON.stringify(data.slice(0, 3), null, 2));
     
     // Converter array para objeto
     const distribuicao = {};
@@ -93,10 +117,15 @@ export const carregarDistribuicaoDoSupabase = async (quarter, year) => {
       distribuicao[reg.psm][reg.week][reg.route][reg.tipo] = reg.desconto;
     });
     
-    console.log(`✅ [DISTRIBUIÇÃO] ${data.length} registros carregados do Supabase`);
+    const duration = Date.now() - startTime;
+    console.log(`✅ [DISTRIBUIÇÃO] ${data.length} registros carregados em ${duration}ms`);
+    console.log('📊 [DISTRIBUIÇÃO] Estrutura carregada:', JSON.stringify(distribuicao, null, 2));
+    
     return distribuicao;
   } catch (error) {
-    console.error('❌ [DISTRIBUIÇÃO] Erro ao carregar do Supabase:', error);
+    const duration = Date.now() - startTime;
+    console.error(`❌ [DISTRIBUIÇÃO] Erro após ${duration}ms:`, error);
+    console.error('❌ [DISTRIBUIÇÃO] Stack:', error.stack);
     return {};
   }
 };
