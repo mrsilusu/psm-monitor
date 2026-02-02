@@ -2,9 +2,10 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { BarChart3, TrendingUp, Users, AlertTriangle, CheckCircle, XCircle, Clock, MapPin, TrendingDown, Home, Upload, FileJson, Download, Calendar, BarChart, FileText, Menu, PieChart, DownloadCloud, Trash2, AlertCircle } from 'lucide-react';
 
 import { lerTudoDoSupabase, salvarTudoNoSupabase, salvarJustificativasNoSupabase, lerJustificativasDoSupabase } from './services/supabaseService';
+import { salvarDistribuicaoNoSupabase, carregarDistribuicaoDoSupabase, limparDistribuicaoNoSupabase } from './services/supabaseDistribuicaoService';
 
 const PSMMonitorApp = () => {
-  console.log("🚀 PSM Monitor 5.03.7 - MENU COLAPSAVEL ! ✅");
+  console.log("🚀 PSM Monitor 5.08.0 - PERSISTÊNCIA DISTRIBUIÇÃO ! ✅");
   
   // ============================================================================
   // MAPEAMENTO DE ROTAS PARA PROVÍNCIAS
@@ -1724,17 +1725,62 @@ useEffect(() => {
     };
   }, [justificativas, selectedYear]); // Executar sempre que 'justificativas' ou 'selectedYear' mudar
 
-  // useEffect #2.5: Salvar estado 'distribuicaoReparacoes' no localStorage
+  // useEffect #2.5: Salvar estado 'distribuicaoReparacoes' no localStorage E SUPABASE
   useEffect(() => {
     if (Object.keys(distribuicaoReparacoes).length > 0) {
+      // 1. Salvar no localStorage (imediato)
       try {
         window.localStorage.setItem('psm_distribuicao_reparacoes_v1', JSON.stringify(distribuicaoReparacoes));
         console.log('💾 [DISTRIBUIÇÃO] Salvo no localStorage');
       } catch (error) {
         console.error('❌ [DISTRIBUIÇÃO] Erro ao salvar:', error);
       }
+      
+      // 2. Salvar no Supabase (com debounce)
+      clearTimeout(window.salvarDistribuicaoTimeout);
+      window.salvarDistribuicaoTimeout = setTimeout(async () => {
+        console.log('💾 [DISTRIBUIÇÃO] Salvando no Supabase...');
+        
+        const resultado = await salvarDistribuicaoNoSupabase(
+          distribuicaoReparacoes,
+          selectedQuarter,
+          selectedYear
+        );
+        
+        if (resultado.success) {
+          console.log('✅ [DISTRIBUIÇÃO] Salvo no Supabase');
+        } else {
+          console.error('❌ [DISTRIBUIÇÃO] Erro ao salvar no Supabase:', resultado.error);
+        }
+      }, 3000); // 3 segundos de debounce
     }
-  }, [distribuicaoReparacoes]);
+    
+    // Cleanup
+    return () => {
+      if (window.salvarDistribuicaoTimeout) {
+        clearTimeout(window.salvarDistribuicaoTimeout);
+      }
+    };
+  }, [distribuicaoReparacoes, selectedQuarter, selectedYear]);
+
+  // useEffect #2.6: Carregar distribuição do Supabase quando mudar quarter/year
+  useEffect(() => {
+    const carregarDistribuicaoInicial = async () => {
+      console.log('📥 [DISTRIBUIÇÃO] Carregando do Supabase...');
+      
+      const distrib = await carregarDistribuicaoDoSupabase(
+        selectedQuarter,
+        selectedYear
+      );
+      
+      if (Object.keys(distrib).length > 0) {
+        setDistribuicaoReparacoes(distrib);
+        console.log('✅ [DISTRIBUIÇÃO] Carregada do Supabase');
+      }
+    };
+    
+    carregarDistribuicaoInicial();
+  }, [selectedQuarter, selectedYear]);
 
   // useEffect #3: Log de inicialização (apenas uma vez)
   useEffect(() => {
@@ -2685,6 +2731,9 @@ useEffect(() => {
             // V5.07.0: Limpar APENAS a semana atual (não futuras)
             if (updated[psm]?.[week]?.[route]) {
               delete updated[psm][week][route];
+              
+              // V5.08.0: Limpar também no Supabase
+              limparDistribuicaoNoSupabase(psm, week, route, selectedQuarter, selectedYear);
             }
             
             return updated;
