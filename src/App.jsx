@@ -5,7 +5,7 @@ import { lerTudoDoSupabase, salvarTudoNoSupabase, salvarJustificativasNoSupabase
 import { salvarDistribuicaoNoSupabase, carregarDistribuicaoDoSupabase, limparDistribuicaoNoSupabase } from './services/supabaseDistribuicaoService';
 
 const PSMMonitorApp = () => {
-  console.log("🚀 PSM Monitor 5.08.9 - LAYOUT IMAGEM ! ✅");
+  console.log("🚀 PSM Monitor 5.08.10 - VISIBILIDADE + COLUNA ! ✅");
   
   // ============================================================================
   // MAPEAMENTO DE ROTAS PARA PROVÍNCIAS
@@ -9808,9 +9808,9 @@ Gerado por: PSM Monitor v3.42.03
                       <div className="flex-1 flex flex-col justify-center">
                         <p className="text-center text-xs font-semibold mb-3">Total: {routes.length} rotas</p>
                         
-                        {/* V5.08.9: Barra DENTRO do card (overflow-hidden) */}
+                        {/* V5.08.10: Barra com números SEMPRE VISÍVEIS */}
                         <div className="mb-4 px-2">
-                          <div className="flex h-10 bg-gray-100 rounded overflow-hidden border-2 border-gray-300 shadow-sm">
+                          <div className="flex h-10 bg-gray-100 rounded overflow-visible border-2 border-gray-300 shadow-sm relative">
                             {/* Ordem: Transporte → Indisponíveis → Subcategorias → Total Reparadas */}
                             {[
                               'transporte', 
@@ -9826,17 +9826,20 @@ Gerado por: PSM Monitor v3.42.03
                               if (value === 0) return null;
                               
                               const width = (value / totalGeral) * 100;
-                              const minWidth = Math.max(width, 2); // Mínimo 2% para visibilidade
                               
-                              // V5.08.9: Font-size menor para caber dentro
-                              const fontSize = width < 4 ? 'text-[8px]' : 
-                                             width < 8 ? 'text-[9px]' : 
+                              // V5.08.10: SEMPRE mostrar, mesmo se pequeno
+                              const minWidth = Math.max(width, 0.5);
+                              
+                              // Font adaptativo
+                              const fontSize = width < 3 ? 'text-[7px]' : 
+                                             width < 6 ? 'text-[8px]' : 
+                                             width < 10 ? 'text-[9px]' : 
                                              'text-[10px]';
                               
                               return (
                                 <div
                                   key={key}
-                                  className={`flex items-center justify-center text-white font-bold ${fontSize}`}
+                                  className={`flex items-center justify-center text-white font-bold ${fontSize} relative`}
                                   style={{
                                     width: `${width}%`,
                                     minWidth: `${minWidth}%`,
@@ -9844,15 +9847,18 @@ Gerado por: PSM Monitor v3.42.03
                                   }}
                                   title={`${statusLabels[key]}: ${value}`}
                                 >
-                                  <span className="px-0.5">{value}</span>
+                                  {/* V5.08.10: Sempre mostrar número (overflow permite sair se necessário) */}
+                                  <span className="absolute inset-0 flex items-center justify-center whitespace-nowrap z-10">
+                                    {value}
+                                  </span>
                                 </div>
                               );
                             })}
                           </div>
                         </div>
                         
-                        {/* V5.08.9: Legenda conforme imagem */}
-                        <div className="space-y-1.5">
+                        {/* V5.08.10: Legenda com subtipos EM COLUNA */}
+                        <div className="flex flex-col items-center space-y-1.5">
                           {/* LINHA 1: Principais (fonte MAIOR) */}
                           <div className="flex justify-center gap-6 text-[11px] font-medium">
                             {/* Transporte */}
@@ -9888,8 +9894,8 @@ Gerado por: PSM Monitor v3.42.03
                             )}
                           </div>
                           
-                          {/* LINHAS 2+: Subcategorias (fonte MENOR, sem padding) */}
-                          <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-[9px]">
+                          {/* SUBTIPOS EM COLUNA (um abaixo do outro, centralizados) */}
+                          <div className="flex flex-col items-center gap-0.5 text-[9px]">
                             {['reconhecidas', 'depLicenca', 'fibrasDep', 'depPassagem', 'depCutover'].map(key => {
                               const value = totals[key];
                               if (value === 0) return null;
@@ -9899,7 +9905,7 @@ Gerado por: PSM Monitor v3.42.03
                                 : 0;
                               
                               return (
-                                <div key={key} className="flex items-center gap-1">
+                                <div key={key} className="flex items-center gap-1.5">
                                   <div className="w-2.5 h-2.5 rounded-sm" style={{backgroundColor: colors[key]}}></div>
                                   <span>
                                     {statusLabels[key]}: <strong>{value}</strong>
