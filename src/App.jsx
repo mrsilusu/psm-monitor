@@ -5,7 +5,7 @@ import { lerTudoDoSupabase, salvarTudoNoSupabase, salvarJustificativasNoSupabase
 import { salvarDistribuicaoNoSupabase, carregarDistribuicaoDoSupabase, limparDistribuicaoNoSupabase } from './services/supabaseDistribuicaoService';
 
 const PSMMonitorApp = () => {
-  console.log("🚀 PSM Monitor 5.08.3 - GRÁFICOS REDUZIDOS ! ✅");
+  console.log("🚀 PSM Monitor 5.08.11 - LAYOUT FINAL ! ✅");
   
   // ============================================================================
   // MAPEAMENTO DE ROTAS PARA PROVÍNCIAS
@@ -9765,10 +9765,10 @@ Gerado por: PSM Monitor v3.42.03
                     );
                   }
                   
-                  // Calcular totais
+                  // V5.08.6: Calcular totais
+                  // Transporte é ISOLADO (mostra valor mas não entra em percentagem)
                   const totals = {
                     transporte: routes.reduce((sum, r) => sum + r.transporte, 0),
-                    indisponiveis: routes.reduce((sum, r) => sum + r.indisponiveis, 0),
                     totalReparadas: routes.reduce((sum, r) => sum + r.totalReparadas, 0),
                     reconhecidas: routes.reduce((sum, r) => sum + r.reconhecidas, 0),
                     depPassagem: routes.reduce((sum, r) => sum + r.depPassagem, 0),
@@ -9777,12 +9777,21 @@ Gerado por: PSM Monitor v3.42.03
                     fibrasDep: routes.reduce((sum, r) => sum + r.fibrasDep, 0)
                   };
                   
-                  const totalSum = Object.values(totals).reduce((a, b) => a + b, 0);
+                  // V5.08.6: Indisponíveis = soma das subcategorias
+                  totals.indisponiveis = totals.reconhecidas + totals.depPassagem + 
+                                         totals.depLicenca + totals.depCutover + totals.fibrasDep;
+                  
+                  // V5.08.7: Total para percentagem = APENAS Reparadas + Indisponíveis
+                  // Transporte NÃO entra no cálculo de percentagem (isolado)
+                  const totalSum = totals.totalReparadas + totals.indisponiveis;
+                  
+                  // V5.08.7: Total GERAL para largura da barra (inclui Transporte)
+                  const totalGeral = totals.transporte + totals.totalReparadas + totals.indisponiveis;
                   
                   const statusLabels = {
-                    transporte: 'Transporte',
-                    indisponiveis: 'Indisponíveis',
+                    transporte: 'Transporte', // V5.08.6: Isolado (sem %)
                     totalReparadas: 'Total Reparadas',
+                    indisponiveis: 'Indisponíveis',
                     reconhecidas: 'Reconhecidas',
                     depPassagem: 'Dep. Passagem',
                     depLicenca: 'Dep. Licença',
@@ -9796,46 +9805,108 @@ Gerado por: PSM Monitor v3.42.03
                         <h3 className="text-center text-sm font-bold text-gray-800">{title}</h3>
                       </div>
                       
-                      <div className="flex-1 flex flex-col justify-center">
+                      <div className="flex-1 flex flex-col justify-center px-4">
                         <p className="text-center text-xs font-semibold mb-3">Total: {routes.length} rotas</p>
                         
-                        {/* Barra horizontal empilhada com 8 segmentos */}
-                        <div className="mb-4 px-2">
+                        {/* V5.08.11: Barra DENTRO do card com overflow-hidden */}
+                        <div className="mb-4">
                           <div className="flex h-10 bg-gray-100 rounded overflow-hidden border-2 border-gray-300 shadow-sm">
-                            {Object.entries(totals).map(([key, value]) => {
+                            {[
+                              'transporte', 
+                              'indisponiveis',
+                              'reconhecidas',
+                              'depPassagem', 
+                              'depLicenca', 
+                              'depCutover', 
+                              'fibrasDep',
+                              'totalReparadas'
+                            ].map(key => {
+                              const value = totals[key];
                               if (value === 0) return null;
-                              const width = (value / totalSum) * 100;
-                              // v3.22.3: Garantir largura mínima de 3% para segmentos muito pequenos
-                              const minWidth = Math.max(width, 3);
+                              
+                              const width = (value / totalGeral) * 100;
+                              
+                              // Font adaptativo
+                              const fontSize = width < 2.5 ? 'text-[7px]' : 
+                                             width < 5 ? 'text-[8px]' : 
+                                             width < 10 ? 'text-[9px]' : 
+                                             'text-[10px]';
+                              
                               return (
                                 <div
                                   key={key}
-                                  className="flex items-center justify-center text-white font-bold text-xs"
+                                  className={`flex items-center justify-center text-white font-bold ${fontSize}`}
                                   style={{
                                     width: `${width}%`,
-                                    minWidth: `${minWidth}%`,
                                     backgroundColor: colors[key]
                                   }}
                                   title={`${statusLabels[key]}: ${value}`}
                                 >
-                                  <span>{value}</span>
+                                  <span className="px-0.5">{value}</span>
                                 </div>
                               );
                             })}
                           </div>
                         </div>
                         
-                        {/* Legenda em 2 colunas com percentagem */}
-                        <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[10px] mx-auto max-w-xs">
-                          {Object.entries(totals).map(([key, value]) => {
-                            const percentage = totalSum > 0 ? ((value / totalSum) * 100).toFixed(1) : 0;
-                            return (
-                              <div key={key} className="flex items-center gap-1.5">
-                                <div className="w-2.5 h-2.5 flex-shrink-0 rounded-sm" style={{backgroundColor: colors[key]}}></div>
-                                <span className="truncate font-medium">{statusLabels[key]}: <strong>{value}</strong> <span className="text-gray-500">({percentage}%)</span></span>
+                        {/* V5.08.11: Legenda - Linha horizontal com Indisponíveis + subtipos em coluna */}
+                        <div className="flex justify-center items-start gap-6 text-[10px]">
+                          {/* Transporte */}
+                          {totals.transporte > 0 && (
+                            <div className="flex items-center gap-1.5">
+                              <div className="w-3 h-3 rounded-sm flex-shrink-0" style={{backgroundColor: colors.transporte}}></div>
+                              <span className="whitespace-nowrap font-medium">
+                                <strong>Transporte:</strong> {totals.transporte}
+                              </span>
+                            </div>
+                          )}
+                          
+                          {/* Indisponíveis com subtipos abaixo */}
+                          {totals.indisponiveis > 0 && (
+                            <div className="flex flex-col items-start">
+                              {/* Indisponíveis principal */}
+                              <div className="flex items-center gap-1.5 mb-1">
+                                <div className="w-3 h-3 rounded-sm flex-shrink-0" style={{backgroundColor: colors.indisponiveis}}></div>
+                                <span className="whitespace-nowrap font-medium">
+                                  <strong>Indisponíveis:</strong> {totals.indisponiveis}
+                                  <span className="text-gray-600"> ({((totals.indisponiveis / totalSum) * 100).toFixed(1)}%)</span>
+                                </span>
                               </div>
-                            );
-                          })}
+                              
+                              {/* Subtipos ALINHADOS verticalmente abaixo */}
+                              <div className="flex flex-col gap-0.5 pl-5 text-[9px]">
+                                {['reconhecidas', 'fibrasDep', 'depPassagem', 'depCutover'].map(key => {
+                                  const value = totals[key];
+                                  if (value === 0) return null;
+                                  
+                                  const percentage = totals.indisponiveis > 0 
+                                    ? ((value / totals.indisponiveis) * 100).toFixed(1) 
+                                    : 0;
+                                  
+                                  return (
+                                    <div key={key} className="flex items-center gap-1.5">
+                                      <div className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{backgroundColor: colors[key]}}></div>
+                                      <span className="whitespace-nowrap">
+                                        {statusLabels[key]}: <strong>{value}</strong>
+                                        <span className="text-gray-500"> ({percentage}%)</span>
+                                      </span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Total Reparadas */}
+                          {totals.totalReparadas > 0 && (
+                            <div className="flex items-center gap-1.5">
+                              <div className="w-3 h-3 rounded-sm flex-shrink-0" style={{backgroundColor: colors.totalReparadas}}></div>
+                              <span className="whitespace-nowrap font-medium">
+                                <strong>Total Reparadas:</strong> {totals.totalReparadas}
+                                <span className="text-gray-600"> ({((totals.totalReparadas / totalSum) * 100).toFixed(1)}%)</span>
+                              </span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
