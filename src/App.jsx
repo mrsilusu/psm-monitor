@@ -5,7 +5,7 @@ import { lerTudoDoSupabase, salvarTudoNoSupabase, salvarJustificativasNoSupabase
 import { salvarDistribuicaoNoSupabase, carregarDistribuicaoDoSupabase, limparDistribuicaoNoSupabase } from './services/supabaseDistribuicaoService';
 
 const PSMMonitorApp = () => {
-  console.log("🚀 PSM Monitor 5.08.13 - FONTE FIXA ! ✅");
+  console.log("🚀 PSM Monitor 5.08.14 - V5.08.12 + FONTE FIXA ! ✅");
   
   // ============================================================================
   // MAPEAMENTO DE ROTAS PARA PROVÍNCIAS
@@ -9808,17 +9808,18 @@ Gerado por: PSM Monitor v3.42.03
                       <div className="flex-1 flex flex-col justify-center px-4">
                         <p className="text-center text-xs font-semibold mb-3">Total: {routes.length} rotas</p>
                         
-                        {/* V5.08.13: Barra com FONTE FIXA e cores sempre visíveis */}
+                        {/* V5.08.14: Barra com subtipos ordenados CRESCENTE + FONTE FIXA 10px */}
                         <div className="mb-4">
                           <div className="flex h-10 bg-gray-100 rounded overflow-hidden border-2 border-gray-300 shadow-sm">
                             {(() => {
-                              // Ordenar subtipos por valor crescente
+                              // V5.08.12: Ordenar subtipos por valor crescente
                               const subtipos = ['reconhecidas', 'depPassagem', 'depLicenca', 'depCutover', 'fibrasDep'];
                               const subtiposOrdenados = subtipos
                                 .map(key => ({ key, value: totals[key] }))
-                                .sort((a, b) => a.value - b.value)
+                                .sort((a, b) => a.value - b.value) // Crescente
                                 .map(item => item.key);
                               
+                              // Ordem final: Transporte → Indisponíveis → Subtipos (crescente) → Total Reparadas
                               const ordem = ['transporte', 'indisponiveis', ...subtiposOrdenados, 'totalReparadas'];
                               
                               return ordem.map(key => {
@@ -9827,12 +9828,7 @@ Gerado por: PSM Monitor v3.42.03
                                 
                                 const width = (value / totalGeral) * 100;
                                 
-                                // V5.08.13: Largura mínima para garantir visibilidade da cor
-                                const minWidth = Math.max(width, 3); // Mínimo 3% para ver a cor
-                                
-                                // V5.08.13: FONTE FIXA - sempre 10px, bold
-                                // Só mostra número se tiver espaço (> 4%)
-                                const mostrarNumero = width > 4;
+                                // V5.08.14: FONTE FIXA - sempre 10px, nunca reduz
                                 
                                 return (
                                   <div
@@ -9840,13 +9836,11 @@ Gerado por: PSM Monitor v3.42.03
                                     className="flex items-center justify-center text-white font-bold text-[10px]"
                                     style={{
                                       width: `${width}%`,
-                                      minWidth: `${minWidth}%`,
                                       backgroundColor: colors[key]
                                     }}
                                     title={`${statusLabels[key]}: ${value}`}
                                   >
-                                    {/* V5.08.13: Número só aparece se couber */}
-                                    {mostrarNumero && <span className="px-1">{value}</span>}
+                                    <span className="px-0.5">{value}</span>
                                   </div>
                                 );
                               });
@@ -9854,7 +9848,7 @@ Gerado por: PSM Monitor v3.42.03
                           </div>
                         </div>
                         
-                        {/* Legenda com subtipos em ordem CRESCENTE */}
+                        {/* V5.08.12: Legenda com subtipos em ordem CRESCENTE */}
                         <div className="flex justify-center items-start gap-6 text-[10px]">
                           {/* Transporte */}
                           {totals.transporte > 0 && (
@@ -9878,11 +9872,12 @@ Gerado por: PSM Monitor v3.42.03
                                 </span>
                               </div>
                               
-                              {/* Subtipos ORDENADOS por valor crescente */}
+                              {/* V5.08.12: Subtipos ORDENADOS por valor crescente */}
                               <div className="flex flex-col gap-0.5 pl-5 text-[9px]">
                                 {(() => {
                                   const subtipos = ['reconhecidas', 'depPassagem', 'depLicenca', 'depCutover', 'fibrasDep'];
                                   
+                                  // Ordenar por valor crescente
                                   return subtipos
                                     .map(key => ({ key, value: totals[key] }))
                                     .sort((a, b) => a.value - b.value)
