@@ -5,7 +5,7 @@ import { lerTudoDoSupabase, salvarTudoNoSupabase, salvarJustificativasNoSupabase
 import { salvarDistribuicaoNoSupabase, carregarDistribuicaoDoSupabase, limparDistribuicaoNoSupabase } from './services/supabaseDistribuicaoService';
 
 const PSMMonitorApp = () => {
-  console.log("🚀 PSM Monitor 5.08.8 - LAYOUT REORGANIZADO ! ✅");
+  console.log("🚀 PSM Monitor 5.08.9 - LAYOUT IMAGEM ! ✅");
   
   // ============================================================================
   // MAPEAMENTO DE ROTAS PARA PROVÍNCIAS
@@ -9808,9 +9808,9 @@ Gerado por: PSM Monitor v3.42.03
                       <div className="flex-1 flex flex-col justify-center">
                         <p className="text-center text-xs font-semibold mb-3">Total: {routes.length} rotas</p>
                         
-                        {/* V5.08.8: Barra com ORDEM CORRETA e números SEMPRE VISÍVEIS */}
+                        {/* V5.08.9: Barra DENTRO do card (overflow-hidden) */}
                         <div className="mb-4 px-2">
-                          <div className="flex h-10 bg-gray-100 rounded overflow-visible border-2 border-gray-300 shadow-sm relative">
+                          <div className="flex h-10 bg-gray-100 rounded overflow-hidden border-2 border-gray-300 shadow-sm">
                             {/* Ordem: Transporte → Indisponíveis → Subcategorias → Total Reparadas */}
                             {[
                               'transporte', 
@@ -9825,26 +9825,18 @@ Gerado por: PSM Monitor v3.42.03
                               const value = totals[key];
                               if (value === 0) return null;
                               
-                              // V5.08.8: Calcular largura baseada no total correto
-                              let total;
-                              if (key === 'transporte') {
-                                total = totalGeral;
-                              } else if (['reconhecidas', 'depPassagem', 'depLicenca', 'depCutover', 'fibrasDep'].includes(key)) {
-                                total = totalGeral; // Subcategorias também usam total geral para largura visual
-                              } else {
-                                total = totalGeral;
-                              }
+                              const width = (value / totalGeral) * 100;
+                              const minWidth = Math.max(width, 2); // Mínimo 2% para visibilidade
                               
-                              const width = (value / total) * 100;
-                              const minWidth = Math.max(width, 3);
-                              
-                              // V5.08.8: Font-size adaptativo - menor para segmentos estreitos
-                              const fontSize = width < 5 ? 'text-[9px]' : width < 10 ? 'text-[10px]' : 'text-xs';
+                              // V5.08.9: Font-size menor para caber dentro
+                              const fontSize = width < 4 ? 'text-[8px]' : 
+                                             width < 8 ? 'text-[9px]' : 
+                                             'text-[10px]';
                               
                               return (
                                 <div
                                   key={key}
-                                  className={`flex items-center justify-center text-white font-bold ${fontSize} relative`}
+                                  className={`flex items-center justify-center text-white font-bold ${fontSize}`}
                                   style={{
                                     width: `${width}%`,
                                     minWidth: `${minWidth}%`,
@@ -9852,23 +9844,23 @@ Gerado por: PSM Monitor v3.42.03
                                   }}
                                   title={`${statusLabels[key]}: ${value}`}
                                 >
-                                  <span className="relative z-10 whitespace-nowrap px-1">{value}</span>
+                                  <span className="px-0.5">{value}</span>
                                 </div>
                               );
                             })}
                           </div>
                         </div>
                         
-                        {/* V5.08.8: Legenda reorganizada em 2 linhas */}
-                        <div className="space-y-2">
-                          {/* LINHA 1: Principais (Transporte, Indisponíveis, Reparadas) */}
-                          <div className="flex justify-center gap-6 text-[10px]">
+                        {/* V5.08.9: Legenda conforme imagem */}
+                        <div className="space-y-1.5">
+                          {/* LINHA 1: Principais (fonte MAIOR) */}
+                          <div className="flex justify-center gap-6 text-[11px] font-medium">
                             {/* Transporte */}
                             {totals.transporte > 0 && (
                               <div className="flex items-center gap-1.5">
-                                <div className="w-3 h-3 flex-shrink-0 rounded-sm" style={{backgroundColor: colors.transporte}}></div>
-                                <span className="font-medium">
-                                  Transporte: <strong>{totals.transporte}</strong>
+                                <div className="w-3 h-3 rounded-sm" style={{backgroundColor: colors.transporte}}></div>
+                                <span>
+                                  <strong>Transporte:</strong> {totals.transporte}
                                 </span>
                               </div>
                             )}
@@ -9876,10 +9868,10 @@ Gerado por: PSM Monitor v3.42.03
                             {/* Indisponíveis */}
                             {totals.indisponiveis > 0 && (
                               <div className="flex items-center gap-1.5">
-                                <div className="w-3 h-3 flex-shrink-0 rounded-sm" style={{backgroundColor: colors.indisponiveis}}></div>
-                                <span className="font-medium">
-                                  Indisponíveis: <strong>{totals.indisponiveis}</strong>
-                                  <span className="text-gray-500"> ({((totals.indisponiveis / totalSum) * 100).toFixed(1)}%)</span>
+                                <div className="w-3 h-3 rounded-sm" style={{backgroundColor: colors.indisponiveis}}></div>
+                                <span>
+                                  <strong>Indisponíveis:</strong> {totals.indisponiveis}
+                                  <span className="text-gray-600"> ({((totals.indisponiveis / totalSum) * 100).toFixed(1)}%)</span>
                                 </span>
                               </div>
                             )}
@@ -9887,18 +9879,18 @@ Gerado por: PSM Monitor v3.42.03
                             {/* Total Reparadas */}
                             {totals.totalReparadas > 0 && (
                               <div className="flex items-center gap-1.5">
-                                <div className="w-3 h-3 flex-shrink-0 rounded-sm" style={{backgroundColor: colors.totalReparadas}}></div>
-                                <span className="font-medium">
-                                  Total Reparadas: <strong>{totals.totalReparadas}</strong>
-                                  <span className="text-gray-500"> ({((totals.totalReparadas / totalSum) * 100).toFixed(1)}%)</span>
+                                <div className="w-3 h-3 rounded-sm" style={{backgroundColor: colors.totalReparadas}}></div>
+                                <span>
+                                  <strong>Total Reparadas:</strong> {totals.totalReparadas}
+                                  <span className="text-gray-600"> ({((totals.totalReparadas / totalSum) * 100).toFixed(1)}%)</span>
                                 </span>
                               </div>
                             )}
                           </div>
                           
-                          {/* LINHA 2: Subcategorias (alinhadas abaixo de Indisponíveis) */}
-                          <div className="flex justify-center gap-4 text-[9px] pl-16">
-                            {['reconhecidas', 'depPassagem', 'depLicenca', 'depCutover', 'fibrasDep'].map(key => {
+                          {/* LINHAS 2+: Subcategorias (fonte MENOR, sem padding) */}
+                          <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-[9px]">
+                            {['reconhecidas', 'depLicenca', 'fibrasDep', 'depPassagem', 'depCutover'].map(key => {
                               const value = totals[key];
                               if (value === 0) return null;
                               
@@ -9908,8 +9900,8 @@ Gerado por: PSM Monitor v3.42.03
                               
                               return (
                                 <div key={key} className="flex items-center gap-1">
-                                  <div className="w-2 h-2 flex-shrink-0 rounded-sm" style={{backgroundColor: colors[key]}}></div>
-                                  <span className="font-medium">
+                                  <div className="w-2.5 h-2.5 rounded-sm" style={{backgroundColor: colors[key]}}></div>
+                                  <span>
                                     {statusLabels[key]}: <strong>{value}</strong>
                                     <span className="text-gray-500"> ({percentage}%)</span>
                                   </span>
