@@ -5,7 +5,7 @@ import { lerTudoDoSupabase, salvarTudoNoSupabase, salvarJustificativasNoSupabase
 import { salvarDistribuicaoNoSupabase, carregarDistribuicaoDoSupabase, limparDistribuicaoNoSupabase } from './services/supabaseDistribuicaoService';
 
 const PSMMonitorApp = () => {
-  console.log("🚀 PSM Monitor 5.08.11 - LAYOUT FINAL ! ✅");
+  console.log("🚀 PSM Monitor 5.08.12 - ORDEM CRESCENTE ! ✅");
   
   // ============================================================================
   // MAPEAMENTO DE ROTAS PARA PROVÍNCIAS
@@ -9808,48 +9808,51 @@ Gerado por: PSM Monitor v3.42.03
                       <div className="flex-1 flex flex-col justify-center px-4">
                         <p className="text-center text-xs font-semibold mb-3">Total: {routes.length} rotas</p>
                         
-                        {/* V5.08.11: Barra DENTRO do card com overflow-hidden */}
+                        {/* V5.08.12: Barra com subtipos ordenados por valor CRESCENTE */}
                         <div className="mb-4">
                           <div className="flex h-10 bg-gray-100 rounded overflow-hidden border-2 border-gray-300 shadow-sm">
-                            {[
-                              'transporte', 
-                              'indisponiveis',
-                              'reconhecidas',
-                              'depPassagem', 
-                              'depLicenca', 
-                              'depCutover', 
-                              'fibrasDep',
-                              'totalReparadas'
-                            ].map(key => {
-                              const value = totals[key];
-                              if (value === 0) return null;
+                            {(() => {
+                              // V5.08.12: Ordenar subtipos por valor crescente
+                              const subtipos = ['reconhecidas', 'depPassagem', 'depLicenca', 'depCutover', 'fibrasDep'];
+                              const subtiposOrdenados = subtipos
+                                .map(key => ({ key, value: totals[key] }))
+                                .sort((a, b) => a.value - b.value) // Crescente
+                                .map(item => item.key);
                               
-                              const width = (value / totalGeral) * 100;
+                              // Ordem final: Transporte → Indisponíveis → Subtipos (crescente) → Total Reparadas
+                              const ordem = ['transporte', 'indisponiveis', ...subtiposOrdenados, 'totalReparadas'];
                               
-                              // Font adaptativo
-                              const fontSize = width < 2.5 ? 'text-[7px]' : 
-                                             width < 5 ? 'text-[8px]' : 
-                                             width < 10 ? 'text-[9px]' : 
-                                             'text-[10px]';
-                              
-                              return (
-                                <div
-                                  key={key}
-                                  className={`flex items-center justify-center text-white font-bold ${fontSize}`}
-                                  style={{
-                                    width: `${width}%`,
-                                    backgroundColor: colors[key]
-                                  }}
-                                  title={`${statusLabels[key]}: ${value}`}
-                                >
-                                  <span className="px-0.5">{value}</span>
-                                </div>
-                              );
-                            })}
+                              return ordem.map(key => {
+                                const value = totals[key];
+                                if (value === 0) return null;
+                                
+                                const width = (value / totalGeral) * 100;
+                                
+                                // Font adaptativo
+                                const fontSize = width < 2.5 ? 'text-[7px]' : 
+                                               width < 5 ? 'text-[8px]' : 
+                                               width < 10 ? 'text-[9px]' : 
+                                               'text-[10px]';
+                                
+                                return (
+                                  <div
+                                    key={key}
+                                    className={`flex items-center justify-center text-white font-bold ${fontSize}`}
+                                    style={{
+                                      width: `${width}%`,
+                                      backgroundColor: colors[key]
+                                    }}
+                                    title={`${statusLabels[key]}: ${value}`}
+                                  >
+                                    <span className="px-0.5">{value}</span>
+                                  </div>
+                                );
+                              });
+                            })()}
                           </div>
                         </div>
                         
-                        {/* V5.08.11: Legenda - Linha horizontal com Indisponíveis + subtipos em coluna */}
+                        {/* V5.08.12: Legenda com subtipos em ordem CRESCENTE */}
                         <div className="flex justify-center items-start gap-6 text-[10px]">
                           {/* Transporte */}
                           {totals.transporte > 0 && (
@@ -9861,7 +9864,7 @@ Gerado por: PSM Monitor v3.42.03
                             </div>
                           )}
                           
-                          {/* Indisponíveis com subtipos abaixo */}
+                          {/* Indisponíveis com subtipos abaixo (ordenados crescente) */}
                           {totals.indisponiveis > 0 && (
                             <div className="flex flex-col items-start">
                               {/* Indisponíveis principal */}
@@ -9873,26 +9876,33 @@ Gerado por: PSM Monitor v3.42.03
                                 </span>
                               </div>
                               
-                              {/* Subtipos ALINHADOS verticalmente abaixo */}
+                              {/* V5.08.12: Subtipos ORDENADOS por valor crescente */}
                               <div className="flex flex-col gap-0.5 pl-5 text-[9px]">
-                                {['reconhecidas', 'fibrasDep', 'depPassagem', 'depCutover'].map(key => {
-                                  const value = totals[key];
-                                  if (value === 0) return null;
+                                {(() => {
+                                  const subtipos = ['reconhecidas', 'depPassagem', 'depLicenca', 'depCutover', 'fibrasDep'];
                                   
-                                  const percentage = totals.indisponiveis > 0 
-                                    ? ((value / totals.indisponiveis) * 100).toFixed(1) 
-                                    : 0;
-                                  
-                                  return (
-                                    <div key={key} className="flex items-center gap-1.5">
-                                      <div className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{backgroundColor: colors[key]}}></div>
-                                      <span className="whitespace-nowrap">
-                                        {statusLabels[key]}: <strong>{value}</strong>
-                                        <span className="text-gray-500"> ({percentage}%)</span>
-                                      </span>
-                                    </div>
-                                  );
-                                })}
+                                  // Ordenar por valor crescente
+                                  return subtipos
+                                    .map(key => ({ key, value: totals[key] }))
+                                    .sort((a, b) => a.value - b.value)
+                                    .map(({ key, value }) => {
+                                      if (value === 0) return null;
+                                      
+                                      const percentage = totals.indisponiveis > 0 
+                                        ? ((value / totals.indisponiveis) * 100).toFixed(1) 
+                                        : 0;
+                                      
+                                      return (
+                                        <div key={key} className="flex items-center gap-1.5">
+                                          <div className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{backgroundColor: colors[key]}}></div>
+                                          <span className="whitespace-nowrap">
+                                            {statusLabels[key]}: <strong>{value}</strong>
+                                            <span className="text-gray-500"> ({percentage}%)</span>
+                                          </span>
+                                        </div>
+                                      );
+                                    });
+                                })()}
                               </div>
                             </div>
                           )}
