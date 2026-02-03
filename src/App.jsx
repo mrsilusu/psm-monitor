@@ -5,7 +5,7 @@ import { lerTudoDoSupabase, salvarTudoNoSupabase, salvarJustificativasNoSupabase
 import { salvarDistribuicaoNoSupabase, carregarDistribuicaoDoSupabase, limparDistribuicaoNoSupabase } from './services/supabaseDistribuicaoService';
 
 const PSMMonitorApp = () => {
-  console.log("🚀 PSM Monitor 5.08.1 - SALVAMENTO IMEDIATO ! ✅");
+  console.log("🚀 PSM Monitor 5.08.3 - GRÁFICOS REDUZIDOS ! ✅");
   
   // ============================================================================
   // MAPEAMENTO DE ROTAS PARA PROVÍNCIAS
@@ -9499,14 +9499,15 @@ Gerado por: PSM Monitor v3.42.03
                         if (indisponiveisVal > 0) indisponiveis = indisponiveisVal;
                         
                         // Total Reparadas: SOMAR (acumulado) - ÚNICO QUE ACUMULA
-                        totalReparadas += parseInt(weekData['Total Reparadas']) || 0;
+                        totalReparadas += parseInt(weekData['Total Reparadas'], 10) || 0;
                         
-                        // Reconhecidas, Dependências e Fibras Dep.: pegar último valor (não somar)
-                        const reconhecidasVal = parseInt(weekData['Reconhecidas']) || 0;
-                        const depPassagemVal = parseInt(weekData['Dep. de Passagem de Cabo']) || 0;
-                        const depLicencaVal = parseInt(weekData['Dep. de Licença']) || 0;
-                        const depCutoverVal = parseInt(weekData['Dep. de Cutover']) || 0;
-                        const fibrasDepVal = parseInt(weekData[`Fibras dependentes da ${selectedOperator}`]) || 0;
+                        // V5.08.3: Usar valores REDUZIDOS (com desconto aplicado)
+                        // Reconhecidas, Dependências e Fibras Dep.: pegar último valor REDUZIDO
+                        const reconhecidasVal = getValorReduzido(selectedOperator, week, rota, 'Reconhecidas');
+                        const depPassagemVal = getValorReduzido(selectedOperator, week, rota, 'Dep. de Passagem de Cabo');
+                        const depLicencaVal = getValorReduzido(selectedOperator, week, rota, 'Dep. de Licença');
+                        const depCutoverVal = getValorReduzido(selectedOperator, week, rota, 'Dep. de Cutover');
+                        const fibrasDepVal = getValorReduzido(selectedOperator, week, rota, `Fibras dependentes da ${selectedOperator}`);
                         
                         if (reconhecidasVal > 0) reconhecidas = reconhecidasVal;
                         if (depPassagemVal > 0) depPassagem = depPassagemVal;
