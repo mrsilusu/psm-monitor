@@ -5,7 +5,7 @@ import { lerTudoDoSupabase, salvarTudoNoSupabase, salvarJustificativasNoSupabase
 import { salvarDistribuicaoNoSupabase, carregarDistribuicaoDoSupabase, limparDistribuicaoNoSupabase } from './services/supabaseDistribuicaoService';
 
 const PSMMonitorApp = () => {
-  console.log("🚀 PSM Monitor 5.08.16 - REDUÇÃO SIMPLES E ESCOPO CORRETO ! ✅");
+  console.log("🚀 PSM Monitor 5.08.14 - V5.08.12 + FONTE FIXA ! ✅");
   
   // ============================================================================
   // MAPEAMENTO DE ROTAS PARA PROVÍNCIAS
@@ -3023,43 +3023,30 @@ useEffect(() => {
   };
 
   /**
-   * V5.08.16: Obtém valor REDUZIDO para Dashboard Executivo
-   * LÓGICA CORRIGIDA:
-   * 1. Pegar valor base da rota (busca na semana ou anteriores DO QUADRIMESTRE)
-   * 2. Acumular TODAS as reduções do quadrimestre até agora
-   * 3. Retornar valor - reduções
+   * V5.07.0: Obtém valor REDUZIDO para Dashboard Executivo
+   * Calcula: Valor Original - Desconto ACUMULADO de todas as semanas até a atual
    */
   const getValorReduzido = (psm, week, route, tipo) => {
-    const trimestreAtual = quarterConfig[selectedQuarter];
-    const weekNum = parseInt(week.replace('W', ''), 10);
+    // Pegar valor original
+    let original = parseInt(data[psm]?.[week]?.[route]?.[tipo], 10) || 0;
     
-    // V5.08.16: PASSO 1 - Pegar valor BASE
-    // Buscar primeiro valor não-zero DENTRO DO QUADRIMESTRE (do início até esta semana)
-    let valorBase = 0;
+    // Se não houver, buscar em semanas anteriores
+    if (original === 0) {
+      original = buscarValorAnterior(psm, week, route, tipo);
+    }
+    
+    // V5.07.0: SOMAR descontos de TODAS as semanas até a atual (acumulativo)
+    const weekNum = parseInt(week.replace('W', ''), 10);
+    const trimestreAtual = quarterConfig[selectedQuarter];
+    
+    let descontoAcumulado = 0;
     for (let w = trimestreAtual.start; w <= weekNum; w++) {
       const semana = `W${w}`;
-      const valor = parseInt(data[psm]?.[semana]?.[route]?.[tipo], 10) || 0;
-      if (valor > 0) {
-        valorBase = valor;
-        break; // Pega o PRIMEIRO valor encontrado
-      }
+      const descontoDaSemana = distribuicaoReparacoes[psm]?.[semana]?.[route]?.[tipo] || 0;
+      descontoAcumulado += descontoDaSemana;
     }
     
-    // Se não encontrou no quadrimestre até aqui, retorna 0
-    if (valorBase === 0) {
-      return 0;
-    }
-    
-    // V5.08.16: PASSO 2 - Acumular TODAS as reduções do quadrimestre
-    let descontoTotal = 0;
-    for (let w = trimestreAtual.start; w <= trimestreAtual.end; w++) {
-      const semana = `W${w}`;
-      const desconto = distribuicaoReparacoes[psm]?.[semana]?.[route]?.[tipo] || 0;
-      descontoTotal += desconto;
-    }
-    
-    // V5.08.16: PASSO 3 - Retornar valor reduzido
-    return Math.max(0, valorBase - descontoTotal);
+    return Math.max(0, original - descontoAcumulado);
   };
 
   /**
