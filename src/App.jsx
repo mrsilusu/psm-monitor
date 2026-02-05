@@ -7474,6 +7474,118 @@ Gerado por: PSM Monitor v3.42.03
                 })()}
               </div>
               
+              {/* V5.09.0: Nova Seção - Distribuição por Tipo de Reparação */}
+              <div className="mb-6">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-blue-600 rounded flex items-center justify-center">
+                    <span className="text-white text-sm">📊</span>
+                  </div>
+                  <h4 className="text-sm font-semibold text-gray-700">Distribuição por Tipo de Reparação</h4>
+                </div>
+                
+                <div className="grid grid-cols-5 gap-3 p-4 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg border border-gray-200">
+                  {/* Dep. Licença */}
+                  <div className="bg-white rounded-lg p-3 shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 border border-gray-100">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <div className="w-2.5 h-2.5 rounded-full bg-orange-500 flex-shrink-0"></div>
+                        <span className="text-[11px] font-semibold text-gray-600 truncate">Dep. Licença</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xl font-bold text-gray-900">{executiveDashboard.depLicenca?.value || 0}</span>
+                        <span className="text-[10px] font-semibold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
+                          {(() => {
+                            const total = executiveDashboard.totalReparadas?.value || 0;
+                            const valor = executiveDashboard.depLicenca?.value || 0;
+                            return total > 0 ? `(${Math.round((valor / total) * 100)}%)` : '(0%)';
+                          })()}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Reconhecidas */}
+                  <div className="bg-white rounded-lg p-3 shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 border border-gray-100">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <div className="w-2.5 h-2.5 rounded-full bg-cyan-500 flex-shrink-0"></div>
+                        <span className="text-[11px] font-semibold text-gray-600 truncate">Reconhecidas</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xl font-bold text-gray-900">{executiveDashboard.reconhecidas?.value || 0}</span>
+                        <span className="text-[10px] font-semibold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
+                          {(() => {
+                            const total = executiveDashboard.totalReparadas?.value || 0;
+                            const valor = executiveDashboard.reconhecidas?.value || 0;
+                            return total > 0 ? `(${Math.round((valor / total) * 100)}%)` : '(0%)';
+                          })()}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Dep. Passagens */}
+                  <div className="bg-white rounded-lg p-3 shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 border border-gray-100">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <div className="w-2.5 h-2.5 rounded-full bg-indigo-500 flex-shrink-0"></div>
+                        <span className="text-[11px] font-semibold text-gray-600 truncate">Dep. Passagens</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xl font-bold text-gray-900">{executiveDashboard.depPassagensCabo?.value || 0}</span>
+                        <span className="text-[10px] font-semibold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
+                          {(() => {
+                            const total = executiveDashboard.totalReparadas?.value || 0;
+                            const valor = executiveDashboard.depPassagensCabo?.value || 0;
+                            return total > 0 ? `(${Math.round((valor / total) * 100)}%)` : '(0%)';
+                          })()}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Dep. Cutover */}
+                  <div className="bg-white rounded-lg p-3 shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 border border-gray-100">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <div className="w-2.5 h-2.5 rounded-full bg-purple-500 flex-shrink-0"></div>
+                        <span className="text-[11px] font-semibold text-gray-600 truncate">Dep. Cutover</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xl font-bold text-gray-900">{executiveDashboard.depCutover?.value || 0}</span>
+                        <span className="text-[10px] font-semibold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
+                          {(() => {
+                            const total = executiveDashboard.totalReparadas?.value || 0;
+                            const valor = executiveDashboard.depCutover?.value || 0;
+                            return total > 0 ? `(${Math.round((valor / total) * 100)}%)` : '(0%)';
+                          })()}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Fibras Dep. PSM */}
+                  <div className="bg-white rounded-lg p-3 shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 border border-gray-100">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <div className="w-2.5 h-2.5 rounded-full bg-gray-600 flex-shrink-0"></div>
+                        <span className="text-[11px] font-semibold text-gray-600 truncate">Fibras Dep. {selectedOperator}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xl font-bold text-gray-900">{executiveDashboard.fibrasDependentes?.value || 0}</span>
+                        <span className="text-[10px] font-semibold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
+                          {(() => {
+                            const total = executiveDashboard.totalReparadas?.value || 0;
+                            const valor = executiveDashboard.fibrasDependentes?.value || 0;
+                            return total > 0 ? `(${Math.round((valor / total) * 100)}%)` : '(0%)';
+                          })()}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
               {/* v3.41.02: 4 CARDS DE ANÁLISE - Por PROVÍNCIA (modo PSM) ou por PSM (modo Global) */}
               <div className="grid grid-cols-4 gap-4 mb-6">
                 {(() => {
