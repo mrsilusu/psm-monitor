@@ -5,7 +5,7 @@ import { lerTudoDoSupabase, salvarTudoNoSupabase, salvarJustificativasNoSupabase
 import { salvarDistribuicaoNoSupabase, carregarDistribuicaoDoSupabase, limparDistribuicaoNoSupabase } from './services/supabaseDistribuicaoService';
 
 const PSMMonitorApp = () => {
-  console.log("🚀 PSM Monitor 5.08.14 - V5.08.12 + FONTE FIXA ! ✅");
+  console.log("🚀 PSM Monitor 5.08.15 - REDUÇÃO PARA SEMANAS FUTURAS ! ✅");
   
   // ============================================================================
   // MAPEAMENTO DE ROTAS PARA PROVÍNCIAS
@@ -3027,23 +3027,52 @@ useEffect(() => {
    * Calcula: Valor Original - Desconto ACUMULADO de todas as semanas até a atual
    */
   const getValorReduzido = (psm, week, route, tipo) => {
-    // Pegar valor original
+    // V5.08.15: Verificar se a semana TEM dados inseridos
+    const temDadosInseridos = data[psm]?.[week]?.[route]?.[tipo] !== undefined && 
+                              data[psm]?.[week]?.[route]?.[tipo] !== null &&
+                              data[psm]?.[week]?.[route]?.[tipo] !== '';
+    
+    // Pegar valor original (se existir nesta semana)
     let original = parseInt(data[psm]?.[week]?.[route]?.[tipo], 10) || 0;
     
-    // Se não houver, buscar em semanas anteriores
-    if (original === 0) {
+    // V5.08.15: Se NÃO tem dados inseridos, buscar valor anterior (semana futura)
+    if (!temDadosInseridos) {
       original = buscarValorAnterior(psm, week, route, tipo);
     }
     
-    // V5.07.0: SOMAR descontos de TODAS as semanas até a atual (acumulativo)
+    // V5.08.15: Calcular desconto acumulado
     const weekNum = parseInt(week.replace('W', ''), 10);
     const trimestreAtual = quarterConfig[selectedQuarter];
     
     let descontoAcumulado = 0;
-    for (let w = trimestreAtual.start; w <= weekNum; w++) {
-      const semana = `W${w}`;
-      const descontoDaSemana = distribuicaoReparacoes[psm]?.[semana]?.[route]?.[tipo] || 0;
-      descontoAcumulado += descontoDaSemana;
+    
+    // V5.08.15: LÓGICA CORRIGIDA
+    if (temDadosInseridos) {
+      // Semana COM dados inseridos: acumular descontos ATÉ esta semana
+      for (let w = trimestreAtual.start; w <= weekNum; w++) {
+        const semana = `W${w}`;
+        const descontoDaSemana = distribuicaoReparacoes[psm]?.[semana]?.[route]?.[tipo] || 0;
+        descontoAcumulado += descontoDaSemana;
+      }
+    } else {
+      // Semana SEM dados inseridos (futura): acumular TODOS os descontos até agora
+      // Buscar até que semana existem dados
+      let ultimaComDados = trimestreAtual.start;
+      for (let w = trimestreAtual.start; w <= trimestreAtual.end; w++) {
+        const semana = `W${w}`;
+        if (data[psm]?.[semana]?.[route]?.[tipo] !== undefined && 
+            data[psm]?.[semana]?.[route]?.[tipo] !== null &&
+            data[psm]?.[semana]?.[route]?.[tipo] !== '') {
+          ultimaComDados = w;
+        }
+      }
+      
+      // Acumular TODOS os descontos até a última semana com dados
+      for (let w = trimestreAtual.start; w <= ultimaComDados; w++) {
+        const semana = `W${w}`;
+        const descontoDaSemana = distribuicaoReparacoes[psm]?.[semana]?.[route]?.[tipo] || 0;
+        descontoAcumulado += descontoDaSemana;
+      }
     }
     
     return Math.max(0, original - descontoAcumulado);
