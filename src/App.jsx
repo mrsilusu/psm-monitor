@@ -5,7 +5,83 @@ import { lerTudoDoSupabase, salvarTudoNoSupabase, salvarJustificativasNoSupabase
 import { salvarDistribuicaoNoSupabase, carregarDistribuicaoDoSupabase, limparDistribuicaoNoSupabase } from './services/supabaseDistribuicaoService';
 
 const PSMMonitorApp = () => {
-  console.log("🚀 PSM Monitor 5.08.17 - BASE V5.08.14 + FIX BD DELETE ! ✅");
+  console.log("🚀 PSM Monitor 5.08.19 - AUTO-CLEANUP localStorage ! ✅");
+  
+  // ============================================================================
+  // V5.08.19: SISTEMA DE VERSIONAMENTO E LIMPEZA AUTOMÁTICA DO localStorage
+  // ============================================================================
+  
+  /**
+   * VERSÃO ATUAL DO SCHEMA DE DADOS
+   * Incrementar quando houver mudanças incompatíveis
+   */
+  const CURRENT_DATA_VERSION = 2; // V5.08.19: Versão 2
+  
+  /**
+   * Função para limpar localStorage corrompido ou antigo
+   * Executada UMA VEZ ao carregar o app
+   */
+  const cleanupLocalStorage = () => {
+    try {
+      // 1. Verificar versão salva
+      const savedVersion = localStorage.getItem('psm_data_version');
+      const versionNumber = savedVersion ? parseInt(savedVersion, 10) : 0;
+      
+      console.log(`🔍 [CLEANUP] Versão localStorage: ${versionNumber}, Versão atual: ${CURRENT_DATA_VERSION}`);
+      
+      // 2. Se versão antiga ou não existe, LIMPAR
+      if (versionNumber < CURRENT_DATA_VERSION) {
+        console.log('🧹 [CLEANUP] Limpando localStorage antigo...');
+        
+        // Lista de keys antigas que podem estar corrompidas
+        const keysToClean = [
+          'psm_distribuicao_reparacoes',     // Versão antiga (sem _v1)
+          'psm_distribuicao_reparacoes_v1',  // Pode estar corrompida
+          'psm_rotas_data_v2',                // Versões antigas de dados
+          'psm_rotas_data_v3',
+          'psm_justificativas',               // Versão antiga
+          'psm_justificativas_v1',
+        ];
+        
+        keysToClean.forEach(key => {
+          if (localStorage.getItem(key)) {
+            console.log(`🗑️ [CLEANUP] Removendo: ${key}`);
+            localStorage.removeItem(key);
+          }
+        });
+        
+        // 3. Salvar nova versão
+        localStorage.setItem('psm_data_version', CURRENT_DATA_VERSION.toString());
+        console.log('✅ [CLEANUP] localStorage limpo e atualizado para versão', CURRENT_DATA_VERSION);
+        
+        // 4. Mostrar notificação ao usuário (opcional)
+        console.log('ℹ️ [CLEANUP] Dados locais foram atualizados. Tudo será recarregado do servidor.');
+        
+        return true; // Limpeza foi feita
+      } else {
+        console.log('✅ [CLEANUP] localStorage já está na versão atual');
+        return false; // Não foi necessário limpar
+      }
+    } catch (error) {
+      console.error('❌ [CLEANUP] Erro ao limpar localStorage:', error);
+      return false;
+    }
+  };
+  
+  // Executar limpeza UMA VEZ ao montar o componente
+  // ANTES de inicializar qualquer estado
+  React.useEffect(() => {
+    const wasCleanedUp = cleanupLocalStorage();
+    
+    if (wasCleanedUp) {
+      // Se foi limpo, forçar reload para carregar dados frescos do Supabase
+      console.log('🔄 [CLEANUP] Recarregando página para aplicar mudanças...');
+      // Usar timeout para dar tempo de mostrar os logs
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    }
+  }, []); // Executar apenas uma vez no mount
   
   // ============================================================================
   // MAPEAMENTO DE ROTAS PARA PROVÍNCIAS
@@ -356,11 +432,12 @@ const PSMMonitorApp = () => {
   // ESTADO: DISTRIBUIÇÃO DE REPARAÇÕES (V5.06.0)
   // Estrutura: { PSM: { Week: { Rota: { 'Reconhecidas': 10, 'Dep. Cutover': 5 } } } }
   // Guarda QUANTO foi descontado de cada tipo de indisponibilidade
+  // V5.08.19: Usar key versionada para evitar conflitos
   const [distribuicaoReparacoes, setDistribuicaoReparacoes] = useState(() => {
-    const saved = window.localStorage.getItem('psm_distribuicao_reparacoes_v1');
+    const saved = window.localStorage.getItem('psm_distribuicao_reparacoes_v2'); // V5.08.19: v2
     if (saved) {
       try {
-        console.log('📥 [DISTRIBUIÇÃO] Carregado do localStorage');
+        console.log('📥 [DISTRIBUIÇÃO] Carregado do localStorage v2');
         return JSON.parse(saved);
       } catch (e) {
         console.error('❌ [DISTRIBUIÇÃO] Erro ao carregar:', e);
@@ -1738,15 +1815,15 @@ useEffect(() => {
     if (Object.keys(distribuicaoReparacoes).length > 0) {
       // 1. Salvar no localStorage (imediato)
       try {
-        window.localStorage.setItem('psm_distribuicao_reparacoes_v1', JSON.stringify(distribuicaoReparacoes));
-        console.log('💾 [DISTRIBUIÇÃO] Salvo no localStorage');
+        window.localStorage.setItem('psm_distribuicao_reparacoes_v2', JSON.stringify(distribuicaoReparacoes)); // V5.08.19: v2
+        console.log('💾 [DISTRIBUIÇÃO] Salvo no localStorage v2');
       } catch (error) {
         console.error('❌ [DISTRIBUIÇÃO] Erro ao salvar no localStorage:', error);
       }
       
       // 2. Salvar no Supabase IMEDIATAMENTE (sem debounce)
       const salvarImediatamente = async () => {
-        console.log('💾 [DISTRIBUIÇÃO] Salvando no Supabase IMEDIATAMENTE...');
+        console.log('💾 [DISTRIBUIÇÃO] Salvando no Supabase...');
         
         const resultado = await salvarDistribuicaoNoSupabase(
           distribuicaoReparacoes,
@@ -6016,7 +6093,7 @@ useEffect(() => {
                 <BarChart3 className="w-8 h-8 text-purple-600" />
                 <div>
                   <h1 className="text-2xl font-bold text-gray-800">Performance Clean Up Advanced</h1>
-                  <p className="text-xs text-gray-500">v5.02.0 - Sem Semana Rep! 🎨✨</p>
+                  <p className="text-xs text-gray-500">V5.08.19 AUTO-CLEANUP localStorage </p>
                 </div>
               </div>
               {/* Indicador de Salvamento */}
