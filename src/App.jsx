@@ -5,7 +5,7 @@ import { lerTudoDoSupabase, salvarTudoNoSupabase, salvarJustificativasNoSupabase
 import { salvarDistribuicaoNoSupabase, carregarDistribuicaoDoSupabase, limparDistribuicaoNoSupabase } from './services/supabaseDistribuicaoService';
 
 const PSMMonitorApp = () => {
-  console.log("🚀 PSM Monitor 5.08.19 - AUTO-CLEANUP localStorage ! ✅");
+  console.log("🚀 PSM Monitor 5.08.20 - SALVAMENTO INTELIGENTE ! 🛡️✅");
   
   // ============================================================================
   // V5.08.19: SISTEMA DE VERSIONAMENTO E LIMPEZA AUTOMÁTICA DO localStorage
@@ -758,6 +758,11 @@ useEffect(() => {
   const scrollContainerRef = useRef(null);
   const [lastScrollY, setLastScrollY] = useState(0);
   const [headerVisible, setHeaderVisible] = useState(true);
+  
+  // V5.08.20: Refs e state para controle de salvamento inteligente
+  const lastSavedDistribuicaoRef = useRef(null);
+  const saveDistribuicaoTimerRef = useRef(null);
+  const [isLoadingDistribuicao, setIsLoadingDistribuicao] = useState(false);
   
   // v3.40.7: Detectar scroll do container para mostrar/ocultar header
   useEffect(() => {
@@ -1803,28 +1808,61 @@ useEffect(() => {
     };
   }, [justificativas, selectedYear]); // Executar sempre que 'justificativas' ou 'selectedYear' mudar
 
-  // useEffect #2.5: Salvar estado 'distribuicaoReparacoes' no localStorage E SUPABASE IMEDIATAMENTE
+  // V5.08.20: useEffect #2.5 REESCRITO - Salvamento inteligente com deep compare e debounce
   useEffect(() => {
-    // V5.08.17: Se flag estiver ativa, pular este salvamento
+    // V5.08.17: Se flag estiver ativa, pular este salvamento (após delete)
     if (skipNextSaveRef.current) {
       console.log('⏭️ [DISTRIBUIÇÃO] Pulando salvamento (após delete)');
       skipNextSaveRef.current = false;
       return;
     }
     
-    if (Object.keys(distribuicaoReparacoes).length > 0) {
-      // 1. Salvar no localStorage (imediato)
+    // V5.08.20: CAMADA 2 - Não salvar durante carregamento inicial
+    if (isLoadingDistribuicao) {
+      console.log('⏭️ [DISTRIBUIÇÃO] Carregando dados, pulando salvamento');
+      return;
+    }
+    
+    // Verificar se tem dados
+    if (Object.keys(distribuicaoReparacoes).length === 0) {
+      console.log('⏭️ [DISTRIBUIÇÃO] Sem dados para salvar');
+      return;
+    }
+    
+    // V5.08.20: CAMADA 1 - Comparação profunda (Deep Compare)
+    const dadosAtuais = JSON.stringify(distribuicaoReparacoes);
+    const dadosAnteriores = lastSavedDistribuicaoRef.current;
+    
+    if (dadosAtuais === dadosAnteriores) {
+      console.log('⏭️ [DISTRIBUIÇÃO] Dados não mudaram, pulando salvamento');
+      return;
+    }
+    
+    console.log('🔄 [DISTRIBUIÇÃO] Dados mudaram, preparando salvamento...');
+    
+    // V5.08.20: CAMADA 3 - Cancelar timer anterior (se existir)
+    if (saveDistribuicaoTimerRef.current) {
+      clearTimeout(saveDistribuicaoTimerRef.current);
+      console.log('⏱️ [DISTRIBUIÇÃO] Timer anterior cancelado');
+    }
+    
+    // V5.08.20: CAMADA 3 - Debounce de 1 segundo
+    saveDistribuicaoTimerRef.current = setTimeout(async () => {
+      console.log('💾 [DISTRIBUIÇÃO] Salvando após debounce (1s)...');
+      
+      // Atualizar lastSaved ANTES de salvar (evita race condition)
+      lastSavedDistribuicaoRef.current = dadosAtuais;
+      
+      // 1. Salvar localStorage
       try {
-        window.localStorage.setItem('psm_distribuicao_reparacoes_v2', JSON.stringify(distribuicaoReparacoes)); // V5.08.19: v2
+        window.localStorage.setItem('psm_distribuicao_reparacoes_v2', dadosAtuais);
         console.log('💾 [DISTRIBUIÇÃO] Salvo no localStorage v2');
       } catch (error) {
         console.error('❌ [DISTRIBUIÇÃO] Erro ao salvar no localStorage:', error);
       }
       
-      // 2. Salvar no Supabase IMEDIATAMENTE (sem debounce)
-      const salvarImediatamente = async () => {
-        console.log('💾 [DISTRIBUIÇÃO] Salvando no Supabase...');
-        
+      // 2. Salvar Supabase
+      try {
         const resultado = await salvarDistribuicaoNoSupabase(
           distribuicaoReparacoes,
           selectedQuarter,
@@ -1832,19 +1870,23 @@ useEffect(() => {
         );
         
         if (resultado.success) {
-          console.log('✅ [DISTRIBUIÇÃO] Salvo no Supabase');
+          console.log('✅ [DISTRIBUIÇÃO] Salvo no Supabase com sucesso');
         } else {
           console.error('❌ [DISTRIBUIÇÃO] Erro ao salvar no Supabase:', resultado.error);
         }
-      };
-      
-      salvarImediatamente();
-    }
-  }, [distribuicaoReparacoes, selectedQuarter, selectedYear]);
+      } catch (error) {
+        console.error('❌ [DISTRIBUIÇÃO] Erro ao salvar no Supabase:', error);
+      }
+    }, 1000); // 1 segundo de debounce
+    
+  }, [distribuicaoReparacoes, selectedQuarter, selectedYear, isLoadingDistribuicao]);
 
-  // useEffect #2.6: Carregar distribuição do Supabase quando mudar quarter/year
+  // V5.08.20: useEffect #2.6 ATUALIZADO - Carregar com flag de loading
   useEffect(() => {
     const carregarDistribuicaoInicial = async () => {
+      // V5.08.20: Ativar flag de loading ANTES de carregar
+      setIsLoadingDistribuicao(true);
+      
       console.log('📥 [DISTRIBUIÇÃO] Carregando do Supabase...');
       
       const distrib = await carregarDistribuicaoDoSupabase(
@@ -1854,12 +1896,34 @@ useEffect(() => {
       
       if (Object.keys(distrib).length > 0) {
         setDistribuicaoReparacoes(distrib);
+        
+        // V5.08.20: Atualizar lastSaved para evitar salvamento logo após carregamento
+        lastSavedDistribuicaoRef.current = JSON.stringify(distrib);
+        
         console.log('✅ [DISTRIBUIÇÃO] Carregada do Supabase');
+      } else {
+        console.log('ℹ️ [DISTRIBUIÇÃO] Nenhum dado encontrado no Supabase');
+        
+        // V5.08.20: Mesmo sem dados, atualizar lastSaved
+        lastSavedDistribuicaoRef.current = JSON.stringify({});
       }
+      
+      // V5.08.20: Desativar flag de loading APÓS carregar
+      setIsLoadingDistribuicao(false);
     };
     
     carregarDistribuicaoInicial();
   }, [selectedQuarter, selectedYear]);
+
+  // V5.08.20: Cleanup do timer de salvamento ao desmontar
+  useEffect(() => {
+    return () => {
+      if (saveDistribuicaoTimerRef.current) {
+        clearTimeout(saveDistribuicaoTimerRef.current);
+        console.log('🧹 [DISTRIBUIÇÃO] Timer de salvamento limpo ao desmontar');
+      }
+    };
+  }, []);
 
   // useEffect #3: Log de inicialização (apenas uma vez)
   useEffect(() => {
@@ -6093,7 +6157,7 @@ useEffect(() => {
                 <BarChart3 className="w-8 h-8 text-purple-600" />
                 <div>
                   <h1 className="text-2xl font-bold text-gray-800">Performance Clean Up Advanced</h1>
-                  <p className="text-xs text-gray-500">V5.08.19 AUTO-CLEANUP localStorage </p>
+                  <p className="text-xs text-gray-500">v5.02.0 - Sem Semana Rep! 🎨✨</p>
                 </div>
               </div>
               {/* Indicador de Salvamento */}
