@@ -5,7 +5,7 @@ import { lerTudoDoSupabase, salvarTudoNoSupabase, salvarJustificativasNoSupabase
 import { salvarDistribuicaoNoSupabase, carregarDistribuicaoDoSupabase, limparDistribuicaoNoSupabase } from './services/supabaseDistribuicaoService';
 
 const PSMMonitorApp = () => {
-  console.log("🚀 PSM Monitor 5.08.14 - V5.08.12 + FONTE FIXA ! ✅");
+  console.log("🚀 PSM Monitor 5.08.17 - BASE V5.08.14 + FIX BD DELETE ! ✅");
   
   // ============================================================================
   // MAPEAMENTO DE ROTAS PARA PROVÍNCIAS
@@ -1021,6 +1021,7 @@ useEffect(() => {
   const [pendingRepairData, setPendingRepairData] = useState(null);
   const modalTimerRef = useRef(null);
   const valorOriginalRef = useRef(null); // Guarda valor antes de começar a editar
+  const skipNextSaveRef = useRef(false); // V5.08.17: Flag para evitar salvamento após delete
   
   // Modal de drill-down de status
   const [showStatusDrilldown, setShowStatusDrilldown] = useState(false);
@@ -1727,6 +1728,13 @@ useEffect(() => {
 
   // useEffect #2.5: Salvar estado 'distribuicaoReparacoes' no localStorage E SUPABASE IMEDIATAMENTE
   useEffect(() => {
+    // V5.08.17: Se flag estiver ativa, pular este salvamento
+    if (skipNextSaveRef.current) {
+      console.log('⏭️ [DISTRIBUIÇÃO] Pulando salvamento (após delete)');
+      skipNextSaveRef.current = false;
+      return;
+    }
+    
     if (Object.keys(distribuicaoReparacoes).length > 0) {
       // 1. Salvar no localStorage (imediato)
       try {
@@ -2718,6 +2726,9 @@ useEffect(() => {
         // V5.06.5: Se campo estiver VAZIO, limpar distribuição
         if (valorFinal === '' || valorFinal === '0') {
           console.log('🧹 Campo vazio/zerado - limpando distribuição');
+          
+          // V5.08.17: Ativar flag para evitar salvamento após delete
+          skipNextSaveRef.current = true;
           
           setDistribuicaoReparacoes(prev => {
             const updated = JSON.parse(JSON.stringify(prev));
