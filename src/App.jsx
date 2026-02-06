@@ -5,7 +5,7 @@ import { lerTudoDoSupabase, salvarTudoNoSupabase, salvarJustificativasNoSupabase
 import { salvarDistribuicaoNoSupabase, carregarDistribuicaoDoSupabase, limparDistribuicaoNoSupabase } from './services/supabaseDistribuicaoService';
 
 const PSMMonitorApp = () => {
-  console.log("🚀 PSM Monitor 5.09.5 - FINAL: Efetividade PSM + Alertas Corretos ! ✅");
+  console.log("🚀 PSM Monitor 5.09.6 - Alertas + Efetividade PSM Card Corrigidos ! ✅");
   
   // ============================================================================
   // V5.08.19: SISTEMA DE VERSIONAMENTO E LIMPEZA AUTOMÁTICA DO localStorage
@@ -3429,6 +3429,28 @@ useEffect(() => {
                              stats.depLicencaSum + stats.depCutoverSum + 
                              stats.fibrasDependentesLast;
     
+    // V5.09.6: Calcular efetividade média Global e PSM
+    const efetividadeGlobalMedia = stats.indisponiveisSum > 0 
+      ? (stats.totalReparadasSum / stats.indisponiveisSum) * 100 
+      : 0;
+    
+    // Calcular Fibras PSM reparadas
+    let fibrasPSMReparadasTotal = 0;
+    routesToProcess.forEach(route => {
+      quarterWeeks.forEach(week => {
+        const weekNum = parseInt(week.substring(1));
+        const selectedWeekNum = parseInt(selectedWeek.substring(1));
+        if (weekNum <= selectedWeekNum) {
+          const distDaSemana = distribuicaoReparacoes[selectedOperator]?.[week]?.[route] || {};
+          fibrasPSMReparadasTotal += parseInt(distDaSemana[`Fibras dependentes da ${selectedOperator}`]) || 0;
+        }
+      });
+    });
+    
+    const efetividadePSMMedia = stats.fibrasDependentesLast > 0
+      ? (fibrasPSMReparadasTotal / stats.fibrasDependentesLast) * 100
+      : 0;
+    
     console.log(`✅ Dashboard calculado:`, {
       reconhecidas: stats.reconhecidasSum,
       depPassagens: stats.depPassagensSum,
@@ -3436,7 +3458,9 @@ useEffect(() => {
       depCutover: stats.depCutoverSum,
       fibrasDep: stats.fibrasDependentesLast,
       totalReparadas: stats.totalReparadasSum,
-      indisponiveis: stats.indisponiveisSum
+      indisponiveis: stats.indisponiveisSum,
+      efetividadeGlobal: efetividadeGlobalMedia.toFixed(1) + '%',
+      efetividadePSM: efetividadePSMMedia.toFixed(1) + '%'
     });
 
 
@@ -4312,21 +4336,19 @@ useEffect(() => {
       // Se não tem indisponíveis, não há nada para validar
       if (indisponiveis === 0) return;
       
-      // V5.09.4: Usar valores ORIGINAIS (sem desconto) para validar soma
+      // V5.09.6: Sempre usar valores ORIGINAIS para validar
       const reconhecidas = parseInt(weekData['Reconhecidas']) || 0;
       const depPassagem = parseInt(weekData['Dep. de Passagem de Cabo']) || 0;
       const depLicenca = parseInt(weekData['Dep. de Licença']) || 0;
       const depCutover = parseInt(weekData['Dep. de Cutover']) || 0;
       const fibrasDependentes = parseInt(weekData[`Fibras dependentes da ${selectedOperator}`]) || 0;
-      const totalReparadas = parseInt(weekData['Total Reparadas']) || 0;
       
       const somaJustificativas = reconhecidas + depPassagem + depLicenca + depCutover + fibrasDependentes;
       
-      console.log(`🔍 ${route}: Indisponíveis=${indisponiveis}, Soma=${somaJustificativas}, TotalReparadas=${totalReparadas}`);
+      console.log(`🔍 ${route}: Indisponíveis=${indisponiveis}, Soma=${somaJustificativas}`);
       
-      // V5.09.4: ALERTA apenas se soma ≠ indisponíveis E não há reparadas
-      // Se há reparadas, é normal haver diferença (desconto aplicado)
-      if (somaJustificativas !== indisponiveis && totalReparadas === 0) {
+      // V5.09.6: ALERTA SEMPRE que soma ≠ indisponíveis (independente de reparadas)
+      if (somaJustificativas !== indisponiveis) {
         const alertaId = `indisp-sem-explicacao-${route}-${selectedWeek}-${selectedQuarter}`;
         const alertaJaLido = alertasLidos.includes(alertaId);
         
@@ -5466,7 +5488,11 @@ useEffect(() => {
                         </h4>
                       </div>
                       <div className="flex items-center justify-center">
-                        <div className="text-4xl font-bold text-purple-700">0.0%</div>
+                        <div className="text-4xl font-bold text-purple-700">
+                          {efetividadeMode === 'global' 
+                            ? efetividadeGlobalMedia.toFixed(1) 
+                            : efetividadePSMMedia.toFixed(1)}%
+                        </div>
                       </div>
                       <p className="text-xs text-center text-gray-600 mt-1">Média {selectedOperator}</p>
                       <p className="text-[10px] text-center text-purple-600 mt-1">🔄 Clique para alternar</p>
