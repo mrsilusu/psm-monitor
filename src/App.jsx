@@ -5,7 +5,7 @@ import { lerTudoDoSupabase, salvarTudoNoSupabase, salvarJustificativasNoSupabase
 import { salvarDistribuicaoNoSupabase, carregarDistribuicaoDoSupabase, limparDistribuicaoNoSupabase } from './services/supabaseDistribuicaoService';
 
 const PSMMonitorApp = () => {
-  console.log("🚀 PSM Monitor 5.09.4 - CORREÇÕES: Efetividade PSM + Alertas ! 🔧✅");
+  console.log("🚀 PSM Monitor 5.09.5 - FINAL: Efetividade PSM + Alertas Corretos ! ✅");
   
   // ============================================================================
   // V5.08.19: SISTEMA DE VERSIONAMENTO E LIMPEZA AUTOMÁTICA DO localStorage
@@ -4312,19 +4312,21 @@ useEffect(() => {
       // Se não tem indisponíveis, não há nada para validar
       if (indisponiveis === 0) return;
       
-      // V5.09.3: Usar valores REDUZIDOS (com desconto de reparadas aplicado)
-      const reconhecidas = getValorReduzido(selectedOperator, selectedWeek, route, 'Reconhecidas');
-      const depPassagem = getValorReduzido(selectedOperator, selectedWeek, route, 'Dep. de Passagem de Cabo');
-      const depLicenca = getValorReduzido(selectedOperator, selectedWeek, route, 'Dep. de Licença');
-      const depCutover = getValorReduzido(selectedOperator, selectedWeek, route, 'Dep. de Cutover');
-      const fibrasDependentes = getValorReduzido(selectedOperator, selectedWeek, route, `Fibras dependentes da ${selectedOperator}`);
+      // V5.09.4: Usar valores ORIGINAIS (sem desconto) para validar soma
+      const reconhecidas = parseInt(weekData['Reconhecidas']) || 0;
+      const depPassagem = parseInt(weekData['Dep. de Passagem de Cabo']) || 0;
+      const depLicenca = parseInt(weekData['Dep. de Licença']) || 0;
+      const depCutover = parseInt(weekData['Dep. de Cutover']) || 0;
+      const fibrasDependentes = parseInt(weekData[`Fibras dependentes da ${selectedOperator}`]) || 0;
+      const totalReparadas = parseInt(weekData['Total Reparadas']) || 0;
       
       const somaJustificativas = reconhecidas + depPassagem + depLicenca + depCutover + fibrasDependentes;
       
-      console.log(`🔍 ${route}: Indisponíveis=${indisponiveis}, Soma Reduzida=${somaJustificativas} (Rec=${reconhecidas}, Pass=${depPassagem}, Lic=${depLicenca}, Cut=${depCutover}, Fibras=${fibrasDependentes})`);
+      console.log(`🔍 ${route}: Indisponíveis=${indisponiveis}, Soma=${somaJustificativas}, TotalReparadas=${totalReparadas}`);
       
-      // Se a soma não bate com indisponíveis, criar alerta
-      if (somaJustificativas !== indisponiveis) {
+      // V5.09.4: ALERTA apenas se soma ≠ indisponíveis E não há reparadas
+      // Se há reparadas, é normal haver diferença (desconto aplicado)
+      if (somaJustificativas !== indisponiveis && totalReparadas === 0) {
         const alertaId = `indisp-sem-explicacao-${route}-${selectedWeek}-${selectedQuarter}`;
         const alertaJaLido = alertasLidos.includes(alertaId);
         
@@ -4346,7 +4348,7 @@ useEffect(() => {
               depPassagem,
               depLicenca,
               depCutover,
-              fibrasDependentes: fibrasDependentes
+              fibrasDependentes
             },
             semanaDeteccao: selectedWeek,
             timestamp: new Date().toISOString(),
@@ -7620,15 +7622,28 @@ Gerado por: PSM Monitor v3.42.03
                       const indisponibilidadeLiquida = Math.max(0, Math.round(indisponiveis - reparadas));
                       const efetividadeGlobal = indisponiveis > 0 ? ((reparadas / indisponiveis) * 100) : 0;
                       
-                      // v3.49.25: Efetividade PSM com lógica rigorosa
+                      // V5.09.5: Efetividade PSM - calcular apenas Fibras PSM reparadas
                       const fibrasDependentesPSM = indisponiveis - (reconhecidas + depPassagem + depLicenca + depCutover);
-                      let efetividadePSM = 0;
                       
+                      // Calcular APENAS reparadas de Fibras Dep. PSM
+                      let fibrasPSMReparadas = 0;
+                      routesByPSM[psm].forEach(route => {
+                        quarterWeeks.forEach(week => {
+                          const weekNum = parseInt(week.substring(1));
+                          const selectedWeekNum = parseInt(selectedWeek.substring(1));
+                          if (weekNum <= selectedWeekNum) {
+                            const distDaSemana = distribuicaoReparacoes[psm]?.[week]?.[route] || {};
+                            fibrasPSMReparadas += parseInt(distDaSemana[`Fibras dependentes da ${psm}`]) || 0;
+                          }
+                        });
+                      });
+                      
+                      let efetividadePSM = 0;
                       if (fibrasDependentesPSM > 0) {
-                        efetividadePSM = Math.min(100, (reparadas / fibrasDependentesPSM) * 100);
+                        efetividadePSM = Math.min(100, (fibrasPSMReparadas / fibrasDependentesPSM) * 100);
                       }
                       
-                      console.log(`  📊 ${psm}: Efet.Global=${efetividadeGlobal.toFixed(1)}%, Efet.PSM=${efetividadePSM.toFixed(1)}%`);
+                      console.log(`  📊 ${psm}: Efet.Global=${efetividadeGlobal.toFixed(1)}%, Efet.PSM=${efetividadePSM.toFixed(1)}% (${fibrasPSMReparadas}/${fibrasDependentesPSM})`);
                       
                       return {
                         provincia: psm, // Nome da entidade (será PSM neste caso)
