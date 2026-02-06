@@ -5,7 +5,7 @@ import { lerTudoDoSupabase, salvarTudoNoSupabase, salvarJustificativasNoSupabase
 import { salvarDistribuicaoNoSupabase, carregarDistribuicaoDoSupabase, limparDistribuicaoNoSupabase } from './services/supabaseDistribuicaoService';
 
 const PSMMonitorApp = () => {
-  console.log("🚀 PSM Monitor 5.09.1 - LAYOUT OTIMIZADO + Barra Verde ! 🎨✅");
+  console.log("🚀 PSM Monitor 5.09.2 - DISTRIBUIÇÃO CORRETA (Reparadas por Tipo) ! 📊✅");
   
   // ============================================================================
   // V5.08.19: SISTEMA DE VERSIONAMENTO E LIMPEZA AUTOMÁTICA DO localStorage
@@ -5325,7 +5325,7 @@ useEffect(() => {
                     ))}
                   </div>
                   
-                  {/* V5.09.0: Nova Seção - Distribuição por Tipo de Reparação */}
+                  {/* V5.09.1: Nova Seção - Distribuição por Tipo de Reparação */}
                   <div className="mb-4">
                     <div className="flex items-center gap-2 mb-2">
                       <div className="w-1 h-5 bg-green-500 rounded"></div>
@@ -5333,105 +5333,94 @@ useEffect(() => {
                     </div>
                     
                     <div className="grid grid-cols-5 gap-3 p-3 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg border border-gray-200">
-                      {/* Dep. Licença */}
-                      <div className="bg-white rounded-lg p-3 shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 border border-gray-100">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2 flex-1 min-w-0">
-                            <div className="w-2.5 h-2.5 rounded-full bg-orange-500 flex-shrink-0"></div>
-                            <span className="text-[11px] font-semibold text-gray-600 truncate">Dep. Licença</span>
+                      {(() => {
+                        // V5.09.1: Calcular reparadas POR TIPO baseado em distribuicaoReparacoes
+                        let depLicencaReparadas = 0;
+                        let reconhecidasReparadas = 0;
+                        let depPassagensReparadas = 0;
+                        let depCutoverReparadas = 0;
+                        let fibrasPSMReparadas = 0;
+                        
+                        // Rotas a processar (com filtro de província se aplicável)
+                        const routesToProcess = selectedProvince !== 'Todas'
+                          ? routesByPSM[selectedOperator].filter(route => routeToProvince[route] === selectedProvince)
+                          : routesByPSM[selectedOperator];
+                        
+                        // Percorrer todas as rotas e semanas do quarter
+                        routesToProcess.forEach(route => {
+                          quarterWeeks.forEach(week => {
+                            const weekNum = parseInt(week.substring(1));
+                            const selectedWeekNum = parseInt(selectedWeek.substring(1));
+                            
+                            // V5.09.1: Só contar até a semana selecionada
+                            if (weekNum <= selectedWeekNum) {
+                              const distDaSemana = distribuicaoReparacoes[selectedOperator]?.[week]?.[route] || {};
+                              
+                              // Somar reparadas de cada tipo
+                              depLicencaReparadas += parseInt(distDaSemana['Dep. Licença']) || 0;
+                              reconhecidasReparadas += parseInt(distDaSemana['Reconhecidas']) || 0;
+                              depPassagensReparadas += parseInt(distDaSemana['Dep. Passagens']) || 0;
+                              depCutoverReparadas += parseInt(distDaSemana['Dep. Cutover']) || 0;
+                              fibrasPSMReparadas += parseInt(distDaSemana[`Fibras Dep. ${selectedOperator}`]) || 0;
+                            }
+                          });
+                        });
+                        
+                        // Total de reparadas (soma de todos os tipos)
+                        const totalReparadas = depLicencaReparadas + reconhecidasReparadas + 
+                                              depPassagensReparadas + depCutoverReparadas + fibrasPSMReparadas;
+                        
+                        // Array com os dados dos cards
+                        const tiposDistribuicao = [
+                          {
+                            label: 'Dep. Licença',
+                            valor: depLicencaReparadas,
+                            cor: 'bg-orange-500',
+                            percent: totalReparadas > 0 ? Math.round((depLicencaReparadas / totalReparadas) * 100) : 0
+                          },
+                          {
+                            label: 'Reconhecidas',
+                            valor: reconhecidasReparadas,
+                            cor: 'bg-cyan-500',
+                            percent: totalReparadas > 0 ? Math.round((reconhecidasReparadas / totalReparadas) * 100) : 0
+                          },
+                          {
+                            label: 'Dep. Passagens',
+                            valor: depPassagensReparadas,
+                            cor: 'bg-indigo-500',
+                            percent: totalReparadas > 0 ? Math.round((depPassagensReparadas / totalReparadas) * 100) : 0
+                          },
+                          {
+                            label: 'Dep. Cutover',
+                            valor: depCutoverReparadas,
+                            cor: 'bg-purple-500',
+                            percent: totalReparadas > 0 ? Math.round((depCutoverReparadas / totalReparadas) * 100) : 0
+                          },
+                          {
+                            label: `Fibras Dep. ${selectedOperator}`,
+                            valor: fibrasPSMReparadas,
+                            cor: 'bg-gray-600',
+                            percent: totalReparadas > 0 ? Math.round((fibrasPSMReparadas / totalReparadas) * 100) : 0
+                          }
+                        ];
+                        
+                        return tiposDistribuicao.map((tipo, idx) => (
+                          <div key={idx} className="bg-white rounded-lg p-3 shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 border border-gray-100">
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2 flex-1 min-w-0">
+                                <div className={`w-2.5 h-2.5 rounded-full ${tipo.cor} flex-shrink-0`}></div>
+                                <span className="text-[11px] font-semibold text-gray-600 truncate">{tipo.label}</span>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-xl font-bold text-gray-900">{tipo.valor}</span>
+                                <span className="text-[10px] font-semibold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
+                                  ({tipo.percent}%)
+                                </span>
+                              </div>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-xl font-bold text-gray-900">{executiveDashboard.depLicenca?.value || 0}</span>
-                            <span className="text-[10px] font-semibold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
-                              {(() => {
-                                const total = executiveDashboard.totalReparadas?.value || 0;
-                                const valor = executiveDashboard.depLicenca?.value || 0;
-                                return total > 0 ? `(${Math.round((valor / total) * 100)}%)` : '(0%)';
-                              })()}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Reconhecidas */}
-                      <div className="bg-white rounded-lg p-3 shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 border border-gray-100">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2 flex-1 min-w-0">
-                            <div className="w-2.5 h-2.5 rounded-full bg-cyan-500 flex-shrink-0"></div>
-                            <span className="text-[11px] font-semibold text-gray-600 truncate">Reconhecidas</span>
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-xl font-bold text-gray-900">{executiveDashboard.reconhecidas?.value || 0}</span>
-                            <span className="text-[10px] font-semibold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
-                              {(() => {
-                                const total = executiveDashboard.totalReparadas?.value || 0;
-                                const valor = executiveDashboard.reconhecidas?.value || 0;
-                                return total > 0 ? `(${Math.round((valor / total) * 100)}%)` : '(0%)';
-                              })()}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Dep. Passagens */}
-                      <div className="bg-white rounded-lg p-3 shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 border border-gray-100">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2 flex-1 min-w-0">
-                            <div className="w-2.5 h-2.5 rounded-full bg-indigo-500 flex-shrink-0"></div>
-                            <span className="text-[11px] font-semibold text-gray-600 truncate">Dep. Passagens</span>
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-xl font-bold text-gray-900">{executiveDashboard.depPassagensCabo?.value || 0}</span>
-                            <span className="text-[10px] font-semibold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
-                              {(() => {
-                                const total = executiveDashboard.totalReparadas?.value || 0;
-                                const valor = executiveDashboard.depPassagensCabo?.value || 0;
-                                return total > 0 ? `(${Math.round((valor / total) * 100)}%)` : '(0%)';
-                              })()}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Dep. Cutover */}
-                      <div className="bg-white rounded-lg p-3 shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 border border-gray-100">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2 flex-1 min-w-0">
-                            <div className="w-2.5 h-2.5 rounded-full bg-purple-500 flex-shrink-0"></div>
-                            <span className="text-[11px] font-semibold text-gray-600 truncate">Dep. Cutover</span>
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-xl font-bold text-gray-900">{executiveDashboard.depCutover?.value || 0}</span>
-                            <span className="text-[10px] font-semibold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
-                              {(() => {
-                                const total = executiveDashboard.totalReparadas?.value || 0;
-                                const valor = executiveDashboard.depCutover?.value || 0;
-                                return total > 0 ? `(${Math.round((valor / total) * 100)}%)` : '(0%)';
-                              })()}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Fibras Dep. PSM */}
-                      <div className="bg-white rounded-lg p-3 shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 border border-gray-100">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2 flex-1 min-w-0">
-                            <div className="w-2.5 h-2.5 rounded-full bg-gray-600 flex-shrink-0"></div>
-                            <span className="text-[11px] font-semibold text-gray-600 truncate">Fibras Dep. {selectedOperator}</span>
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-xl font-bold text-gray-900">{executiveDashboard.fibrasDependentes?.value || 0}</span>
-                            <span className="text-[10px] font-semibold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
-                              {(() => {
-                                const total = executiveDashboard.totalReparadas?.value || 0;
-                                const valor = executiveDashboard.fibrasDependentes?.value || 0;
-                                return total > 0 ? `(${Math.round((valor / total) * 100)}%)` : '(0%)';
-                              })()}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
+                        ));
+                      })()}
                     </div>
                   </div>
                   
@@ -7472,7 +7461,7 @@ Gerado por: PSM Monitor v3.42.03
                 })()}
               </div>
               
-              {/* V5.09.0: Nova Seção - Distribuição por Tipo de Reparação */}
+              {/* V5.09.1: Nova Seção - Distribuição por Tipo de Reparação */}
               <div className="mb-4">
                 <div className="flex items-center gap-2 mb-2">
                   <div className="w-1 h-5 bg-green-500 rounded"></div>
@@ -7480,105 +7469,94 @@ Gerado por: PSM Monitor v3.42.03
                 </div>
                 
                 <div className="grid grid-cols-5 gap-3 p-3 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg border border-gray-200">
-                  {/* Dep. Licença */}
-                  <div className="bg-white rounded-lg p-3 shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 border border-gray-100">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <div className="w-2.5 h-2.5 rounded-full bg-orange-500 flex-shrink-0"></div>
-                        <span className="text-[11px] font-semibold text-gray-600 truncate">Dep. Licença</span>
+                  {(() => {
+                    // V5.09.1: Calcular reparadas POR TIPO baseado em distribuicaoReparacoes
+                    let depLicencaReparadas = 0;
+                    let reconhecidasReparadas = 0;
+                    let depPassagensReparadas = 0;
+                    let depCutoverReparadas = 0;
+                    let fibrasPSMReparadas = 0;
+                    
+                    // Rotas a processar (com filtro de província se aplicável)
+                    const routesToProcess = selectedProvince !== 'Todas'
+                      ? routesByPSM[selectedOperator].filter(route => routeToProvince[route] === selectedProvince)
+                      : routesByPSM[selectedOperator];
+                    
+                    // Percorrer todas as rotas e semanas do quarter
+                    routesToProcess.forEach(route => {
+                      quarterWeeks.forEach(week => {
+                        const weekNum = parseInt(week.substring(1));
+                        const selectedWeekNum = parseInt(selectedWeek.substring(1));
+                        
+                        // V5.09.1: Só contar até a semana selecionada
+                        if (weekNum <= selectedWeekNum) {
+                          const distDaSemana = distribuicaoReparacoes[selectedOperator]?.[week]?.[route] || {};
+                          
+                          // Somar reparadas de cada tipo
+                          depLicencaReparadas += parseInt(distDaSemana['Dep. Licença']) || 0;
+                          reconhecidasReparadas += parseInt(distDaSemana['Reconhecidas']) || 0;
+                          depPassagensReparadas += parseInt(distDaSemana['Dep. Passagens']) || 0;
+                          depCutoverReparadas += parseInt(distDaSemana['Dep. Cutover']) || 0;
+                          fibrasPSMReparadas += parseInt(distDaSemana[`Fibras Dep. ${selectedOperator}`]) || 0;
+                        }
+                      });
+                    });
+                    
+                    // Total de reparadas (soma de todos os tipos)
+                    const totalReparadas = depLicencaReparadas + reconhecidasReparadas + 
+                                          depPassagensReparadas + depCutoverReparadas + fibrasPSMReparadas;
+                    
+                    // Array com os dados dos cards
+                    const tiposDistribuicao = [
+                      {
+                        label: 'Dep. Licença',
+                        valor: depLicencaReparadas,
+                        cor: 'bg-orange-500',
+                        percent: totalReparadas > 0 ? Math.round((depLicencaReparadas / totalReparadas) * 100) : 0
+                      },
+                      {
+                        label: 'Reconhecidas',
+                        valor: reconhecidasReparadas,
+                        cor: 'bg-cyan-500',
+                        percent: totalReparadas > 0 ? Math.round((reconhecidasReparadas / totalReparadas) * 100) : 0
+                      },
+                      {
+                        label: 'Dep. Passagens',
+                        valor: depPassagensReparadas,
+                        cor: 'bg-indigo-500',
+                        percent: totalReparadas > 0 ? Math.round((depPassagensReparadas / totalReparadas) * 100) : 0
+                      },
+                      {
+                        label: 'Dep. Cutover',
+                        valor: depCutoverReparadas,
+                        cor: 'bg-purple-500',
+                        percent: totalReparadas > 0 ? Math.round((depCutoverReparadas / totalReparadas) * 100) : 0
+                      },
+                      {
+                        label: `Fibras Dep. ${selectedOperator}`,
+                        valor: fibrasPSMReparadas,
+                        cor: 'bg-gray-600',
+                        percent: totalReparadas > 0 ? Math.round((fibrasPSMReparadas / totalReparadas) * 100) : 0
+                      }
+                    ];
+                    
+                    return tiposDistribuicao.map((tipo, idx) => (
+                      <div key={idx} className="bg-white rounded-lg p-3 shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 border border-gray-100">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            <div className={`w-2.5 h-2.5 rounded-full ${tipo.cor} flex-shrink-0`}></div>
+                            <span className="text-[11px] font-semibold text-gray-600 truncate">{tipo.label}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xl font-bold text-gray-900">{tipo.valor}</span>
+                            <span className="text-[10px] font-semibold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
+                              ({tipo.percent}%)
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xl font-bold text-gray-900">{executiveDashboard.depLicenca?.value || 0}</span>
-                        <span className="text-[10px] font-semibold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
-                          {(() => {
-                            const total = executiveDashboard.totalReparadas?.value || 0;
-                            const valor = executiveDashboard.depLicenca?.value || 0;
-                            return total > 0 ? `(${Math.round((valor / total) * 100)}%)` : '(0%)';
-                          })()}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Reconhecidas */}
-                  <div className="bg-white rounded-lg p-3 shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 border border-gray-100">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <div className="w-2.5 h-2.5 rounded-full bg-cyan-500 flex-shrink-0"></div>
-                        <span className="text-[11px] font-semibold text-gray-600 truncate">Reconhecidas</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xl font-bold text-gray-900">{executiveDashboard.reconhecidas?.value || 0}</span>
-                        <span className="text-[10px] font-semibold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
-                          {(() => {
-                            const total = executiveDashboard.totalReparadas?.value || 0;
-                            const valor = executiveDashboard.reconhecidas?.value || 0;
-                            return total > 0 ? `(${Math.round((valor / total) * 100)}%)` : '(0%)';
-                          })()}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Dep. Passagens */}
-                  <div className="bg-white rounded-lg p-3 shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 border border-gray-100">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <div className="w-2.5 h-2.5 rounded-full bg-indigo-500 flex-shrink-0"></div>
-                        <span className="text-[11px] font-semibold text-gray-600 truncate">Dep. Passagens</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xl font-bold text-gray-900">{executiveDashboard.depPassagensCabo?.value || 0}</span>
-                        <span className="text-[10px] font-semibold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
-                          {(() => {
-                            const total = executiveDashboard.totalReparadas?.value || 0;
-                            const valor = executiveDashboard.depPassagensCabo?.value || 0;
-                            return total > 0 ? `(${Math.round((valor / total) * 100)}%)` : '(0%)';
-                          })()}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Dep. Cutover */}
-                  <div className="bg-white rounded-lg p-3 shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 border border-gray-100">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <div className="w-2.5 h-2.5 rounded-full bg-purple-500 flex-shrink-0"></div>
-                        <span className="text-[11px] font-semibold text-gray-600 truncate">Dep. Cutover</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xl font-bold text-gray-900">{executiveDashboard.depCutover?.value || 0}</span>
-                        <span className="text-[10px] font-semibold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
-                          {(() => {
-                            const total = executiveDashboard.totalReparadas?.value || 0;
-                            const valor = executiveDashboard.depCutover?.value || 0;
-                            return total > 0 ? `(${Math.round((valor / total) * 100)}%)` : '(0%)';
-                          })()}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Fibras Dep. PSM */}
-                  <div className="bg-white rounded-lg p-3 shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 border border-gray-100">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <div className="w-2.5 h-2.5 rounded-full bg-gray-600 flex-shrink-0"></div>
-                        <span className="text-[11px] font-semibold text-gray-600 truncate">Fibras Dep. {selectedOperator}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xl font-bold text-gray-900">{executiveDashboard.fibrasDependentes?.value || 0}</span>
-                        <span className="text-[10px] font-semibold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
-                          {(() => {
-                            const total = executiveDashboard.totalReparadas?.value || 0;
-                            const valor = executiveDashboard.fibrasDependentes?.value || 0;
-                            return total > 0 ? `(${Math.round((valor / total) * 100)}%)` : '(0%)';
-                          })()}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+                    ));
+                  })()}
                 </div>
               </div>
               
