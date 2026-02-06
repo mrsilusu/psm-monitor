@@ -5,7 +5,7 @@ import { lerTudoDoSupabase, salvarTudoNoSupabase, salvarJustificativasNoSupabase
 import { salvarDistribuicaoNoSupabase, carregarDistribuicaoDoSupabase, limparDistribuicaoNoSupabase } from './services/supabaseDistribuicaoService';
 
 const PSMMonitorApp = () => {
-  console.log("🚀 PSM Monitor 5.09.0 - DASHBOARD UPGRADE + Distribuição Reparações ! 🎨✅");
+  console.log("🚀 PSM Monitor 5.09.1 - LAYOUT OTIMIZADO + Barra Verde ! 🎨✅");
   
   // ============================================================================
   // V5.08.19: SISTEMA DE VERSIONAMENTO E LIMPEZA AUTOMÁTICA DO localStorage
@@ -5326,15 +5326,13 @@ useEffect(() => {
                   </div>
                   
                   {/* V5.09.0: Nova Seção - Distribuição por Tipo de Reparação */}
-                  <div className="mb-6">
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-blue-600 rounded flex items-center justify-center">
-                        <span className="text-white text-sm">📊</span>
-                      </div>
+                  <div className="mb-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-1 h-5 bg-green-500 rounded"></div>
                       <h4 className="text-sm font-semibold text-gray-700">Distribuição por Tipo de Reparação</h4>
                     </div>
                     
-                    <div className="grid grid-cols-5 gap-3 p-4 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg border border-gray-200">
+                    <div className="grid grid-cols-5 gap-3 p-3 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg border border-gray-200">
                       {/* Dep. Licença */}
                       <div className="bg-white rounded-lg p-3 shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 border border-gray-100">
                         <div className="flex items-center justify-between gap-2">
@@ -7475,15 +7473,13 @@ Gerado por: PSM Monitor v3.42.03
               </div>
               
               {/* V5.09.0: Nova Seção - Distribuição por Tipo de Reparação */}
-              <div className="mb-6">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-blue-600 rounded flex items-center justify-center">
-                    <span className="text-white text-sm">📊</span>
-                  </div>
+              <div className="mb-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-1 h-5 bg-green-500 rounded"></div>
                   <h4 className="text-sm font-semibold text-gray-700">Distribuição por Tipo de Reparação</h4>
                 </div>
                 
-                <div className="grid grid-cols-5 gap-3 p-4 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg border border-gray-200">
+                <div className="grid grid-cols-5 gap-3 p-3 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg border border-gray-200">
                   {/* Dep. Licença */}
                   <div className="bg-white rounded-lg p-3 shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 border border-gray-100">
                     <div className="flex items-center justify-between gap-2">
