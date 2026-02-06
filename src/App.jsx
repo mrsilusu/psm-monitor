@@ -5,7 +5,7 @@ import { lerTudoDoSupabase, salvarTudoNoSupabase, salvarJustificativasNoSupabase
 import { salvarDistribuicaoNoSupabase, carregarDistribuicaoDoSupabase, limparDistribuicaoNoSupabase } from './services/supabaseDistribuicaoService';
 
 const PSMMonitorApp = () => {
-  console.log("🚀 PSM Monitor 5.09.2 - DISTRIBUIÇÃO CORRETA (Reparadas por Tipo) ! 📊✅");
+  console.log("🚀 PSM Monitor 5.09.3 - NOMES CORRETOS (Chaves Corrigidas) ! 🔧✅");
   
   // ============================================================================
   // V5.08.19: SISTEMA DE VERSIONAMENTO E LIMPEZA AUTOMÁTICA DO localStorage
@@ -5356,12 +5356,12 @@ useEffect(() => {
                             if (weekNum <= selectedWeekNum) {
                               const distDaSemana = distribuicaoReparacoes[selectedOperator]?.[week]?.[route] || {};
                               
-                              // Somar reparadas de cada tipo
-                              depLicencaReparadas += parseInt(distDaSemana['Dep. Licença']) || 0;
+                              // Somar reparadas de cada tipo (NOMES CORRETOS!)
+                              depLicencaReparadas += parseInt(distDaSemana['Dep. de Licença']) || 0;
                               reconhecidasReparadas += parseInt(distDaSemana['Reconhecidas']) || 0;
-                              depPassagensReparadas += parseInt(distDaSemana['Dep. Passagens']) || 0;
-                              depCutoverReparadas += parseInt(distDaSemana['Dep. Cutover']) || 0;
-                              fibrasPSMReparadas += parseInt(distDaSemana[`Fibras Dep. ${selectedOperator}`]) || 0;
+                              depPassagensReparadas += parseInt(distDaSemana['Dep. de Passagem de Cabo']) || 0;
+                              depCutoverReparadas += parseInt(distDaSemana['Dep. de Cutover']) || 0;
+                              fibrasPSMReparadas += parseInt(distDaSemana[`Fibras dependentes da ${selectedOperator}`]) || 0;
                             }
                           });
                         });
@@ -7492,12 +7492,12 @@ Gerado por: PSM Monitor v3.42.03
                         if (weekNum <= selectedWeekNum) {
                           const distDaSemana = distribuicaoReparacoes[selectedOperator]?.[week]?.[route] || {};
                           
-                          // Somar reparadas de cada tipo
-                          depLicencaReparadas += parseInt(distDaSemana['Dep. Licença']) || 0;
+                          // Somar reparadas de cada tipo (NOMES CORRETOS!)
+                          depLicencaReparadas += parseInt(distDaSemana['Dep. de Licença']) || 0;
                           reconhecidasReparadas += parseInt(distDaSemana['Reconhecidas']) || 0;
-                          depPassagensReparadas += parseInt(distDaSemana['Dep. Passagens']) || 0;
-                          depCutoverReparadas += parseInt(distDaSemana['Dep. Cutover']) || 0;
-                          fibrasPSMReparadas += parseInt(distDaSemana[`Fibras Dep. ${selectedOperator}`]) || 0;
+                          depPassagensReparadas += parseInt(distDaSemana['Dep. de Passagem de Cabo']) || 0;
+                          depCutoverReparadas += parseInt(distDaSemana['Dep. de Cutover']) || 0;
+                          fibrasPSMReparadas += parseInt(distDaSemana[`Fibras dependentes da ${selectedOperator}`]) || 0;
                         }
                       });
                     });
