@@ -5,7 +5,7 @@ import { lerTudoDoSupabase, salvarTudoNoSupabase, salvarJustificativasNoSupabase
 import { salvarDistribuicaoNoSupabase, carregarDistribuicaoDoSupabase, limparDistribuicaoNoSupabase } from './services/supabaseDistribuicaoService';
 
 const PSMMonitorApp = () => {
-  console.log("🚀 PSM Monitor 5.09.3 - NOMES CORRETOS (Chaves Corrigidas) ! 🔧✅");
+  console.log("🚀 PSM Monitor 5.09.4 - CORREÇÕES: Efetividade PSM + Alertas ! 🔧✅");
   
   // ============================================================================
   // V5.08.19: SISTEMA DE VERSIONAMENTO E LIMPEZA AUTOMÁTICA DO localStorage
@@ -4312,21 +4312,16 @@ useEffect(() => {
       // Se não tem indisponíveis, não há nada para validar
       if (indisponiveis === 0) return;
       
-      // Calcular soma dos campos de justificação
-      const reconhecidas = parseInt(weekData['Reconhecidas']) || 0;
-      const depPassagem = parseInt(weekData['Dep. de Passagem de Cabo']) || 0;
-      const depLicenca = parseInt(weekData['Dep. de Licença']) || 0;
-      const depCutover = parseInt(weekData['Dep. de Cutover']) || 0;
-      const fibrasDependentesAtual = parseInt(weekData[`Fibras dependentes da ${selectedOperator}`]) || 0;
-      const totalReparadas = parseInt(weekData['Total Reparadas']) || 0;
+      // V5.09.3: Usar valores REDUZIDOS (com desconto de reparadas aplicado)
+      const reconhecidas = getValorReduzido(selectedOperator, selectedWeek, route, 'Reconhecidas');
+      const depPassagem = getValorReduzido(selectedOperator, selectedWeek, route, 'Dep. de Passagem de Cabo');
+      const depLicenca = getValorReduzido(selectedOperator, selectedWeek, route, 'Dep. de Licença');
+      const depCutover = getValorReduzido(selectedOperator, selectedWeek, route, 'Dep. de Cutover');
+      const fibrasDependentes = getValorReduzido(selectedOperator, selectedWeek, route, `Fibras dependentes da ${selectedOperator}`);
       
-      // v3.49.17: CORREÇÃO - Fibras Dependentes Original = Atual + Total Reparadas
-      // (porque Total Reparadas desconta automaticamente das Fibras Dependentes)
-      const fibrasDependentesOriginal = fibrasDependentesAtual + totalReparadas;
+      const somaJustificativas = reconhecidas + depPassagem + depLicenca + depCutover + fibrasDependentes;
       
-      const somaJustificativas = reconhecidas + depPassagem + depLicenca + depCutover + fibrasDependentesOriginal;
-      
-      console.log(`🔍 ${route}: Indisponíveis=${indisponiveis}, FibrasAtual=${fibrasDependentesAtual}, TotalReparadas=${totalReparadas}, FibrasOriginal=${fibrasDependentesOriginal}, Soma=${somaJustificativas}`);
+      console.log(`🔍 ${route}: Indisponíveis=${indisponiveis}, Soma Reduzida=${somaJustificativas} (Rec=${reconhecidas}, Pass=${depPassagem}, Lic=${depLicenca}, Cut=${depCutover}, Fibras=${fibrasDependentes})`);
       
       // Se a soma não bate com indisponíveis, criar alerta
       if (somaJustificativas !== indisponiveis) {
@@ -4351,9 +4346,7 @@ useEffect(() => {
               depPassagem,
               depLicenca,
               depCutover,
-              fibrasDependentes: fibrasDependentesOriginal, // Mostrar o valor original
-              fibrasDependentesAtual: fibrasDependentesAtual,
-              totalReparadas: totalReparadas
+              fibrasDependentes: fibrasDependentes
             },
             semanaDeteccao: selectedWeek,
             timestamp: new Date().toISOString(),
@@ -7781,19 +7774,29 @@ Gerado por: PSM Monitor v3.42.03
                     const fibrasDependentesPSM = Math.max(0, indisponibilidadeLiquida - 
                       (reconhecidasReduzido + depPassagemReduzido + depLicencaReduzido + depCutoverReduzido));
                     
-                    // REGRA: Só conta reparações DEPOIS de reparar TODAS as fibras dependentes do PSM
+                    // V5.09.3: Calcular APENAS reparadas de Fibras Dep. PSM
+                    let fibrasPSMReparadas = 0;
+                    rotasProv.forEach(route => {
+                      quarterWeeks.forEach(week => {
+                        const weekNum = parseInt(week.substring(1));
+                        const selectedWeekNum = parseInt(selectedWeek.substring(1));
+                        if (weekNum <= selectedWeekNum) {
+                          const distDaSemana = distribuicaoReparacoes[selectedOperator]?.[week]?.[route] || {};
+                          fibrasPSMReparadas += parseInt(distDaSemana[`Fibras dependentes da ${selectedOperator}`]) || 0;
+                        }
+                      });
+                    });
+                    
+                    // REGRA: Só atinge 100% se reparar TODAS as fibras dependentes do PSM
                     let efetividadePSM = 0;
                     
                     if (fibrasDependentesPSM > 0) {
-                      // Há fibras dependentes do PSM para reparar
-                      // Percentagem = (reparadas / fibras dependentes) * 100
-                      // MAS: limitado a 100% máximo
-                      efetividadePSM = Math.min(100, (reparadas / fibrasDependentesPSM) * 100);
+                      // Percentagem = (reparadas de Fibras PSM / total Fibras Dep. PSM) * 100
+                      efetividadePSM = Math.min(100, (fibrasPSMReparadas / fibrasDependentesPSM) * 100);
                       
-                      console.log(`  📊 ${prov} Efetividade PSM: ${efetividadePSM.toFixed(1)}% (${reparadas}/${fibrasDependentesPSM}) - ${reparadas >= fibrasDependentesPSM ? '✅ TODAS REPARADAS' : '⚠️ AINDA FALTAM'}`);
+                      console.log(`  📊 ${prov} Efetividade PSM: ${efetividadePSM.toFixed(1)}% (${fibrasPSMReparadas}/${fibrasDependentesPSM}) - ${fibrasPSMReparadas >= fibrasDependentesPSM ? '✅ TODAS REPARADAS' : '⚠️ AINDA FALTAM'}`);
                     } else {
-                      // Não há fibras dependentes do PSM (todos os problemas são de outras causas)
-                      // Neste caso: 0% porque não contribui para o PSM
+                      // Não há fibras dependentes do PSM
                       efetividadePSM = 0;
                       console.log(`  📊 ${prov} Efetividade PSM: 0% (sem fibras dependentes do PSM) - outras causas: ${reconhecidasReduzido + depPassagemReduzido + depLicencaReduzido + depCutoverReduzido}`);
                     }
