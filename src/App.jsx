@@ -5,7 +5,7 @@ import { lerTudoDoSupabase, salvarTudoNoSupabase, salvarJustificativasNoSupabase
 import { salvarDistribuicaoNoSupabase, carregarDistribuicaoDoSupabase, limparDistribuicaoNoSupabase } from './services/supabaseDistribuicaoService';
 
 const PSMMonitorApp = () => {
-  console.log("🚀 PSM Monitor 5.09.6 - Alertas + Efetividade PSM Card Corrigidos ! ✅");
+  console.log("🚀 PSM Monitor 5.09.8 - Efetividade PSM CORRIGIDA (Header Original) ! ✅");
   
   // ============================================================================
   // V5.08.19: SISTEMA DE VERSIONAMENTO E LIMPEZA AUTOMÁTICA DO localStorage
@@ -3447,8 +3447,9 @@ useEffect(() => {
       });
     });
     
-    const efetividadePSMMedia = stats.fibrasDependentesLast > 0
-      ? (fibrasPSMReparadasTotal / stats.fibrasDependentesLast) * 100
+    // V5.09.7: Usar statsOriginais.fibrasDependentesLast (valor ORIGINAL do header)
+    const efetividadePSMMedia = statsOriginais.fibrasDependentesLast > 0
+      ? (fibrasPSMReparadasTotal / statsOriginais.fibrasDependentesLast) * 100
       : 0;
     
     console.log(`✅ Dashboard calculado:`, {
@@ -3457,6 +3458,8 @@ useEffect(() => {
       depLicenca: stats.depLicencaSum,
       depCutover: stats.depCutoverSum,
       fibrasDep: stats.fibrasDependentesLast,
+      fibrasDepOriginal: statsOriginais.fibrasDependentesLast,
+      fibrasPSMReparadas: fibrasPSMReparadasTotal,
       totalReparadas: stats.totalReparadasSum,
       indisponiveis: stats.indisponiveisSum,
       efetividadeGlobal: efetividadeGlobalMedia.toFixed(1) + '%',
@@ -11362,6 +11365,5 @@ Gerado por: PSM Monitor v3.42.03
   </div>
   );
 };
-//teste
 
 export default PSMMonitorApp;
