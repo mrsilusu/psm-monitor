@@ -5,7 +5,7 @@ import { lerTudoDoSupabase, salvarTudoNoSupabase, salvarJustificativasNoSupabase
 import { salvarDistribuicaoNoSupabase, carregarDistribuicaoDoSupabase, limparDistribuicaoNoSupabase } from './services/supabaseDistribuicaoService';
 
 const PSMMonitorApp = () => {
-  console.log("🚀 PSM Monitor 5.09.8 - Efetividade PSM CORRIGIDA (Header Original) ! ✅");
+  console.log("🚀 PSM Monitor 5.09.9 - DEBUG Efetividade PSM ! 🔍");
   
   // ============================================================================
   // V5.08.19: SISTEMA DE VERSIONAMENTO E LIMPEZA AUTOMÁTICA DO localStorage
@@ -3448,6 +3448,13 @@ useEffect(() => {
     });
     
     // V5.09.7: Usar statsOriginais.fibrasDependentesLast (valor ORIGINAL do header)
+    console.log(`🔍 DEBUG Efetividade PSM:`, {
+      fibrasPSMReparadas: fibrasPSMReparadasTotal,
+      fibrasDepDashboard: stats.fibrasDependentesLast,
+      fibrasDepHeader: statsOriginais.fibrasDependentesLast,
+      calculo: `${fibrasPSMReparadasTotal} / ${statsOriginais.fibrasDependentesLast} * 100`
+    });
+    
     const efetividadePSMMedia = statsOriginais.fibrasDependentesLast > 0
       ? (fibrasPSMReparadasTotal / statsOriginais.fibrasDependentesLast) * 100
       : 0;
