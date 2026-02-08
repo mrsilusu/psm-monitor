@@ -5,7 +5,7 @@ import { lerTudoDoSupabase, salvarTudoNoSupabase, salvarJustificativasNoSupabase
 import { salvarDistribuicaoNoSupabase, carregarDistribuicaoDoSupabase, limparDistribuicaoNoSupabase } from './services/supabaseDistribuicaoService';
 
 const PSMMonitorApp = () => {
-  console.log("🚀 PSM Monitor 5.10.3 - CARDS CORRIGIDOS (Valor Original) ! 🎯✅");
+  console.log("🚀 PSM Monitor 5.10.4 - ERRO CORRIGIDO (Variável Renomeada) ! ✅");
   
   // ============================================================================
   // V5.08.19: SISTEMA DE VERSIONAMENTO E LIMPEZA AUTOMÁTICA DO localStorage
@@ -7689,8 +7689,21 @@ Gerado por: PSM Monitor v3.42.03
                       const indisponibilidadeLiquida = Math.max(0, Math.round(indisponiveis - reparadas));
                       const efetividadeGlobal = indisponiveis > 0 ? ((reparadas / indisponiveis) * 100) : 0;
                       
-                      // V5.09.5: Efetividade PSM - calcular apenas Fibras PSM reparadas
-                      const fibrasDependentesPSM = indisponiveis - (reconhecidas + depPassagem + depLicenca + depCutover);
+                      // V5.10.3: Buscar valor ORIGINAL de Fibras Dep. PSM
+                      let fibrasDependentesPSMOriginal = 0;
+                      routesByPSM[psm].forEach(route => {
+                        for (let i = quarterWeeks.length - 1; i >= 0; i--) {
+                          const week = quarterWeeks[i];
+                          const routeData = data[psm]?.[week]?.[route];
+                          if (routeData) {
+                            const fibrasVal = parseInt(routeData[`Fibras dependentes da ${psm}`]) || 0;
+                            if (fibrasVal > 0) {
+                              fibrasDependentesPSMOriginal += fibrasVal;
+                              break;
+                            }
+                          }
+                        }
+                      });
                       
                       // Calcular APENAS reparadas de Fibras Dep. PSM
                       let fibrasPSMReparadas = 0;
@@ -7706,11 +7719,11 @@ Gerado por: PSM Monitor v3.42.03
                       });
                       
                       let efetividadePSM = 0;
-                      if (fibrasDependentesPSM > 0) {
-                        efetividadePSM = Math.min(100, (fibrasPSMReparadas / fibrasDependentesPSM) * 100);
+                      if (fibrasDependentesPSMOriginal > 0) {
+                        efetividadePSM = Math.min(100, (fibrasPSMReparadas / fibrasDependentesPSMOriginal) * 100);
                       }
                       
-                      console.log(`  📊 ${psm}: Efet.Global=${efetividadeGlobal.toFixed(1)}%, Efet.PSM=${efetividadePSM.toFixed(1)}% (${fibrasPSMReparadas}/${fibrasDependentesPSM})`);
+                      console.log(`  📊 ${psm}: Efet.Global=${efetividadeGlobal.toFixed(1)}%, Efet.PSM=${efetividadePSM.toFixed(1)}% (${fibrasPSMReparadas}/${fibrasDependentesPSMOriginal} ORIGINAL)`);
                       
                       return {
                         provincia: psm, // Nome da entidade (será PSM neste caso)
@@ -7720,7 +7733,7 @@ Gerado por: PSM Monitor v3.42.03
                         efetividade: efetividadeGlobal,
                         efetividadeGlobal,
                         efetividadePSM,
-                        indisponiveisPSM: fibrasDependentesPSM
+                        indisponiveisPSM: fibrasDependentesPSMOriginal
                       };
                     });
                     
@@ -7906,7 +7919,7 @@ Gerado por: PSM Monitor v3.42.03
                       efetividade: efetividadeGlobal, // GLOBAL (compatibilidade)
                       efetividadeGlobal,  // v3.40.73: GLOBAL explícito
                       efetividadePSM,     // v3.40.73: PSM (nova lógica rigorosa v3.49.25)
-                      indisponiveisPSM: fibrasDependentesPSM    // Para referência
+                      indisponiveisPSM: fibrasDependentesPSMOriginal    // V5.10.3: Usar valor original
                     };
                   });
                   } // Fim do else (modo PSM)
