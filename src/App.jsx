@@ -5,7 +5,7 @@ import { lerTudoDoSupabase, salvarTudoNoSupabase, salvarJustificativasNoSupabase
 import { salvarDistribuicaoNoSupabase, carregarDistribuicaoDoSupabase, limparDistribuicaoNoSupabase } from './services/supabaseDistribuicaoService';
 
 const PSMMonitorApp = () => {
-  console.log("🚀 PSM Monitor 5.10.0 - Efetividade PSM = Mesma Lógica Global ! ✅");
+  console.log("🚀 PSM Monitor 5.10.1 - Efetividade PSM DEFINITIVO (Reparadas PSM / Header) ! ✅");
   
   // ============================================================================
   // V5.08.19: SISTEMA DE VERSIONAMENTO E LIMPEZA AUTOMÁTICA DO localStorage
@@ -3434,18 +3434,30 @@ useEffect(() => {
       ? (stats.totalReparadasSum / stats.indisponiveisSum) * 100 
       : 0;
     
-    // V5.10.0: Efetividade PSM com MESMA LÓGICA da Global
-    // Usa APENAS Fibras Dep. PSM (valor REDUZIDO do Dashboard)
-    const efetividadePSMMedia = stats.fibrasDependentesLast > 0
-      ? (stats.totalReparadasSum / stats.fibrasDependentesLast) * 100
+    // V5.10.1: Efetividade PSM CORRETA
+    // Numerador: Reparadas APENAS do tipo Fibras PSM
+    // Denominador: Fibras Dep. PSM do HEADER (valor original)
+    let fibrasPSMReparadasTotal = 0;
+    routesToProcess.forEach(route => {
+      quarterWeeks.forEach(week => {
+        const weekNum = parseInt(week.substring(1));
+        const selectedWeekNum = parseInt(selectedWeek.substring(1));
+        if (weekNum <= selectedWeekNum) {
+          const distDaSemana = distribuicaoReparacoes[selectedOperator]?.[week]?.[route] || {};
+          fibrasPSMReparadasTotal += parseInt(distDaSemana[`Fibras dependentes da ${selectedOperator}`]) || 0;
+        }
+      });
+    });
+    
+    const efetividadePSMMedia = statsOriginais.fibrasDependentesLast > 0
+      ? (fibrasPSMReparadasTotal / statsOriginais.fibrasDependentesLast) * 100
       : 0;
     
     console.log(`🔍 DEBUG Efetividade PSM:`, {
-      totalReparadas: stats.totalReparadasSum,
-      todosIndisponiveis: stats.indisponiveisSum,
-      apenasFibrasPSM: stats.fibrasDependentesLast,
-      efetividadeGlobal: `${stats.totalReparadasSum} / ${stats.indisponiveisSum} * 100 = ${efetividadeGlobalMedia.toFixed(1)}%`,
-      efetividadePSM: `${stats.totalReparadasSum} / ${stats.fibrasDependentesLast} * 100 = ${efetividadePSMMedia.toFixed(1)}%`
+      fibrasPSMReparadas: fibrasPSMReparadasTotal,
+      fibrasDepHeader: statsOriginais.fibrasDependentesLast,
+      fibrasDepDashboard: stats.fibrasDependentesLast,
+      calculo: `${fibrasPSMReparadasTotal} / ${statsOriginais.fibrasDependentesLast} * 100 = ${efetividadePSMMedia.toFixed(1)}%`
     });
     
     console.log(`✅ Dashboard calculado:`, {
