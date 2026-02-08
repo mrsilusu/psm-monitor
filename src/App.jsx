@@ -5,7 +5,7 @@ import { lerTudoDoSupabase, salvarTudoNoSupabase, salvarJustificativasNoSupabase
 import { salvarDistribuicaoNoSupabase, carregarDistribuicaoDoSupabase, limparDistribuicaoNoSupabase } from './services/supabaseDistribuicaoService';
 
 const PSMMonitorApp = () => {
-  console.log("🚀 PSM Monitor 5.10.4 - ERRO CORRIGIDO (Variável Renomeada) ! ✅");
+  console.log("🚀 PSM Monitor 5.10.5 - MÉDIA POR PROVÍNCIA (Só com Dados) ! ✅");
   
   // ============================================================================
   // V5.08.19: SISTEMA DE VERSIONAMENTO E LIMPEZA AUTOMÁTICA DO localStorage
@@ -3429,67 +3429,116 @@ useEffect(() => {
                              stats.depLicencaSum + stats.depCutoverSum + 
                              stats.fibrasDependentesLast;
     
-    // V5.09.6: Calcular efetividade média Global e PSM
-    const efetividadeGlobalMedia = stats.indisponiveisSum > 0 
-      ? (stats.totalReparadasSum / stats.indisponiveisSum) * 100 
-      : 0;
-    
-    // V5.10.1: Efetividade PSM CORRETA
-    // Numerador: Reparadas APENAS do tipo Fibras PSM
-    // Denominador: Fibras Dep. PSM do HEADER (valor original)
+    // V5.10.5: Calcular MÉDIA de efetividade por província (não soma total)
+    // Só conta províncias que têm dados
     
     console.log(`\n═══════════════════════════════════════════════════════`);
-    console.log(`🔍 ANÁLISE PROFUNDA - EFETIVIDADE PSM`);
+    console.log(`🔍 CALCULANDO MÉDIA DE EFETIVIDADE POR PROVÍNCIA`);
     console.log(`═══════════════════════════════════════════════════════`);
     
-    let fibrasPSMReparadasTotal = 0;
-    console.log(`\n📊 CALCULANDO REPARADAS DO TIPO FIBRAS PSM:`);
+    const provinciasParaMedia = selectedProvince !== 'Todas'
+      ? [selectedProvince]
+      : operatorToProvinces[selectedOperator];
     
-    routesToProcess.forEach(route => {
-      let reparadasDestaRota = 0;
-      quarterWeeks.forEach(week => {
-        const weekNum = parseInt(week.substring(1));
-        const selectedWeekNum = parseInt(selectedWeek.substring(1));
-        if (weekNum <= selectedWeekNum) {
-          const distDaSemana = distribuicaoReparacoes[selectedOperator]?.[week]?.[route] || {};
-          const reparadas = parseInt(distDaSemana[`Fibras dependentes da ${selectedOperator}`]) || 0;
-          if (reparadas > 0) {
-            console.log(`  ${route} | ${week}: ${reparadas} reparadas`);
-            reparadasDestaRota += reparadas;
+    let somatorioEfetGlobal = 0;
+    let somatorioEfetPSM = 0;
+    let provinciasComDadosGlobal = 0;
+    let provinciasComDadosPSM = 0;
+    
+    provinciasParaMedia.forEach(prov => {
+      const rotasProv = routesToProcess.filter(route => routeToProvince[route] === prov);
+      
+      if (rotasProv.length === 0) return;
+      
+      // Calcular para esta província
+      let indisponiveisProv = 0;
+      let reparadasProv = 0;
+      let fibrasPSMOriginalProv = 0;
+      let fibrasPSMReparadasProv = 0;
+      
+      rotasProv.forEach(route => {
+        // Buscar última semana
+        let ultimaSemana = null;
+        for (let i = weeksAteSelecao.length - 1; i >= 0; i--) {
+          const week = weeksAteSelecao[i];
+          const routeData = data[selectedOperator]?.[week]?.[route];
+          if (routeData) {
+            ultimaSemana = week;
+            break;
           }
         }
+        
+        if (ultimaSemana) {
+          // Indisponíveis reduzidos
+          const reconhReduz = getValorReduzido(selectedOperator, ultimaSemana, route, 'Reconhecidas');
+          const depPassReduz = getValorReduzido(selectedOperator, ultimaSemana, route, 'Dep. de Passagem de Cabo');
+          const depLicReduz = getValorReduzido(selectedOperator, ultimaSemana, route, 'Dep. de Licença');
+          const depCutReduz = getValorReduzido(selectedOperator, ultimaSemana, route, 'Dep. de Cutover');
+          const fibrasReduz = getValorReduzido(selectedOperator, ultimaSemana, route, `Fibras dependentes da ${selectedOperator}`);
+          
+          indisponiveisProv += reconhReduz + depPassReduz + depLicReduz + depCutReduz + fibrasReduz;
+          
+          // Reparadas acumuladas
+          const values = routeValuesAteSelecao[route];
+          reparadasProv += values.totalReparadas;
+          
+          // Fibras PSM ORIGINAL
+          for (let i = quarterWeeks.length - 1; i >= 0; i--) {
+            const week = quarterWeeks[i];
+            const rd = data[selectedOperator]?.[week]?.[route];
+            if (rd) {
+              const fibVal = parseInt(rd[`Fibras dependentes da ${selectedOperator}`]) || 0;
+              if (fibVal > 0) {
+                fibrasPSMOriginalProv += fibVal;
+                break;
+              }
+            }
+          }
+          
+          // Fibras PSM Reparadas
+          quarterWeeks.forEach(week => {
+            const wNum = parseInt(week.substring(1));
+            const selNum = parseInt(selectedWeek.substring(1));
+            if (wNum <= selNum) {
+              const dist = distribuicaoReparacoes[selectedOperator]?.[week]?.[route] || {};
+              fibrasPSMReparadasProv += parseInt(dist[`Fibras dependentes da ${selectedOperator}`]) || 0;
+            }
+          });
+        }
       });
-      if (reparadasDestaRota > 0) {
-        console.log(`  ✓ ${route} TOTAL: ${reparadasDestaRota}`);
+      
+      // Calcular efetividades desta província
+      const efetGlobalProv = indisponiveisProv > 0 ? (reparadasProv / indisponiveisProv) * 100 : 0;
+      const efetPSMProv = fibrasPSMOriginalProv > 0 ? (fibrasPSMReparadasProv / fibrasPSMOriginalProv) * 100 : 0;
+      
+      console.log(`\n📍 ${prov}:`);
+      console.log(`  Global: ${efetGlobalProv.toFixed(1)}% (${reparadasProv}/${indisponiveisProv})`);
+      console.log(`  PSM: ${efetPSMProv.toFixed(1)}% (${fibrasPSMReparadasProv}/${fibrasPSMOriginalProv})`);
+      
+      // Somar apenas se houver dados
+      if (indisponiveisProv > 0) {
+        somatorioEfetGlobal += efetGlobalProv;
+        provinciasComDadosGlobal++;
       }
-      fibrasPSMReparadasTotal += reparadasDestaRota;
+      
+      if (fibrasPSMOriginalProv > 0) {
+        somatorioEfetPSM += efetPSMProv;
+        provinciasComDadosPSM++;
+      }
     });
     
-    console.log(`\n📈 TOTAL REPARADAS FIBRAS PSM: ${fibrasPSMReparadasTotal}`);
-    
-    console.log(`\n📊 CALCULANDO FIBRAS DEP. PSM DO HEADER (ORIGINAL):`);
-    console.log(`  statsOriginais.fibrasDependentesLast = ${statsOriginais.fibrasDependentesLast}`);
-    
-    console.log(`\n📊 DETALHES routeLastValues (usado para calcular statsOriginais):`);
-    Object.entries(routeLastValues).forEach(([route, values]) => {
-      if (values.fibrasDep > 0) {
-        console.log(`  ${route}: fibrasDep = ${values.fibrasDep}`);
-      }
-    });
-    
-    console.log(`\n📊 COMPARAÇÃO:`);
-    console.log(`  Dashboard (stats.fibrasDependentesLast): ${stats.fibrasDependentesLast}`);
-    console.log(`  Header (statsOriginais.fibrasDependentesLast): ${statsOriginais.fibrasDependentesLast}`);
-    
-    const efetividadePSMMedia = statsOriginais.fibrasDependentesLast > 0
-      ? (fibrasPSMReparadasTotal / statsOriginais.fibrasDependentesLast) * 100
+    // Calcular MÉDIAS
+    const efetividadeGlobalMedia = provinciasComDadosGlobal > 0 
+      ? somatorioEfetGlobal / provinciasComDadosGlobal
       : 0;
     
-    console.log(`\n🎯 CÁLCULO FINAL:`);
-    console.log(`  Efetividade PSM = ${fibrasPSMReparadasTotal} / ${statsOriginais.fibrasDependentesLast} * 100`);
-    console.log(`  Efetividade PSM = ${efetividadePSMMedia.toFixed(1)}%`);
-    console.log(`\n  ✅ ESPERADO: Se 3 reparadas e 6 header = 50%`);
-    console.log(`  ⚠️ RESULTADO: ${efetividadePSMMedia.toFixed(1)}%`);
+    const efetividadePSMMedia = provinciasComDadosPSM > 0
+      ? somatorioEfetPSM / provinciasComDadosPSM
+      : 0;
+    
+    console.log(`\n📊 MÉDIAS FINAIS:`);
+    console.log(`  Global: ${efetividadeGlobalMedia.toFixed(1)}% (média de ${provinciasComDadosGlobal} províncias com dados)`);
+    console.log(`  PSM: ${efetividadePSMMedia.toFixed(1)}% (média de ${provinciasComDadosPSM} províncias com dados)`);
     console.log(`═══════════════════════════════════════════════════════\n`);
     
     console.log(`✅ Dashboard calculado:`, {
