@@ -5,7 +5,7 @@ import { lerTudoDoSupabase, salvarTudoNoSupabase, salvarJustificativasNoSupabase
 import { salvarDistribuicaoNoSupabase, carregarDistribuicaoDoSupabase, limparDistribuicaoNoSupabase } from './services/supabaseDistribuicaoService';
 
 const PSMMonitorApp = () => {
-  console.log("🚀 PSM Monitor 5.10.2 - ANÁLISE PROFUNDA Efetividade PSM ! 🔍");
+  console.log("🚀 PSM Monitor 5.10.3 - CARDS CORRIGIDOS (Valor Original) ! 🎯✅");
   
   // ============================================================================
   // V5.08.19: SISTEMA DE VERSIONAMENTO E LIMPEZA AUTOMÁTICA DO localStorage
@@ -7852,9 +7852,22 @@ Gerado por: PSM Monitor v3.42.03
                       depCutoverReduzido += getValorReduzido(selectedOperator, selectedWeek, route, 'Dep. de Cutover');
                     });
                     
-                    // Fibras Dependentes = Indisponibilidade Líquida - outras categorias REDUZIDAS
-                    const fibrasDependentesPSM = Math.max(0, indisponibilidadeLiquida - 
-                      (reconhecidasReduzido + depPassagemReduzido + depLicencaReduzido + depCutoverReduzido));
+                    // V5.10.3: Buscar valor ORIGINAL de Fibras Dep. PSM (sem redução)
+                    let fibrasDependentesPSMOriginal = 0;
+                    rotasProv.forEach(route => {
+                      // Buscar ÚLTIMA semana com dados para esta rota
+                      for (let i = quarterWeeks.length - 1; i >= 0; i--) {
+                        const week = quarterWeeks[i];
+                        const routeData = data[selectedOperator]?.[week]?.[route];
+                        if (routeData) {
+                          const fibrasVal = parseInt(routeData[`Fibras dependentes da ${selectedOperator}`]) || 0;
+                          if (fibrasVal > 0) {
+                            fibrasDependentesPSMOriginal += fibrasVal;
+                            break; // Pega só o último valor desta rota
+                          }
+                        }
+                      }
+                    });
                     
                     // V5.09.3: Calcular APENAS reparadas de Fibras Dep. PSM
                     let fibrasPSMReparadas = 0;
@@ -7872,11 +7885,11 @@ Gerado por: PSM Monitor v3.42.03
                     // REGRA: Só atinge 100% se reparar TODAS as fibras dependentes do PSM
                     let efetividadePSM = 0;
                     
-                    if (fibrasDependentesPSM > 0) {
-                      // Percentagem = (reparadas de Fibras PSM / total Fibras Dep. PSM) * 100
-                      efetividadePSM = Math.min(100, (fibrasPSMReparadas / fibrasDependentesPSM) * 100);
+                    if (fibrasDependentesPSMOriginal > 0) {
+                      // Percentagem = (reparadas de Fibras PSM / valor ORIGINAL) * 100
+                      efetividadePSM = Math.min(100, (fibrasPSMReparadas / fibrasDependentesPSMOriginal) * 100);
                       
-                      console.log(`  📊 ${prov} Efetividade PSM: ${efetividadePSM.toFixed(1)}% (${fibrasPSMReparadas}/${fibrasDependentesPSM}) - ${fibrasPSMReparadas >= fibrasDependentesPSM ? '✅ TODAS REPARADAS' : '⚠️ AINDA FALTAM'}`);
+                      console.log(`  📊 ${prov} Efetividade PSM: ${efetividadePSM.toFixed(1)}% (${fibrasPSMReparadas}/${fibrasDependentesPSMOriginal} ORIGINAL) - ${fibrasPSMReparadas >= fibrasDependentesPSMOriginal ? '✅ TODAS REPARADAS' : '⚠️ AINDA FALTAM'}`);
                     } else {
                       // Não há fibras dependentes do PSM
                       efetividadePSM = 0;
