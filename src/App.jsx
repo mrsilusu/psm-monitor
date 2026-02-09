@@ -5,7 +5,7 @@ import { lerTudoDoSupabase, salvarTudoNoSupabase, salvarJustificativasNoSupabase
 import { salvarDistribuicaoNoSupabase, carregarDistribuicaoDoSupabase, limparDistribuicaoNoSupabase } from './services/supabaseDistribuicaoService';
 
 const PSMMonitorApp = () => {
-  console.log("🚀 PSM Monitor 5.10.5 - MÉDIA POR PROVÍNCIA (Só com Dados) ! ✅");
+  console.log("🚀 PSM Monitor 5.10.6 - LÓGICA PSM REFORÇADA (Ignora sem Fibras PSM) ! ✅");
   
   // ============================================================================
   // V5.08.19: SISTEMA DE VERSIONAMENTO E LIMPEZA AUTOMÁTICA DO localStorage
@@ -3515,15 +3515,23 @@ useEffect(() => {
       console.log(`  Global: ${efetGlobalProv.toFixed(1)}% (${reparadasProv}/${indisponiveisProv})`);
       console.log(`  PSM: ${efetPSMProv.toFixed(1)}% (${fibrasPSMReparadasProv}/${fibrasPSMOriginalProv})`);
       
-      // Somar apenas se houver dados
+      // V5.10.6: REGRA - Só conta para média se tiver dados
+      // Global: precisa ter indisponíveis > 0
       if (indisponiveisProv > 0) {
         somatorioEfetGlobal += efetGlobalProv;
         provinciasComDadosGlobal++;
+        console.log(`  ✅ ENTRA na média GLOBAL`);
+      } else {
+        console.log(`  ⏭️ IGNORADA na média GLOBAL (sem indisponíveis)`);
       }
       
+      // PSM: precisa ter Fibras Dep. PSM > 0 (ignora se só tiver outros tipos)
       if (fibrasPSMOriginalProv > 0) {
         somatorioEfetPSM += efetPSMProv;
         provinciasComDadosPSM++;
+        console.log(`  ✅ ENTRA na média PSM`);
+      } else {
+        console.log(`  ⏭️ IGNORADA na média PSM (sem Fibras Dep. PSM)`);
       }
     });
     
