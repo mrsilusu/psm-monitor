@@ -5,7 +5,7 @@ import { lerTudoDoSupabase, salvarTudoNoSupabase, salvarJustificativasNoSupabase
 import { salvarDistribuicaoNoSupabase, carregarDistribuicaoDoSupabase, limparDistribuicaoNoSupabase } from './services/supabaseDistribuicaoService';
 
 const PSMMonitorApp = () => {
-  console.log("🚀 PSM Monitor 5.10.6 - LÓGICA PSM REFORÇADA (Ignora sem Fibras PSM) ! ✅");
+  console.log("🚀 PSM Monitor 5.10.7 - CARD PSM CORRIGIDO (Filtro por Fibras PSM) ! ✅");
   
   // ============================================================================
   // V5.08.19: SISTEMA DE VERSIONAMENTO E LIMPEZA AUTOMÁTICA DO localStorage
@@ -8321,8 +8321,10 @@ Gerado por: PSM Monitor v3.42.03
                         {/* VELOCÍMETRO AJUSTADO com altura fixa */}
                         <div className="flex justify-center items-center" style={{height: '180px'}}>
                           {(() => {
-                            // v3.40.73: Filtrar províncias e calcular média baseado no modo
-                            const provinciasComDados = entidadesDados.filter(p => p.indisponiveisOriginal > 0);
+                            // V5.10.7: Filtrar províncias baseado no MODO
+                            const provinciasComDados = efetividadeMode === 'psm'
+                              ? entidadesDados.filter(p => p.indisponiveisPSM > 0)  // PSM: só com Fibras PSM
+                              : entidadesDados.filter(p => p.indisponiveisOriginal > 0);  // Global: com qualquer indisp
                             
                             // Usar efetividade baseada no modo selecionado
                             const somaEfetividade = provinciasComDados.reduce((sum, p) => {
