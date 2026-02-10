@@ -5,7 +5,7 @@ import { lerTudoDoSupabase, salvarTudoNoSupabase, salvarJustificativasNoSupabase
 import { salvarDistribuicaoNoSupabase, carregarDistribuicaoDoSupabase, limparDistribuicaoNoSupabase } from './services/supabaseDistribuicaoService';
 
 const PSMMonitorApp = () => {
-  console.log("🚀 PSM Monitor 5.10.7 - CARD PSM CORRIGIDO (Filtro por Fibras PSM) ! ✅");
+  console.log("🚀 PSM Monitor 5.10.12 - FIX Nguabi-Damba (Reduz mesmo sem weekData) ! ✅");
   
   // ============================================================================
   // V5.08.19: SISTEMA DE VERSIONAMENTO E LIMPEZA AUTOMÁTICA DO localStorage
@@ -10010,19 +10010,23 @@ Gerado por: PSM Monitor v3.42.03
                       const weekNum = parseInt(week.substring(1));
                       if (weekNum > weekNumSelecionada) break; // Parar na semana selecionada
                       
-                      const weekData = data[selectedOperator]?.[week]?.[rota];
-                      if (weekData && weekNum >= parseInt(primeiraSemanaDados.substring(1))) {
-                        // Transporte e Indisponíveis: pegar último valor (não somar)
-                        const transporteVal = parseInt(weekData['Transporte']) || 0;
-                        const indisponiveisVal = parseInt(weekData['Indisponíveis']) || 0;
-                        if (transporteVal > 0) transporte = transporteVal;
-                        if (indisponiveisVal > 0) indisponiveis = indisponiveisVal;
+                      // V5.10.12: Verificar se está dentro do período de dados
+                      if (weekNum >= parseInt(primeiraSemanaDados.substring(1))) {
+                        const weekData = data[selectedOperator]?.[week]?.[rota];
                         
-                        // Total Reparadas: SOMAR (acumulado) - ÚNICO QUE ACUMULA
-                        totalReparadas += parseInt(weekData['Total Reparadas'], 10) || 0;
+                        // Transporte e Indisponíveis: pegar último valor ORIGINAL (não reduzido)
+                        if (weekData) {
+                          const transporteVal = parseInt(weekData['Transporte']) || 0;
+                          const indisponiveisVal = parseInt(weekData['Indisponíveis']) || 0;
+                          if (transporteVal > 0) transporte = transporteVal;
+                          if (indisponiveisVal > 0) indisponiveis = indisponiveisVal;
+                          
+                          // Total Reparadas: SOMAR (acumulado) - ÚNICO QUE ACUMULA
+                          totalReparadas += parseInt(weekData['Total Reparadas'], 10) || 0;
+                        }
                         
-                        // V5.08.3: Usar valores REDUZIDOS (com desconto aplicado)
-                        // Reconhecidas, Dependências e Fibras Dep.: pegar último valor REDUZIDO
+                        // V5.10.12: SEMPRE calcular valores REDUZIDOS (mesmo sem weekData)
+                        // Isso permite redução em semanas sem dados na tabela
                         const reconhecidasVal = getValorReduzido(selectedOperator, week, rota, 'Reconhecidas');
                         const depPassagemVal = getValorReduzido(selectedOperator, week, rota, 'Dep. de Passagem de Cabo');
                         const depLicencaVal = getValorReduzido(selectedOperator, week, rota, 'Dep. de Licença');
