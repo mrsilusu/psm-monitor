@@ -5,7 +5,7 @@ import { lerTudoDoSupabase, salvarTudoNoSupabase, salvarJustificativasNoSupabase
 import { salvarDistribuicaoNoSupabase, carregarDistribuicaoDoSupabase, limparDistribuicaoNoSupabase } from './services/supabaseDistribuicaoService';
 
 const PSMMonitorApp = () => {
-  console.log("🚀 PSM Monitor 5.10.13 - GRÁFICOS REDUÇÃO DINÂMICA (Indisponíveis = Soma Reduzida) ! ✅");
+  console.log("🚀 PSM Monitor 5.10.14 - INDISPONÍVEIS NÃO REDUZ (Só tipos reduzem) ! ✅");
   
   // ============================================================================
   // V5.08.19: SISTEMA DE VERSIONAMENTO E LIMPEZA AUTOMÁTICA DO localStorage
@@ -10012,14 +10012,18 @@ Gerado por: PSM Monitor v3.42.03
                       
                       const weekData = data[selectedOperator]?.[week]?.[rota];
                       if (weekData && weekNum >= parseInt(primeiraSemanaDados.substring(1))) {
-                        // Transporte: pegar último valor ORIGINAL
+                        // V5.10.14: Transporte e Indisponíveis NUNCA REDUZEM
+                        // Sempre pegar valor ORIGINAL da tabela
                         const transporteVal = parseInt(weekData['Transporte']) || 0;
+                        const indisponiveisVal = parseInt(weekData['Indisponíveis']) || 0;
                         if (transporteVal > 0) transporte = transporteVal;
+                        if (indisponiveisVal > 0) indisponiveis = indisponiveisVal;
                         
                         // Total Reparadas: SOMAR (acumulado) - ÚNICO QUE ACUMULA
                         totalReparadas += parseInt(weekData['Total Reparadas'], 10) || 0;
                         
-                        // V5.10.13: Usar valores REDUZIDOS para cada tipo
+                        // V5.10.14: Apenas os TIPOS individuais usam valores REDUZIDOS
+                        // (Reconhecidas, Dep. Passagem, Dep. Licença, Dep. Cutover, Fibras Dep.)
                         const reconhecidasVal = getValorReduzido(selectedOperator, week, rota, 'Reconhecidas');
                         const depPassagemVal = getValorReduzido(selectedOperator, week, rota, 'Dep. de Passagem de Cabo');
                         const depLicencaVal = getValorReduzido(selectedOperator, week, rota, 'Dep. de Licença');
@@ -10031,10 +10035,6 @@ Gerado por: PSM Monitor v3.42.03
                         if (depLicencaVal > 0) depLicenca = depLicencaVal;
                         if (depCutoverVal > 0) depCutover = depCutoverVal;
                         if (fibrasDepVal > 0) fibrasDep = fibrasDepVal;
-                        
-                        // V5.10.13: Indisponíveis = SOMA dos valores REDUZIDOS
-                        // (NÃO usar valor original da coluna "Indisponíveis")
-                        indisponiveis = reconhecidasVal + depPassagemVal + depLicencaVal + depCutoverVal + fibrasDepVal;
                       }
                     }
                     
