@@ -5,7 +5,7 @@ import { lerTudoDoSupabase, salvarTudoNoSupabase, salvarJustificativasNoSupabase
 import { salvarDistribuicaoNoSupabase, carregarDistribuicaoDoSupabase, limparDistribuicaoNoSupabase } from './services/supabaseDistribuicaoService';
 
 const PSMMonitorApp = () => {
-  console.log("🚀 PSM Monitor 5.10.18 - FIX: Salva/Carrega Tipos corretamente (sem duplicar)! ✅");
+  console.log("🚀 PSM Monitor 5.10.19 - FIX CRÍTICO: Salva apenas no Quarter correto da semana! ✅");
   
   // ============================================================================
   // V5.08.19: SISTEMA DE VERSIONAMENTO E LIMPEZA AUTOMÁTICA DO localStorage
@@ -1867,22 +1867,54 @@ useEffect(() => {
       
       // 2. Salvar Supabase
       try {
-        // V5.10.18: Extrair APENAS dados do ano/quarter atual para salvar
-        const dadosParaSalvar = distribuicaoReparacoes[selectedYear] || {};
+        // V5.10.19: SEPARAR dados por quarter antes de salvar
+        const dadosDoAno = distribuicaoReparacoes[selectedYear] || {};
         
-        console.log(`💾 [DISTRIBUIÇÃO] Salvando apenas ano ${selectedYear}, quarter ${selectedQuarter}`);
+        // V5.10.19: Organizar dados por quarter
+        const dadosPorQuarter = {
+          Q1: {},
+          Q2: {},
+          Q3: {}
+        };
         
-        const resultado = await salvarDistribuicaoNoSupabase(
-          dadosParaSalvar,  // V5.10.18: Envia apenas dados do ano atual
-          selectedQuarter,
-          selectedYear
-        );
+        // Processar cada PSM
+        Object.keys(dadosDoAno).forEach(psm => {
+          Object.keys(dadosDoAno[psm] || {}).forEach(week => {
+            // V5.10.19: DETERMINAR quarter da semana
+            const quarterDaSemana = getQuarterFromWeek(week);
+            
+            // Inicializar estrutura se necessário
+            if (!dadosPorQuarter[quarterDaSemana][psm]) {
+              dadosPorQuarter[quarterDaSemana][psm] = {};
+            }
+            
+            // Copiar dados da semana para o quarter correto
+            dadosPorQuarter[quarterDaSemana][psm][week] = dadosDoAno[psm][week];
+          });
+        });
         
-        if (resultado.success) {
-          console.log('✅ [DISTRIBUIÇÃO] Salvo no Supabase com sucesso');
-        } else {
-          console.error('❌ [DISTRIBUIÇÃO] Erro ao salvar no Supabase:', resultado.error);
+        // V5.10.19: Salvar CADA quarter separadamente
+        for (const quarter of ['Q1', 'Q2', 'Q3']) {
+          const dadosDoQuarter = dadosPorQuarter[quarter];
+          
+          // Só salvar se houver dados neste quarter
+          if (Object.keys(dadosDoQuarter).length > 0) {
+            console.log(`💾 [DISTRIBUIÇÃO] Salvando ${selectedYear}/${quarter}...`);
+            
+            const resultado = await salvarDistribuicaoNoSupabase(
+              dadosDoQuarter,
+              quarter,  // V5.10.19: Quarter correto da semana
+              selectedYear
+            );
+            
+            if (resultado.success) {
+              console.log(`✅ [DISTRIBUIÇÃO] ${selectedYear}/${quarter} salvo com sucesso`);
+            } else {
+              console.error(`❌ [DISTRIBUIÇÃO] Erro ao salvar ${selectedYear}/${quarter}:`, resultado.error);
+            }
+          }
         }
+        
       } catch (error) {
         console.error('❌ [DISTRIBUIÇÃO] Erro ao salvar no Supabase:', error);
       }
@@ -1896,39 +1928,53 @@ useEffect(() => {
       // V5.08.20: Ativar flag de loading ANTES de carregar
       setIsLoadingDistribuicao(true);
       
-      console.log(`📥 [DISTRIBUIÇÃO] Carregando do Supabase (Ano: ${selectedYear}, Quarter: ${selectedQuarter})...`);
+      console.log(`📥 [DISTRIBUIÇÃO] Carregando TODOS os quarters de ${selectedYear}...`);
       
-      const distrib = await carregarDistribuicaoDoSupabase(
-        selectedQuarter,
-        selectedYear
-      );
+      // V5.10.19: Carregar TODOS os quarters do ano
+      const dadosCompletos = {};
       
-      if (Object.keys(distrib).length > 0) {
-        // V5.10.18: MERGE - Manter dados de outros anos, atualizar apenas ano atual
+      for (const quarter of ['Q1', 'Q2', 'Q3']) {
+        const distrib = await carregarDistribuicaoDoSupabase(quarter, selectedYear);
+        
+        if (Object.keys(distrib).length > 0) {
+          console.log(`✅ [DISTRIBUIÇÃO] ${selectedYear}/${quarter} carregado (${Object.keys(distrib).length} PSMs)`);
+          
+          // Merge dos dados deste quarter
+          Object.keys(distrib).forEach(psm => {
+            if (!dadosCompletos[psm]) dadosCompletos[psm] = {};
+            Object.assign(dadosCompletos[psm], distrib[psm]);
+          });
+        } else {
+          console.log(`ℹ️ [DISTRIBUIÇÃO] ${selectedYear}/${quarter} sem dados`);
+        }
+      }
+      
+      if (Object.keys(dadosCompletos).length > 0) {
+        // V5.10.19: MERGE - Manter dados de outros anos, atualizar ano atual completo
         setDistribuicaoReparacoes(prev => {
           const updated = JSON.parse(JSON.stringify(prev));
+          updated[selectedYear] = dadosCompletos;
           
-          // Atualizar/adicionar dados do ano carregado
-          updated[selectedYear] = distrib;
-          
-          console.log(`✅ [DISTRIBUIÇÃO] Dados de ${selectedYear} carregados e mesclados`);
-          return updated;
-        });
-        
-        // V5.08.20: Atualizar lastSaved para evitar salvamento logo após carregamento
-        lastSavedDistribuicaoRef.current = JSON.stringify({ ...distribuicaoReparacoes, [selectedYear]: distrib });
-        
-      } else {
-        console.log(`ℹ️ [DISTRIBUIÇÃO] Nenhum dado encontrado no Supabase para ${selectedYear}/Q${selectedQuarter}`);
-        
-        // V5.10.18: Se não há dados, limpar apenas o ano atual
-        setDistribuicaoReparacoes(prev => {
-          const updated = JSON.parse(JSON.stringify(prev));
-          delete updated[selectedYear]; // Limpar ano atual se não houver dados
+          console.log(`✅ [DISTRIBUIÇÃO] Todos os dados de ${selectedYear} carregados e mesclados`);
           return updated;
         });
         
         // V5.08.20: Atualizar lastSaved
+        lastSavedDistribuicaoRef.current = JSON.stringify({ 
+          ...distribuicaoReparacoes, 
+          [selectedYear]: dadosCompletos 
+        });
+        
+      } else {
+        console.log(`ℹ️ [DISTRIBUIÇÃO] Nenhum dado encontrado para ${selectedYear}`);
+        
+        // V5.10.18: Se não há dados, limpar apenas o ano atual
+        setDistribuicaoReparacoes(prev => {
+          const updated = JSON.parse(JSON.stringify(prev));
+          delete updated[selectedYear];
+          return updated;
+        });
+        
         lastSavedDistribuicaoRef.current = JSON.stringify(distribuicaoReparacoes);
       }
       
@@ -1937,7 +1983,7 @@ useEffect(() => {
     };
     
     carregarDistribuicaoInicial();
-  }, [selectedQuarter, selectedYear]);
+  }, [selectedYear]); // V5.10.19: Remover selectedQuarter - carrega TODOS quarters
 
   // V5.08.20: Cleanup do timer de salvamento ao desmontar
   useEffect(() => {
