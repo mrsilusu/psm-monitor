@@ -5,7 +5,7 @@ import { lerTudoDoSupabase, salvarTudoNoSupabase, salvarJustificativasNoSupabase
 import { salvarDistribuicaoNoSupabase, carregarDistribuicaoDoSupabase, limparDistribuicaoNoSupabase } from './services/supabaseDistribuicaoService';
 
 const PSMMonitorApp = () => {
-  console.log("🚀 PSM Monitor 5.10.16 - DADOS POR ANO (Reparações e Testes Separados) ! ✅");
+  console.log("🚀 PSM Monitor 5.10.17 - FIX: Distribuição por Tipo filtra ANO corretamente! ✅");
   
   // ============================================================================
   // V5.08.19: SISTEMA DE VERSIONAMENTO E LIMPEZA AUTOMÁTICA DO localStorage
@@ -5479,7 +5479,7 @@ useEffect(() => {
                             
                             // V5.09.1: Só contar até a semana selecionada
                             if (weekNum <= selectedWeekNum) {
-                              const distDaSemana = distribuicaoReparacoes[selectedOperator]?.[week]?.[route] || {};
+                              const distDaSemana = distribuicaoReparacoes[selectedYear]?.[selectedOperator]?.[week]?.[route] || {};
                               
                               // Somar reparadas de cada tipo (NOMES CORRETOS!)
                               depLicencaReparadas += parseInt(distDaSemana['Dep. de Licença']) || 0;
@@ -7623,7 +7623,7 @@ Gerado por: PSM Monitor v3.42.03
                         
                         // V5.09.1: Só contar até a semana selecionada
                         if (weekNum <= selectedWeekNum) {
-                          const distDaSemana = distribuicaoReparacoes[selectedOperator]?.[week]?.[route] || {};
+                          const distDaSemana = distribuicaoReparacoes[selectedYear]?.[selectedOperator]?.[week]?.[route] || {};
                           
                           // Somar reparadas de cada tipo (NOMES CORRETOS!)
                           depLicencaReparadas += parseInt(distDaSemana['Dep. de Licença']) || 0;
@@ -7783,7 +7783,7 @@ Gerado por: PSM Monitor v3.42.03
                           const weekNum = parseInt(week.substring(1));
                           const selectedWeekNum = parseInt(selectedWeek.substring(1));
                           if (weekNum <= selectedWeekNum) {
-                            const distDaSemana = distribuicaoReparacoes[psm]?.[week]?.[route] || {};
+                            const distDaSemana = distribuicaoReparacoes[selectedYear]?.[psm]?.[week]?.[route] || {};
                             fibrasPSMReparadas += parseInt(distDaSemana[`Fibras dependentes da ${psm}`]) || 0;
                           }
                         });
@@ -7960,7 +7960,7 @@ Gerado por: PSM Monitor v3.42.03
                         const weekNum = parseInt(week.substring(1));
                         const selectedWeekNum = parseInt(selectedWeek.substring(1));
                         if (weekNum <= selectedWeekNum) {
-                          const distDaSemana = distribuicaoReparacoes[selectedOperator]?.[week]?.[route] || {};
+                          const distDaSemana = distribuicaoReparacoes[selectedYear]?.[selectedOperator]?.[week]?.[route] || {};
                           fibrasPSMReparadas += parseInt(distDaSemana[`Fibras dependentes da ${selectedOperator}`]) || 0;
                         }
                       });
