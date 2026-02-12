@@ -5,7 +5,7 @@ import { lerTudoDoSupabase, salvarTudoNoSupabase, salvarJustificativasNoSupabase
 import { salvarDistribuicaoNoSupabase, carregarDistribuicaoDoSupabase, limparDistribuicaoNoSupabase } from './services/supabaseDistribuicaoService';
 
 const PSMMonitorApp = () => {
-  console.log("🚀 PSM Monitor 5.10.17 - FIX: Distribuição por Tipo filtra ANO corretamente! ✅");
+  console.log("🚀 PSM Monitor 5.10.18 - FIX: Salva/Carrega Tipos corretamente (sem duplicar)! ✅");
   
   // ============================================================================
   // V5.08.19: SISTEMA DE VERSIONAMENTO E LIMPEZA AUTOMÁTICA DO localStorage
@@ -1867,8 +1867,13 @@ useEffect(() => {
       
       // 2. Salvar Supabase
       try {
+        // V5.10.18: Extrair APENAS dados do ano/quarter atual para salvar
+        const dadosParaSalvar = distribuicaoReparacoes[selectedYear] || {};
+        
+        console.log(`💾 [DISTRIBUIÇÃO] Salvando apenas ano ${selectedYear}, quarter ${selectedQuarter}`);
+        
         const resultado = await salvarDistribuicaoNoSupabase(
-          distribuicaoReparacoes,
+          dadosParaSalvar,  // V5.10.18: Envia apenas dados do ano atual
           selectedQuarter,
           selectedYear
         );
@@ -1891,7 +1896,7 @@ useEffect(() => {
       // V5.08.20: Ativar flag de loading ANTES de carregar
       setIsLoadingDistribuicao(true);
       
-      console.log('📥 [DISTRIBUIÇÃO] Carregando do Supabase...');
+      console.log(`📥 [DISTRIBUIÇÃO] Carregando do Supabase (Ano: ${selectedYear}, Quarter: ${selectedQuarter})...`);
       
       const distrib = await carregarDistribuicaoDoSupabase(
         selectedQuarter,
@@ -1899,17 +1904,32 @@ useEffect(() => {
       );
       
       if (Object.keys(distrib).length > 0) {
-        setDistribuicaoReparacoes(distrib);
+        // V5.10.18: MERGE - Manter dados de outros anos, atualizar apenas ano atual
+        setDistribuicaoReparacoes(prev => {
+          const updated = JSON.parse(JSON.stringify(prev));
+          
+          // Atualizar/adicionar dados do ano carregado
+          updated[selectedYear] = distrib;
+          
+          console.log(`✅ [DISTRIBUIÇÃO] Dados de ${selectedYear} carregados e mesclados`);
+          return updated;
+        });
         
         // V5.08.20: Atualizar lastSaved para evitar salvamento logo após carregamento
-        lastSavedDistribuicaoRef.current = JSON.stringify(distrib);
+        lastSavedDistribuicaoRef.current = JSON.stringify({ ...distribuicaoReparacoes, [selectedYear]: distrib });
         
-        console.log('✅ [DISTRIBUIÇÃO] Carregada do Supabase');
       } else {
-        console.log('ℹ️ [DISTRIBUIÇÃO] Nenhum dado encontrado no Supabase');
+        console.log(`ℹ️ [DISTRIBUIÇÃO] Nenhum dado encontrado no Supabase para ${selectedYear}/Q${selectedQuarter}`);
         
-        // V5.08.20: Mesmo sem dados, atualizar lastSaved
-        lastSavedDistribuicaoRef.current = JSON.stringify({});
+        // V5.10.18: Se não há dados, limpar apenas o ano atual
+        setDistribuicaoReparacoes(prev => {
+          const updated = JSON.parse(JSON.stringify(prev));
+          delete updated[selectedYear]; // Limpar ano atual se não houver dados
+          return updated;
+        });
+        
+        // V5.08.20: Atualizar lastSaved
+        lastSavedDistribuicaoRef.current = JSON.stringify(distribuicaoReparacoes);
       }
       
       // V5.08.20: Desativar flag de loading APÓS carregar
@@ -2880,9 +2900,9 @@ useEffect(() => {
           setDistribuicaoReparacoes(prev => {
             const updated = JSON.parse(JSON.stringify(prev));
             
-            // V5.07.0: Limpar APENAS a semana atual (não futuras)
-            if (updated[psm]?.[week]?.[route]) {
-              delete updated[psm][week][route];
+            // V5.10.18: Limpar APENAS a semana atual DO ANO SELECIONADO
+            if (updated[selectedYear]?.[psm]?.[week]?.[route]) {
+              delete updated[selectedYear][psm][week][route];
               
               // V5.08.0: Limpar também no Supabase
               limparDistribuicaoNoSupabase(psm, week, route, selectedQuarter, selectedYear);
