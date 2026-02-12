@@ -5,7 +5,7 @@ import { lerTudoDoSupabase, salvarTudoNoSupabase, salvarJustificativasNoSupabase
 import { salvarDistribuicaoNoSupabase, carregarDistribuicaoDoSupabase, limparDistribuicaoNoSupabase } from './services/supabaseDistribuicaoService';
 
 const PSMMonitorApp = () => {
-  console.log("🚀 PSM Monitor 5.10.21 - REESTRUTURAÇÃO COMPLETA: Isolamento total por ano! 🧠✅");
+  console.log("🚀 PSM Monitor 5.10.22 - FIX: Estrutura de dados com ANO (igual Distribuição)! ✅");
   
   // ============================================================================
   // V5.08.19: SISTEMA DE VERSIONAMENTO E LIMPEZA AUTOMÁTICA DO localStorage
@@ -531,7 +531,14 @@ useEffect(() => {
       
       if (resultado.success && resultado.data && Object.keys(resultado.data).length > 0) {
         console.log('✅ Dados carregados do Supabase!', resultado.data);
-        setData(resultado.data);
+        
+        // V5.10.22: MERGE - Manter dados de outros anos (igual Distribuição e Validações)
+        setData(prev => {
+          const updated = JSON.parse(JSON.stringify(prev));
+          updated[selectedYear] = resultado.data;
+          console.log(`✅ Dados de ${selectedYear} mesclados no estado`);
+          return updated;
+        });
         
         // ✅ CORREÇÃO: Carregar também os estados de teste e validação
         if (resultado.rotasTestadas && Object.keys(resultado.rotasTestadas).length > 0) {
@@ -691,6 +698,18 @@ useEffect(() => {
     if (weekNum >= 19 && weekNum <= 35) return 'Q2';
     if (weekNum >= 36 && weekNum <= 52) return 'Q3';
     return 'Q1';
+  };
+  
+  // V5.10.22: FUNÇÃO AUXILIAR - Acesso aos dados com isolamento por ANO
+  // Uso: getData(psm, week, route) em vez de data[psm][week][route]
+  const getData = (psm, week, route = null) => {
+    if (!data[selectedYear]) return null;
+    if (!data[selectedYear][psm]) return null;
+    if (!data[selectedYear][psm][week]) return null;
+    if (route) {
+      return data[selectedYear][psm][week][route] || null;
+    }
+    return data[selectedYear][psm][week];
   };
   
   // v3.48.02: FUNÇÕES AUXILIARES - Validação POR SEMANA E QUARTER
@@ -2071,10 +2090,9 @@ useEffect(() => {
       
       // Iterar sobre PSM selecionado, semanas do quadrimestre e rotas
       quarterWeeks.forEach(week => {
-        // V5.10.21: ISOLAMENTO POR ANO
-        if (data[selectedYear]?.[selectedOperator]?.[week]) {
+        if (data[selectedOperator] && data[selectedOperator][week]) {
           routesByPSM[selectedOperator].forEach(route => {
-            const routeData = data[selectedYear][selectedOperator][week][route];
+            const routeData = data[selectedOperator][week][route];
             if (routeData) {
               csv += `${selectedOperator},${week},"${route}",`;
               csv += `${routeData['Transporte'] || ''},`;
@@ -2952,11 +2970,12 @@ useEffect(() => {
       // Criar cópia profunda da estrutura
       const newData = JSON.parse(JSON.stringify(prevData));
       
-      // Garantir que a estrutura existe
-      if (!newData[psm]) newData[psm] = {};
-      if (!newData[psm][week]) newData[psm][week] = {};
-      if (!newData[psm][week][route]) {
-        newData[psm][week][route] = {
+      // V5.10.22: Garantir estrutura com ANO
+      if (!newData[selectedYear]) newData[selectedYear] = {};
+      if (!newData[selectedYear][psm]) newData[selectedYear][psm] = {};
+      if (!newData[selectedYear][psm][week]) newData[selectedYear][psm][week] = {};
+      if (!newData[selectedYear][psm][week][route]) {
+        newData[selectedYear][psm][week][route] = {
           'Transporte': '',
           'Indisponíveis': '',
           'Total Reparadas': '',
@@ -2969,7 +2988,7 @@ useEffect(() => {
       }
 
       // Obter valores atuais
-      const currentData = newData[psm][week][route];
+      const currentData = newData[selectedYear][psm][week][route];
       const currentTotalReparadas = parseInt(currentData['Total Reparadas'], 10) || 0;
       const newTotalReparadas = category === 'Total Reparadas' ? (parseInt(valorFinal, 10) || 0) : currentTotalReparadas;
       
@@ -3253,7 +3272,8 @@ useEffect(() => {
    * @returns {number} Último valor conhecido ou 0
    */
   const buscarValorAnterior = (psm, week, route, tipo) => {
-    if (!data[psm]) return 0;
+    // V5.10.22: Verificar se existem dados para o ano
+    if (!data[selectedYear]?.[psm]) return 0;
     
     // Obter número da semana atual
     const weekNum = parseInt(week.replace('W', ''));
@@ -3262,20 +3282,20 @@ useEffect(() => {
     const trimestreAtual = quarterConfig[selectedQuarter];
     const semanaMinima = trimestreAtual.start;
     
-    console.log(`🔍 Buscando ${tipo} em ${selectedQuarter} (W${semanaMinima}-W${weekNum-1})`);
+    console.log(`🔍 Buscando ${tipo} em ${selectedYear}/${selectedQuarter} (W${semanaMinima}-W${weekNum-1})`);
     
     // Buscar de trás para frente DENTRO DO TRIMESTRE
     for (let w = weekNum - 1; w >= semanaMinima; w--) {
       const semanaAnterior = `W${w}`;
-      const valor = parseInt(data[psm]?.[semanaAnterior]?.[route]?.[tipo], 10) || 0;
+      const valor = parseInt(data[selectedYear]?.[psm]?.[semanaAnterior]?.[route]?.[tipo], 10) || 0;
       
       if (valor > 0) {
-        console.log(`✅ Encontrado ${tipo}=${valor} em ${semanaAnterior} (${selectedQuarter})`);
+        console.log(`✅ Encontrado ${tipo}=${valor} em ${semanaAnterior} (${selectedYear}/${selectedQuarter})`);
         return valor;
       }
     }
     
-    console.log(`⚠️ ${tipo} não encontrado em ${selectedQuarter}`);
+    console.log(`⚠️ ${tipo} não encontrado em ${selectedYear}/${selectedQuarter}`);
     return 0;
   };
 
@@ -3289,7 +3309,8 @@ useEffect(() => {
    */
   const getInputValue = (psm, week, route, category) => {
     try {
-      return data[psm]?.[week]?.[route]?.[category] || '';
+      // V5.10.22: Acesso com ANO
+      return data[selectedYear]?.[psm]?.[week]?.[route]?.[category] || '';
     } catch (e) {
       return '';
     }
@@ -3300,8 +3321,8 @@ useEffect(() => {
    * Calcula: Valor Original - Desconto ACUMULADO de todas as semanas até a atual
    */
   const getValorReduzido = (psm, week, route, tipo) => {
-    // Pegar valor original
-    let original = parseInt(data[psm]?.[week]?.[route]?.[tipo], 10) || 0;
+    // V5.10.22: Pegar valor original com ANO
+    let original = parseInt(data[selectedYear]?.[psm]?.[week]?.[route]?.[tipo], 10) || 0;
     
     // Se não houver, buscar em semanas anteriores
     if (original === 0) {
@@ -3906,10 +3927,9 @@ useEffect(() => {
 
     // Iterar sobre semanas do quadrimestre e acumular indisponíveis
     quarterWeeks.forEach(week => {
-      // V5.10.21: ISOLAMENTO POR ANO - Acesso correto aos dados
-      if (data[selectedYear]?.[selectedOperator]?.[week]) {
+      if (data[selectedOperator]?.[week]) {
         routesToProcess.forEach(route => {
-          const routeData = data[selectedYear][selectedOperator][week][route];
+          const routeData = data[selectedOperator][week][route];
           if (routeData) {
             const indisponiveis = parseInt(routeData['Indisponíveis']) || 0;
             const reparadas = parseInt(routeData['Total Reparadas']) || 0;
@@ -3967,7 +3987,7 @@ useEffect(() => {
     }
 
     return top5;
-  }, [data, selectedOperator, selectedQuarter, selectedProvince, selectedYear]); // V5.10.21: Adicionar selectedYear
+  }, [data, selectedOperator, selectedQuarter, selectedProvince]);
 
   // FASE 3: Função busca TODOS os dados da rota
   const handleRotaClick = (rota) => {
@@ -4176,9 +4196,8 @@ useEffect(() => {
 
       // Iterar sobre semanas ATÉ a selecionada (da mais recente para mais antiga)
       weeksAteSelecao.forEach(week => {
-        // V5.10.21: ISOLAMENTO POR ANO
-        if (data[selectedYear]?.[selectedOperator]?.[week]?.[route]) {
-          const routeData = data[selectedYear][selectedOperator][week][route];
+        if (data[selectedOperator]?.[week]?.[route]) {
+          const routeData = data[selectedOperator][week][route];
           const reparadas = parseInt(routeData['Total Reparadas']) || 0;
 
           if (reparadas > 0) {
@@ -4229,7 +4248,7 @@ useEffect(() => {
     });
 
     return allIntervencoes;
-  }, [data, selectedOperator, selectedQuarter, selectedProvince, selectedWeek, selectedYear]); // V5.10.21: Adicionar selectedYear
+  }, [data, selectedOperator, selectedQuarter, selectedProvince, selectedWeek]); // v3.22.2: Adicionar selectedWeek
 
   // ============================================================================
   // FASE 14: ROTAS NORMALIZADAS DINÂMICO COM useMemo
@@ -4443,7 +4462,7 @@ useEffect(() => {
 
     // Retornar TODAS as rotas normalizadas (sem limitar)
     return normalizadas;
-  }, [data, selectedOperator, selectedQuarter, selectedProvince, selectedYear]); // V5.10.21: Adicionar selectedYear
+  }, [data, selectedOperator, selectedQuarter, selectedProvince]); // Recalcular quando estas variáveis mudarem
 
   // ============================================================================
   // v3.40.28: SISTEMA DE ALERTAS - Reparadas ACUMULADO > Indisponíveis ÚLTIMO
@@ -4611,7 +4630,7 @@ useEffect(() => {
     
     console.log(`🔔 FASE 3: ${alertasDetectados.length} alertas detectados`);
     return alertasDetectados;
-  }, [data, selectedOperator, selectedQuarter, selectedWeek, selectedProvince, alertasLidos, selectedYear]); // V5.10.21: Adicionar selectedYear
+  }, [data, selectedOperator, selectedQuarter, selectedWeek, selectedProvince, alertasLidos]);
 
   // ============================================================================
   // v3.23.0: ROTAS MAIS INTERVENCIONADAS (TOP 5 com mais reparadas)
@@ -4633,9 +4652,8 @@ useEffect(() => {
       let totalReparadas = 0;
       
       quarterWeeks.forEach(week => {
-        // V5.10.21: ISOLAMENTO POR ANO
-        if (data[selectedYear]?.[selectedOperator]?.[week]?.[route]) {
-          const routeData = data[selectedYear][selectedOperator][week][route];
+        if (data[selectedOperator]?.[week]?.[route]) {
+          const routeData = data[selectedOperator][week][route];
           totalReparadas += parseInt(routeData['Total Reparadas']) || 0;
         }
       });
@@ -4668,7 +4686,7 @@ useEffect(() => {
     }
     
     return top5;
-  }, [data, selectedOperator, selectedQuarter, selectedProvince, selectedYear]); // V5.10.21: Adicionar selectedYear
+  }, [data, selectedOperator, selectedQuarter, selectedProvince]);
 
   // ============================================================================
   // v3.23.0: ROTAS SEM INTERVENÇÃO (sem nenhuma reparada no quadrimestre)
@@ -4691,9 +4709,8 @@ useEffect(() => {
       let temDados = false;
       
       quarterWeeks.forEach(week => {
-        // V5.10.21: ISOLAMENTO POR ANO
-        if (data[selectedYear]?.[selectedOperator]?.[week]?.[route]) {
-          const routeData = data[selectedYear][selectedOperator][week][route];
+        if (data[selectedOperator]?.[week]?.[route]) {
+          const routeData = data[selectedOperator][week][route];
           totalReparadas += parseInt(routeData['Total Reparadas']) || 0;
           
           // Verificar se rota tem outros dados
@@ -4714,7 +4731,7 @@ useEffect(() => {
     });
     
     return rotasSemReparadas;
-  }, [data, selectedOperator, selectedQuarter, selectedProvince, selectedYear]); // V5.10.21: Adicionar selectedYear
+  }, [data, selectedOperator, selectedQuarter, selectedProvince]);
 
   // ============================================================================
   // FASE 15: CLASSIFICAÇÃO DE ROTAS (DEGRADADAS/GANHO/ESTÁVEIS) COM useMemo
@@ -8887,9 +8904,8 @@ Gerado por: PSM Monitor v3.42.03
                       let totalSemanaSelecionada = 0;
                       let intervencoesSemanaAtual = 0;
                       routesToProcess.forEach(route => {
-                        // V5.10.21: ISOLAMENTO POR ANO
-                        if (data[selectedYear]?.[selectedOperator]?.[selectedWeek]?.[route]) {
-                          const routeData = data[selectedYear][selectedOperator][selectedWeek][route];
+                        if (data[selectedOperator]?.[selectedWeek]?.[route]) {
+                          const routeData = data[selectedOperator][selectedWeek][route];
                           const reparadas = parseInt(routeData['Total Reparadas']) || 0;
                           if (reparadas > 0) {
                             intervencoesSemanaAtual++;
@@ -8906,9 +8922,8 @@ Gerado por: PSM Monitor v3.42.03
                       let totalSemanaAnterior = 0;
                       if (previousWeek) {
                         routesToProcess.forEach(route => {
-                          // V5.10.21: ISOLAMENTO POR ANO
-                          if (data[selectedYear]?.[selectedOperator]?.[previousWeek]?.[route]) {
-                            const routeData = data[selectedYear][selectedOperator][previousWeek][route];
+                          if (data[selectedOperator]?.[previousWeek]?.[route]) {
+                            const routeData = data[selectedOperator][previousWeek][route];
                             totalSemanaAnterior += parseInt(routeData['Total Reparadas']) || 0;
                           }
                         });
