@@ -5,7 +5,7 @@ import { lerTudoDoSupabase, salvarTudoNoSupabase, salvarJustificativasNoSupabase
 import { salvarDistribuicaoNoSupabase, carregarDistribuicaoDoSupabase, limparDistribuicaoNoSupabase } from './services/supabaseDistribuicaoService';
 
 const PSMMonitorApp = () => {
-  console.log("🚀 PSM Monitor 5.10.19 - FIX CRÍTICO: Salva apenas no Quarter correto da semana! ✅");
+  console.log("🚀 PSM Monitor 5.10.20 - FIX: Testes e Validações salvam/carregam corretamente! ✅");
   
   // ============================================================================
   // V5.08.19: SISTEMA DE VERSIONAMENTO E LIMPEZA AUTOMÁTICA DO localStorage
@@ -536,19 +536,46 @@ useEffect(() => {
         // ✅ CORREÇÃO: Carregar também os estados de teste e validação
         if (resultado.rotasTestadas && Object.keys(resultado.rotasTestadas).length > 0) {
           console.log('✅ Rotas testadas carregadas do Supabase:', resultado.rotasTestadas);
-          setRotasTestadas(resultado.rotasTestadas);
+          
+          // V5.10.20: MERGE - Manter dados de outros anos
+          setRotasTestadas(prev => {
+            const updated = JSON.parse(JSON.stringify(prev));
+            updated[selectedYear] = resultado.rotasTestadas;
+            return updated;
+          });
         }
         
         if (resultado.rotasValidadas && Object.keys(resultado.rotasValidadas).length > 0) {
           console.log('✅ Rotas validadas carregadas do Supabase:', resultado.rotasValidadas);
-          setRotasValidadas(resultado.rotasValidadas);
+          
+          // V5.10.20: MERGE - Manter dados de outros anos
+          setRotasValidadas(prev => {
+            const updated = JSON.parse(JSON.stringify(prev));
+            updated[selectedYear] = resultado.rotasValidadas;
+            return updated;
+          });
         }
       } else {
         console.log('⚠️ Sem dados no Supabase para o ano', selectedYear);
-        // Limpar dados se não houver nada para o ano selecionado
-        setData({ ISISTEL: {}, FIBRASOL: {}, ANGLOBAL: {} });
-        setRotasTestadas({});
-        setRotasValidadas({});
+        // V5.10.20: Limpar dados apenas do ano atual
+        setData(prev => {
+          const updated = JSON.parse(JSON.stringify(prev));
+          // Resetar estrutura do ano atual
+          updated[selectedYear] = { ISISTEL: {}, FIBRASOL: {}, ANGLOBAL: {} };
+          return updated;
+        });
+        
+        setRotasTestadas(prev => {
+          const updated = JSON.parse(JSON.stringify(prev));
+          delete updated[selectedYear];
+          return updated;
+        });
+        
+        setRotasValidadas(prev => {
+          const updated = JSON.parse(JSON.stringify(prev));
+          delete updated[selectedYear];
+          return updated;
+        });
       }
       
       // ✅ Carregar justificativas do Supabase
@@ -630,6 +657,12 @@ useEffect(() => {
   // v3.48.00: Salvar validações no localStorage automaticamente
   useEffect(() => {
     try {
+      // V5.10.20: Logs de debug
+      console.log('💾 [VALIDAÇÕES] Salvando no localStorage:', {
+        testadas: Object.keys(rotasTestadas).length,
+        validadas: Object.keys(rotasValidadas).length
+      });
+      
       window.localStorage.setItem('psm_rotas_testadas_v2', JSON.stringify(rotasTestadas));
       window.localStorage.setItem('psm_rotas_validadas_v2', JSON.stringify(rotasValidadas));
     } catch (e) {
@@ -1714,6 +1747,18 @@ useEffect(() => {
         window.salvarSupabaseTimeout = setTimeout(async () => {
           console.log('💾 [DATA] Salvando no Supabase para o ano:', selectedYear);
           
+          // V5.10.20: Log detalhado das validações sendo salvas
+          console.log('📊 [VALIDAÇÕES] Enviando para Supabase:', {
+            testadas: {
+              anos: Object.keys(rotasTestadas),
+              total: Object.keys(rotasTestadas).length
+            },
+            validadas: {
+              anos: Object.keys(rotasValidadas),
+              total: Object.keys(rotasValidadas).length
+            }
+          });
+          
           const resultado = await salvarTudoNoSupabase(
             data,
             selectedQuarter,
@@ -1759,7 +1804,7 @@ useEffect(() => {
         return () => clearTimeout(timer);
       }
     }
-  }, [data, selectedQuarter, rotasTestadas, rotasValidadas]); // Adicionar selectedQuarter como dependência
+  }, [data, selectedQuarter, selectedYear, rotasTestadas, rotasValidadas]); // V5.10.20: Adicionar selectedYear
 
   // useEffect #2: Salvar estado 'justificativas' no localStorage E SUPABASE automaticamente
   useEffect(() => {
