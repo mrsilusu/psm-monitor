@@ -5,7 +5,7 @@ import { lerTudoDoSupabase, salvarTudoNoSupabase, salvarJustificativasNoSupabase
 import { salvarDistribuicaoNoSupabase, carregarDistribuicaoDoSupabase, limparDistribuicaoNoSupabase } from './services/supabaseDistribuicaoService';
 
 const PSMMonitorApp = () => {
-  console.log("🚀 PSM Monitor 5.10.7 - CARD PSM CORRIGIDO (Filtro por Fibras PSM) ! ✅");
+  console.log("🚀 PSM Monitor 5.10.19 - FIX CRÍTICO: Salva apenas no Quarter correto da semana! ✅");
   
   // ============================================================================
   // V5.08.19: SISTEMA DE VERSIONAMENTO E LIMPEZA AUTOMÁTICA DO localStorage
@@ -434,10 +434,10 @@ const PSMMonitorApp = () => {
   // Guarda QUANTO foi descontado de cada tipo de indisponibilidade
   // V5.08.19: Usar key versionada para evitar conflitos
   const [distribuicaoReparacoes, setDistribuicaoReparacoes] = useState(() => {
-    const saved = window.localStorage.getItem('psm_distribuicao_reparacoes_v2'); // V5.08.19: v2
+    const saved = window.localStorage.getItem('psm_distribuicao_reparacoes_v3'); // V5.10.16: v3 com ANO
     if (saved) {
       try {
-        console.log('📥 [DISTRIBUIÇÃO] Carregado do localStorage v2');
+        console.log('📥 [DISTRIBUIÇÃO] Carregado do localStorage v3 (com ano)');
         return JSON.parse(saved);
       } catch (e) {
         console.error('❌ [DISTRIBUIÇÃO] Erro ao carregar:', e);
@@ -664,16 +664,19 @@ useEffect(() => {
   // Estrutura: { PSM: { semana: { rota: { testada: true } } } }
   
   const isRotaTestada = (psm, semana, rota) => {
-    return rotasTestadas[psm]?.[semana]?.[rota]?.testada === true;
+    // V5.10.16: Filtrar por ANO selecionado
+    return rotasTestadas[selectedYear]?.[psm]?.[semana]?.[rota]?.testada === true;
   };
   
   const isRotaValidada = (psm, semana, rota) => {
-    return rotasValidadas[psm]?.[semana]?.[rota]?.validada === true;
+    // V5.10.16: Filtrar por ANO selecionado
+    return rotasValidadas[selectedYear]?.[psm]?.[semana]?.[rota]?.validada === true;
   };
   
   // v3.48.02: Obter semanas testadas/validadas NO QUARTER SELECIONADO
   const getSemanasTestadasNoQuarter = (psm, rota, quarter) => {
-    if (!rotasTestadas[psm]) return [];
+    // V5.10.16: Filtrar por ANO selecionado
+    if (!rotasTestadas[selectedYear]?.[psm]) return [];
     const semanas = [];
     const quarterWeeks = allWeeks.slice(
       quarterConfig[quarter].start - 1,
@@ -681,7 +684,7 @@ useEffect(() => {
     );
     
     quarterWeeks.forEach(semana => {
-      if (rotasTestadas[psm][semana]?.[rota]?.testada === true) {
+      if (rotasTestadas[selectedYear][psm][semana]?.[rota]?.testada === true) {
         semanas.push(semana);
       }
     });
@@ -689,7 +692,8 @@ useEffect(() => {
   };
   
   const getSemanasValidadasNoQuarter = (psm, rota, quarter) => {
-    if (!rotasValidadas[psm]) return [];
+    // V5.10.16: Filtrar por ANO selecionado
+    if (!rotasValidadas[selectedYear]?.[psm]) return [];
     const semanas = [];
     const quarterWeeks = allWeeks.slice(
       quarterConfig[quarter].start - 1,
@@ -697,7 +701,7 @@ useEffect(() => {
     );
     
     quarterWeeks.forEach(semana => {
-      if (rotasValidadas[psm][semana]?.[rota]?.validada === true) {
+      if (rotasValidadas[selectedYear][psm][semana]?.[rota]?.validada === true) {
         semanas.push(semana);
       }
     });
@@ -1855,25 +1859,62 @@ useEffect(() => {
       
       // 1. Salvar localStorage
       try {
-        window.localStorage.setItem('psm_distribuicao_reparacoes_v2', dadosAtuais);
-        console.log('💾 [DISTRIBUIÇÃO] Salvo no localStorage v2');
+        window.localStorage.setItem('psm_distribuicao_reparacoes_v3', dadosAtuais); // V5.10.16: v3 com ano
+        console.log('💾 [DISTRIBUIÇÃO] Salvo no localStorage v3 (com ano)');
       } catch (error) {
         console.error('❌ [DISTRIBUIÇÃO] Erro ao salvar no localStorage:', error);
       }
       
       // 2. Salvar Supabase
       try {
-        const resultado = await salvarDistribuicaoNoSupabase(
-          distribuicaoReparacoes,
-          selectedQuarter,
-          selectedYear
-        );
+        // V5.10.19: SEPARAR dados por quarter antes de salvar
+        const dadosDoAno = distribuicaoReparacoes[selectedYear] || {};
         
-        if (resultado.success) {
-          console.log('✅ [DISTRIBUIÇÃO] Salvo no Supabase com sucesso');
-        } else {
-          console.error('❌ [DISTRIBUIÇÃO] Erro ao salvar no Supabase:', resultado.error);
+        // V5.10.19: Organizar dados por quarter
+        const dadosPorQuarter = {
+          Q1: {},
+          Q2: {},
+          Q3: {}
+        };
+        
+        // Processar cada PSM
+        Object.keys(dadosDoAno).forEach(psm => {
+          Object.keys(dadosDoAno[psm] || {}).forEach(week => {
+            // V5.10.19: DETERMINAR quarter da semana
+            const quarterDaSemana = getQuarterFromWeek(week);
+            
+            // Inicializar estrutura se necessário
+            if (!dadosPorQuarter[quarterDaSemana][psm]) {
+              dadosPorQuarter[quarterDaSemana][psm] = {};
+            }
+            
+            // Copiar dados da semana para o quarter correto
+            dadosPorQuarter[quarterDaSemana][psm][week] = dadosDoAno[psm][week];
+          });
+        });
+        
+        // V5.10.19: Salvar CADA quarter separadamente
+        for (const quarter of ['Q1', 'Q2', 'Q3']) {
+          const dadosDoQuarter = dadosPorQuarter[quarter];
+          
+          // Só salvar se houver dados neste quarter
+          if (Object.keys(dadosDoQuarter).length > 0) {
+            console.log(`💾 [DISTRIBUIÇÃO] Salvando ${selectedYear}/${quarter}...`);
+            
+            const resultado = await salvarDistribuicaoNoSupabase(
+              dadosDoQuarter,
+              quarter,  // V5.10.19: Quarter correto da semana
+              selectedYear
+            );
+            
+            if (resultado.success) {
+              console.log(`✅ [DISTRIBUIÇÃO] ${selectedYear}/${quarter} salvo com sucesso`);
+            } else {
+              console.error(`❌ [DISTRIBUIÇÃO] Erro ao salvar ${selectedYear}/${quarter}:`, resultado.error);
+            }
+          }
         }
+        
       } catch (error) {
         console.error('❌ [DISTRIBUIÇÃO] Erro ao salvar no Supabase:', error);
       }
@@ -1887,25 +1928,54 @@ useEffect(() => {
       // V5.08.20: Ativar flag de loading ANTES de carregar
       setIsLoadingDistribuicao(true);
       
-      console.log('📥 [DISTRIBUIÇÃO] Carregando do Supabase...');
+      console.log(`📥 [DISTRIBUIÇÃO] Carregando TODOS os quarters de ${selectedYear}...`);
       
-      const distrib = await carregarDistribuicaoDoSupabase(
-        selectedQuarter,
-        selectedYear
-      );
+      // V5.10.19: Carregar TODOS os quarters do ano
+      const dadosCompletos = {};
       
-      if (Object.keys(distrib).length > 0) {
-        setDistribuicaoReparacoes(distrib);
+      for (const quarter of ['Q1', 'Q2', 'Q3']) {
+        const distrib = await carregarDistribuicaoDoSupabase(quarter, selectedYear);
         
-        // V5.08.20: Atualizar lastSaved para evitar salvamento logo após carregamento
-        lastSavedDistribuicaoRef.current = JSON.stringify(distrib);
+        if (Object.keys(distrib).length > 0) {
+          console.log(`✅ [DISTRIBUIÇÃO] ${selectedYear}/${quarter} carregado (${Object.keys(distrib).length} PSMs)`);
+          
+          // Merge dos dados deste quarter
+          Object.keys(distrib).forEach(psm => {
+            if (!dadosCompletos[psm]) dadosCompletos[psm] = {};
+            Object.assign(dadosCompletos[psm], distrib[psm]);
+          });
+        } else {
+          console.log(`ℹ️ [DISTRIBUIÇÃO] ${selectedYear}/${quarter} sem dados`);
+        }
+      }
+      
+      if (Object.keys(dadosCompletos).length > 0) {
+        // V5.10.19: MERGE - Manter dados de outros anos, atualizar ano atual completo
+        setDistribuicaoReparacoes(prev => {
+          const updated = JSON.parse(JSON.stringify(prev));
+          updated[selectedYear] = dadosCompletos;
+          
+          console.log(`✅ [DISTRIBUIÇÃO] Todos os dados de ${selectedYear} carregados e mesclados`);
+          return updated;
+        });
         
-        console.log('✅ [DISTRIBUIÇÃO] Carregada do Supabase');
+        // V5.08.20: Atualizar lastSaved
+        lastSavedDistribuicaoRef.current = JSON.stringify({ 
+          ...distribuicaoReparacoes, 
+          [selectedYear]: dadosCompletos 
+        });
+        
       } else {
-        console.log('ℹ️ [DISTRIBUIÇÃO] Nenhum dado encontrado no Supabase');
+        console.log(`ℹ️ [DISTRIBUIÇÃO] Nenhum dado encontrado para ${selectedYear}`);
         
-        // V5.08.20: Mesmo sem dados, atualizar lastSaved
-        lastSavedDistribuicaoRef.current = JSON.stringify({});
+        // V5.10.18: Se não há dados, limpar apenas o ano atual
+        setDistribuicaoReparacoes(prev => {
+          const updated = JSON.parse(JSON.stringify(prev));
+          delete updated[selectedYear];
+          return updated;
+        });
+        
+        lastSavedDistribuicaoRef.current = JSON.stringify(distribuicaoReparacoes);
       }
       
       // V5.08.20: Desativar flag de loading APÓS carregar
@@ -1913,7 +1983,7 @@ useEffect(() => {
     };
     
     carregarDistribuicaoInicial();
-  }, [selectedQuarter, selectedYear]);
+  }, [selectedYear]); // V5.10.19: Remover selectedQuarter - carrega TODOS quarters
 
   // V5.08.20: Cleanup do timer de salvamento ao desmontar
   useEffect(() => {
@@ -2165,12 +2235,14 @@ useEffect(() => {
           console.log('🔍 INICIANDO PROCESSAMENTO DE VALIDAÇÕES POR SEMANA...');
           console.log('  Headers:', headers);
           
-          // v3.49.11: MERGE - Clonar estados atuais ao invés de criar vazios
+          // V5.10.16: MERGE - Clonar estados atuais ao invés de criar vazios (com ANO)
           const novasTestadas = JSON.parse(JSON.stringify(rotasTestadas));
           const novasValidadas = JSON.parse(JSON.stringify(rotasValidadas));
           
-          if (!novasTestadas[selectedOperator]) novasTestadas[selectedOperator] = {};
-          if (!novasValidadas[selectedOperator]) novasValidadas[selectedOperator] = {};
+          if (!novasTestadas[selectedYear]) novasTestadas[selectedYear] = {};
+          if (!novasTestadas[selectedYear][selectedOperator]) novasTestadas[selectedYear][selectedOperator] = {};
+          if (!novasValidadas[selectedYear]) novasValidadas[selectedYear] = {};
+          if (!novasValidadas[selectedYear][selectedOperator]) novasValidadas[selectedYear][selectedOperator] = {};
           
           let validacoesImportadas = 0;
           
@@ -2207,12 +2279,12 @@ useEffect(() => {
                 
                 if (!semana || !rota) continue;
                 
-                // Inicializar semana se necessário
-                if (!novasTestadas[selectedOperator][semana]) {
-                  novasTestadas[selectedOperator][semana] = {};
+                // V5.10.16: Inicializar semana se necessário (com ANO)
+                if (!novasTestadas[selectedYear][selectedOperator][semana]) {
+                  novasTestadas[selectedYear][selectedOperator][semana] = {};
                 }
-                if (!novasValidadas[selectedOperator][semana]) {
-                  novasValidadas[selectedOperator][semana] = {};
+                if (!novasValidadas[selectedYear][selectedOperator][semana]) {
+                  novasValidadas[selectedYear][selectedOperator][semana] = {};
                 }
                 
                 // Importar testada
@@ -2220,7 +2292,7 @@ useEffect(() => {
                   const testadaVal = (values[testadaIdx] || '').toString().trim().toUpperCase();
                   
                   if (testadaVal === 'SIM' || testadaVal === 'TRUE' || testadaVal === '1') {
-                    novasTestadas[selectedOperator][semana][rota] = {
+                    novasTestadas[selectedYear][selectedOperator][semana][rota] = {
                       testada: true
                     };
                     validacoesImportadas++;
@@ -2232,7 +2304,7 @@ useEffect(() => {
                   const validadaVal = (values[validadaIdx] || '').toString().trim().toUpperCase();
                   
                   if (validadaVal === 'SIM' || validadaVal === 'TRUE' || validadaVal === '1') {
-                    novasValidadas[selectedOperator][semana][rota] = {
+                    novasValidadas[selectedYear][selectedOperator][semana][rota] = {
                       validada: true
                     };
                     validacoesImportadas++;
@@ -2874,9 +2946,9 @@ useEffect(() => {
           setDistribuicaoReparacoes(prev => {
             const updated = JSON.parse(JSON.stringify(prev));
             
-            // V5.07.0: Limpar APENAS a semana atual (não futuras)
-            if (updated[psm]?.[week]?.[route]) {
-              delete updated[psm][week][route];
+            // V5.10.18: Limpar APENAS a semana atual DO ANO SELECIONADO
+            if (updated[selectedYear]?.[psm]?.[week]?.[route]) {
+              delete updated[selectedYear][psm][week][route];
               
               // V5.08.0: Limpar também no Supabase
               limparDistribuicaoNoSupabase(psm, week, route, selectedQuarter, selectedYear);
@@ -2944,7 +3016,7 @@ useEffect(() => {
           
           for (let w = trimestreAtual.start; w <= weekNum; w++) {
             const semana = `W${w}`;
-            const distDaSemana = distribuicaoReparacoes[psm]?.[semana]?.[route] || {};
+            const distDaSemana = distribuicaoReparacoes[selectedYear]?.[psm]?.[semana]?.[route] || {};
             descontoAcumuladoReconh += distDaSemana['Reconhecidas'] || 0;
             descontoAcumuladoDepPass += distDaSemana['Dep. de Passagem de Cabo'] || 0;
             descontoAcumuladoDepLic += distDaSemana['Dep. de Licença'] || 0;
@@ -2998,12 +3070,14 @@ useEffect(() => {
             // V5.07.0: Registrar distribuição APENAS na semana atual (não propagar)
             setDistribuicaoReparacoes(prev => {
               const updated = JSON.parse(JSON.stringify(prev));
-              if (!updated[psm]) updated[psm] = {};
-              if (!updated[psm][week]) updated[psm][week] = {};
-              if (!updated[psm][week][route]) updated[psm][week][route] = {};
+              // V5.10.16: Incluir ANO na estrutura
+              if (!updated[selectedYear]) updated[selectedYear] = {};
+              if (!updated[selectedYear][psm]) updated[selectedYear][psm] = {};
+              if (!updated[selectedYear][psm][week]) updated[selectedYear][psm][week] = {};
+              if (!updated[selectedYear][psm][week][route]) updated[selectedYear][psm][week][route] = {};
               
               // Guardar desconto APENAS desta semana
-              updated[psm][week][route][tipoUnico.tipo] = descontoAplicado;
+              updated[selectedYear][psm][week][route][tipoUnico.tipo] = descontoAplicado;
               
               return updated;
             });
@@ -3036,16 +3110,17 @@ useEffect(() => {
     const descontoAplicado = Math.min(valorDisponivel, diferenca);
     const reparacoesRestantes = diferenca - descontoAplicado;
     
-    // V5.07.0: Registrar distribuição APENAS na semana atual
+    // V5.10.16: Registrar distribuição APENAS na semana atual DO ANO SELECIONADO
     setDistribuicaoReparacoes(prevDist => {
       const updated = JSON.parse(JSON.stringify(prevDist));
-      if (!updated[psm]) updated[psm] = {};
-      if (!updated[psm][week]) updated[psm][week] = {};
-      if (!updated[psm][week][route]) updated[psm][week][route] = {};
+      if (!updated[selectedYear]) updated[selectedYear] = {};
+      if (!updated[selectedYear][psm]) updated[selectedYear][psm] = {};
+      if (!updated[selectedYear][psm][week]) updated[selectedYear][psm][week] = {};
+      if (!updated[selectedYear][psm][week][route]) updated[selectedYear][psm][week][route] = {};
       
       // Somar ao desconto já existente desta semana (distribuição sequencial)
-      const atual = updated[psm][week][route][tipoSelecionado] || 0;
-      updated[psm][week][route][tipoSelecionado] = atual + descontoAplicado;
+      const atual = updated[selectedYear][psm][week][route][tipoSelecionado] || 0;
+      updated[selectedYear][psm][week][route][tipoSelecionado] = atual + descontoAplicado;
       
       console.log(`✅ ${tipoSelecionado}: +${descontoAplicado} em ${week} (total: ${atual + descontoAplicado})`);
       
@@ -3187,14 +3262,15 @@ useEffect(() => {
       original = buscarValorAnterior(psm, week, route, tipo);
     }
     
-    // V5.07.0: SOMAR descontos de TODAS as semanas até a atual (acumulativo)
+    // V5.10.16: SOMAR descontos APENAS do ANO SELECIONADO
     const weekNum = parseInt(week.replace('W', ''), 10);
     const trimestreAtual = quarterConfig[selectedQuarter];
     
     let descontoAcumulado = 0;
     for (let w = trimestreAtual.start; w <= weekNum; w++) {
       const semana = `W${w}`;
-      const descontoDaSemana = distribuicaoReparacoes[psm]?.[semana]?.[route]?.[tipo] || 0;
+      // V5.10.16: Acessar com ANO - distribuicaoReparacoes[ano][psm][week][route][tipo]
+      const descontoDaSemana = distribuicaoReparacoes[selectedYear]?.[psm]?.[semana]?.[route]?.[tipo] || 0;
       descontoAcumulado += descontoDaSemana;
     }
     
@@ -5469,7 +5545,7 @@ useEffect(() => {
                             
                             // V5.09.1: Só contar até a semana selecionada
                             if (weekNum <= selectedWeekNum) {
-                              const distDaSemana = distribuicaoReparacoes[selectedOperator]?.[week]?.[route] || {};
+                              const distDaSemana = distribuicaoReparacoes[selectedYear]?.[selectedOperator]?.[week]?.[route] || {};
                               
                               // Somar reparadas de cada tipo (NOMES CORRETOS!)
                               depLicencaReparadas += parseInt(distDaSemana['Dep. de Licença']) || 0;
@@ -7226,16 +7302,18 @@ Gerado por: PSM Monitor v3.42.03
                           <button
                             onClick={() => {
                               const novasTestadas = { ...rotasTestadas };
-                              if (!novasTestadas[selectedOperator]) novasTestadas[selectedOperator] = {};
-                              if (!novasTestadas[selectedOperator][selectedWeek]) novasTestadas[selectedOperator][selectedWeek] = {};
+                              // V5.10.16: Incluir ANO na estrutura
+                              if (!novasTestadas[selectedYear]) novasTestadas[selectedYear] = {};
+                              if (!novasTestadas[selectedYear][selectedOperator]) novasTestadas[selectedYear][selectedOperator] = {};
+                              if (!novasTestadas[selectedYear][selectedOperator][selectedWeek]) novasTestadas[selectedYear][selectedOperator][selectedWeek] = {};
                               
                               routesByPSM[selectedOperator]?.forEach(rota => {
-                                novasTestadas[selectedOperator][selectedWeek][rota] = {
+                                novasTestadas[selectedYear][selectedOperator][selectedWeek][rota] = {
                                   testada: true
                                 };
                               });
                               setRotasTestadas(novasTestadas);
-                              console.log('✅ Todas as rotas marcadas como testadas em', selectedWeek);
+                              console.log('✅ Todas as rotas marcadas como testadas em', selectedWeek, selectedYear);
                             }}
                             className="px-3 py-1.5 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors"
                           >
@@ -7244,19 +7322,21 @@ Gerado por: PSM Monitor v3.42.03
                           <button
                             onClick={() => {
                               const novasValidadas = { ...rotasValidadas };
-                              if (!novasValidadas[selectedOperator]) novasValidadas[selectedOperator] = {};
-                              if (!novasValidadas[selectedOperator][selectedWeek]) novasValidadas[selectedOperator][selectedWeek] = {};
+                              // V5.10.16: Incluir ANO na estrutura
+                              if (!novasValidadas[selectedYear]) novasValidadas[selectedYear] = {};
+                              if (!novasValidadas[selectedYear][selectedOperator]) novasValidadas[selectedYear][selectedOperator] = {};
+                              if (!novasValidadas[selectedYear][selectedOperator][selectedWeek]) novasValidadas[selectedYear][selectedOperator][selectedWeek] = {};
                               
                               routesByPSM[selectedOperator]?.forEach(rota => {
                                 // Só validar se estiver testada NESTA semana
                                 if (isRotaTestada(selectedOperator, selectedWeek, rota)) {
-                                  novasValidadas[selectedOperator][selectedWeek][rota] = {
+                                  novasValidadas[selectedYear][selectedOperator][selectedWeek][rota] = {
                                     validada: true
                                   };
                                 }
                               });
                               setRotasValidadas(novasValidadas);
-                              console.log('✅ Todas as rotas testadas em', selectedWeek, 'marcadas como validadas');
+                              console.log('✅ Todas as rotas testadas em', selectedWeek, selectedYear, 'marcadas como validadas');
                             }}
                             className="px-3 py-1.5 bg-green-600 text-white rounded text-sm hover:bg-green-700 transition-colors"
                           >
@@ -7609,7 +7689,7 @@ Gerado por: PSM Monitor v3.42.03
                         
                         // V5.09.1: Só contar até a semana selecionada
                         if (weekNum <= selectedWeekNum) {
-                          const distDaSemana = distribuicaoReparacoes[selectedOperator]?.[week]?.[route] || {};
+                          const distDaSemana = distribuicaoReparacoes[selectedYear]?.[selectedOperator]?.[week]?.[route] || {};
                           
                           // Somar reparadas de cada tipo (NOMES CORRETOS!)
                           depLicencaReparadas += parseInt(distDaSemana['Dep. de Licença']) || 0;
@@ -7769,7 +7849,7 @@ Gerado por: PSM Monitor v3.42.03
                           const weekNum = parseInt(week.substring(1));
                           const selectedWeekNum = parseInt(selectedWeek.substring(1));
                           if (weekNum <= selectedWeekNum) {
-                            const distDaSemana = distribuicaoReparacoes[psm]?.[week]?.[route] || {};
+                            const distDaSemana = distribuicaoReparacoes[selectedYear]?.[psm]?.[week]?.[route] || {};
                             fibrasPSMReparadas += parseInt(distDaSemana[`Fibras dependentes da ${psm}`]) || 0;
                           }
                         });
@@ -7946,7 +8026,7 @@ Gerado por: PSM Monitor v3.42.03
                         const weekNum = parseInt(week.substring(1));
                         const selectedWeekNum = parseInt(selectedWeek.substring(1));
                         if (weekNum <= selectedWeekNum) {
-                          const distDaSemana = distribuicaoReparacoes[selectedOperator]?.[week]?.[route] || {};
+                          const distDaSemana = distribuicaoReparacoes[selectedYear]?.[selectedOperator]?.[week]?.[route] || {};
                           fibrasPSMReparadas += parseInt(distDaSemana[`Fibras dependentes da ${selectedOperator}`]) || 0;
                         }
                       });
