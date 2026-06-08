@@ -100,7 +100,7 @@ const PSMMonitorApp = () => {
   // FASE 7: ESTRUTURA DE DADOS CENTRAL
   // ============================================================================
 
-  // QUARTER_CONFIG moved to src/config/quarterConfig.js
+  // QUARTER_CONFIG moved to src/config/QUARTER_CONFIG.js
 
   // Gerar array de semanas [W1, W2, ..., W52]
   // ALL_WEEKS moved to src/config/constants.js
@@ -395,8 +395,8 @@ useEffect(() => {
     if (!rotasTestadas[selectedYear]?.[psm]) return [];
     const semanas = [];
     const quarterWeeks = ALL_WEEKS.slice(
-      quarterConfig[quarter].start - 1,
-      quarterConfig[quarter].end
+      QUARTER_CONFIG[quarter].start - 1,
+      QUARTER_CONFIG[quarter].end
     );
     
     quarterWeeks.forEach(semana => {
@@ -412,8 +412,8 @@ useEffect(() => {
     if (!rotasValidadas[selectedYear]?.[psm]) return [];
     const semanas = [];
     const quarterWeeks = ALL_WEEKS.slice(
-      quarterConfig[quarter].start - 1,
-      quarterConfig[quarter].end
+      QUARTER_CONFIG[quarter].start - 1,
+      QUARTER_CONFIG[quarter].end
     );
     
     quarterWeeks.forEach(semana => {
@@ -520,8 +520,8 @@ useEffect(() => {
     
     // Obter semanas do quadrimestre
     const quarterWeeks = ALL_WEEKS.slice(
-      quarterConfig[selectedQuarter].start - 1,
-      quarterConfig[selectedQuarter].end
+      QUARTER_CONFIG[selectedQuarter].start - 1,
+      QUARTER_CONFIG[selectedQuarter].end
     );
     
     // v3.43.01: NOVA LÓGICA
@@ -653,8 +653,8 @@ useEffect(() => {
       const totalRotas = rotas.length;
       
       const quarterWeeks = ALL_WEEKS.slice(
-        quarterConfig[selectedQuarter].start - 1,
-        quarterConfig[selectedQuarter].end
+        QUARTER_CONFIG[selectedQuarter].start - 1,
+        QUARTER_CONFIG[selectedQuarter].end
       );
       
       // v3.43.02: NOVA LÓGICA (mesma do primeiro useEffect)
@@ -770,7 +770,7 @@ useEffect(() => {
   // v3.17.4: Resetar província quando PSM muda e província não pertence ao novo PSM
   useEffect(() => {
     if (selectedProvince !== 'Todas') {
-      const provincesOfOperator = operatorToProvinces[selectedOperator];
+      const provincesOfOperator = OPERATOR_TO_PROVINCES[selectedOperator];
       if (!provincesOfOperator.includes(selectedProvince)) {
         setSelectedProvince('Todas');
       }
@@ -779,7 +779,7 @@ useEffect(() => {
 
   // Sincronizar Week quando Quarter muda
   useEffect(() => {
-    const config = quarterConfig[selectedQuarter];
+    const config = QUARTER_CONFIG[selectedQuarter];
     const weekNumber = parseInt(selectedWeek.substring(1));
     
     // Se a semana atual não está no range do quadrimestre selecionado
@@ -791,7 +791,7 @@ useEffect(() => {
 
   // Função para obter semanas de um quadrimestre
   const getWeeksForQuarter = (quarter) => {
-    const config = quarterConfig[quarter];
+    const config = QUARTER_CONFIG[quarter];
     return Array.from(
       { length: config.weeks },
       (_, i) => `W${config.start + i}`
@@ -1434,7 +1434,7 @@ useEffect(() => {
             data,
             selectedQuarter,
             selectedYear, // ✅ Usar ano selecionado
-            routeToProvince,
+            ROUTE_TO_PROVINCE,
             rotasTestadas,  
             rotasValidadas  
           );
@@ -1736,8 +1736,8 @@ useEffect(() => {
       
       // Obter semanas do quadrimestre selecionado
       const quarterWeeks = ALL_WEEKS.slice(
-        quarterConfig[selectedQuarter].start - 1,
-        quarterConfig[selectedQuarter].end
+        QUARTER_CONFIG[selectedQuarter].start - 1,
+        QUARTER_CONFIG[selectedQuarter].end
       );
       
       // Iterar sobre PSM selecionado, semanas do quadrimestre e rotas
@@ -2301,7 +2301,7 @@ useEffect(() => {
           totalRoutes: Object.values(ROUTES_BY_PSM).reduce((acc, r) => acc + r.length, 0),
           psms: Object.keys(ROUTES_BY_PSM),
           weeks: ALL_WEEKS.length,
-          quarters: Object.keys(quarterConfig)
+          quarters: Object.keys(QUARTER_CONFIG)
         }
       };
       
@@ -2721,7 +2721,7 @@ useEffect(() => {
           
           // V5.07.1: Subtrair distribuição ACUMULADA (todas semanas até atual)
           const weekNum = parseInt(week.replace('W', ''), 10);
-          const trimestreAtual = quarterConfig[selectedQuarter];
+          const trimestreAtual = QUARTER_CONFIG[selectedQuarter];
           
           // Somar descontos de TODAS as semanas até a atual
           let descontoAcumuladoReconh = 0;
@@ -2929,7 +2929,7 @@ useEffect(() => {
     const weekNum = parseInt(week.replace('W', ''));
     
     // Determinar limites do trimestre atual
-    const trimestreAtual = quarterConfig[selectedQuarter];
+    const trimestreAtual = QUARTER_CONFIG[selectedQuarter];
     const semanaMinima = trimestreAtual.start;
     
     console.log(`🔍 Buscando ${tipo} em ${selectedQuarter} (W${semanaMinima}-W${weekNum-1})`);
@@ -2980,7 +2980,7 @@ useEffect(() => {
     
     // V5.10.16: SOMAR descontos APENAS do ANO SELECIONADO
     const weekNum = parseInt(week.replace('W', ''), 10);
-    const trimestreAtual = quarterConfig[selectedQuarter];
+    const trimestreAtual = QUARTER_CONFIG[selectedQuarter];
     
     let descontoAcumulado = 0;
     for (let w = trimestreAtual.start; w <= weekNum; w++) {
@@ -3012,13 +3012,13 @@ useEffect(() => {
   
   // v3.13.25: Obter semanas do quadrimestre SELECIONADO
   const quarterWeeks = ALL_WEEKS.slice(
-    quarterConfig[selectedQuarter].start - 1,
-    quarterConfig[selectedQuarter].end
+    QUARTER_CONFIG[selectedQuarter].start - 1,
+    QUARTER_CONFIG[selectedQuarter].end
   );
   
   // FASE 1 v3.17.0: Filtrar rotas por província se selecionada
   const routesToProcess = selectedProvince !== 'Todas'
-    ? ROUTES_BY_PSM[selectedOperator].filter(route => routeToProvince[route] === selectedProvince)
+    ? ROUTES_BY_PSM[selectedOperator].filter(route => ROUTE_TO_PROVINCE[route] === selectedProvince)
     : ROUTES_BY_PSM[selectedOperator];
   
   // v3.17.8: Log de debug
@@ -3230,7 +3230,7 @@ useEffect(() => {
     
     const provinciasParaMedia = selectedProvince !== 'Todas'
       ? [selectedProvince]
-      : operatorToProvinces[selectedOperator];
+      : OPERATOR_TO_PROVINCES[selectedOperator];
     
     let somatorioEfetGlobal = 0;
     let somatorioEfetPSM = 0;
@@ -3238,7 +3238,7 @@ useEffect(() => {
     let provinciasComDadosPSM = 0;
     
     provinciasParaMedia.forEach(prov => {
-      const rotasProv = routesToProcess.filter(route => routeToProvince[route] === prov);
+      const rotasProv = routesToProcess.filter(route => ROUTE_TO_PROVINCE[route] === prov);
       
       if (rotasProv.length === 0) return;
       
@@ -3545,13 +3545,13 @@ useEffect(() => {
 
     // Obter semanas do quadrimestre selecionado
     const quarterWeeks = ALL_WEEKS.slice(
-      quarterConfig[selectedQuarter].start - 1,
-      quarterConfig[selectedQuarter].end
+      QUARTER_CONFIG[selectedQuarter].start - 1,
+      QUARTER_CONFIG[selectedQuarter].end
     );
     
     // v3.18.0 FASE 2: Filtrar rotas por província
     const routesToProcess = selectedProvince !== 'Todas'
-      ? ROUTES_BY_PSM[selectedOperator].filter(route => routeToProvince[route] === selectedProvince)
+      ? ROUTES_BY_PSM[selectedOperator].filter(route => ROUTE_TO_PROVINCE[route] === selectedProvince)
       : ROUTES_BY_PSM[selectedOperator];
     
     console.log('📊 TOP 5 CRÍTICAS - Filtro Provincial:', {
@@ -3642,7 +3642,7 @@ useEffect(() => {
   const handleRotaClick = (rota) => {
 
     // Buscar últimos valores de cada status do quadrimestre
-    const quarterLimits = quarterConfig[selectedQuarter];
+    const quarterLimits = QUARTER_CONFIG[selectedQuarter];
     const stats = {};
     
     STATUS_CATEGORIES.forEach(status => {
@@ -3704,7 +3704,7 @@ useEffect(() => {
   
   const handleStatusClick = (statusLabel) => {
 
-    const quarterLimits = quarterConfig[selectedQuarter];
+    const quarterLimits = QUARTER_CONFIG[selectedQuarter];
     const routesDetail = [];
     
     // ✅ MAPEAMENTO CORRETO: Label do card → Chave nos dados
@@ -3808,8 +3808,8 @@ useEffect(() => {
 
     // v3.22.2: Obter apenas semanas ATÉ a semana selecionada (não incluir futuras)
     const quarterWeeks = ALL_WEEKS.slice(
-      quarterConfig[selectedQuarter].start - 1,
-      quarterConfig[selectedQuarter].end
+      QUARTER_CONFIG[selectedQuarter].start - 1,
+      QUARTER_CONFIG[selectedQuarter].end
     );
     
     // Filtrar apenas semanas até a selecionada
@@ -3828,7 +3828,7 @@ useEffect(() => {
     
     // v3.18.0 FASE 2: Filtrar rotas por província
     const routesToProcess = selectedProvince !== 'Todas'
-      ? ROUTES_BY_PSM[selectedOperator].filter(route => routeToProvince[route] === selectedProvince)
+      ? ROUTES_BY_PSM[selectedOperator].filter(route => ROUTE_TO_PROVINCE[route] === selectedProvince)
       : ROUTES_BY_PSM[selectedOperator];
 
     // Array para armazenar intervenções
@@ -3911,11 +3911,11 @@ useEffect(() => {
     console.log('🔄 FASE 14: Calculando Rotas Normalizadas (Critérios Corretos)...');
 
     // Definir limites do quadrimestre
-    const quarterLimits = quarterConfig[selectedQuarter];
+    const quarterLimits = QUARTER_CONFIG[selectedQuarter];
     
     // v3.18.0 FASE 2: Filtrar rotas por província
     const routesToProcess = selectedProvince !== 'Todas'
-      ? ROUTES_BY_PSM[selectedOperator].filter(route => routeToProvince[route] === selectedProvince)
+      ? ROUTES_BY_PSM[selectedOperator].filter(route => ROUTE_TO_PROVINCE[route] === selectedProvince)
       : ROUTES_BY_PSM[selectedOperator];
     
     // Array para armazenar rotas normalizadas
@@ -4121,13 +4121,13 @@ useEffect(() => {
     
     const alertasDetectados = [];
     const quarterWeeks = ALL_WEEKS.slice(
-      quarterConfig[selectedQuarter].start - 1,
-      quarterConfig[selectedQuarter].end
+      QUARTER_CONFIG[selectedQuarter].start - 1,
+      QUARTER_CONFIG[selectedQuarter].end
     );
     
     // Filtrar rotas por província se necessário
     const routesToCheck = selectedProvince !== 'Todas'
-      ? ROUTES_BY_PSM[selectedOperator].filter(route => routeToProvince[route] === selectedProvince)
+      ? ROUTES_BY_PSM[selectedOperator].filter(route => ROUTE_TO_PROVINCE[route] === selectedProvince)
       : ROUTES_BY_PSM[selectedOperator];
     
     console.log(`🔔 FASE 2: Verificando ${routesToCheck.length} rotas`);
@@ -4140,7 +4140,7 @@ useEffect(() => {
       let totalReparadasAcumulado = 0;
       const selectedWeekNum = parseInt(selectedWeek.substring(1));
       
-      for (let i = quarterConfig[selectedQuarter].start; i <= selectedWeekNum; i++) {
+      for (let i = QUARTER_CONFIG[selectedQuarter].start; i <= selectedWeekNum; i++) {
         const w = `W${i}`;
         const wData = data[selectedOperator]?.[w]?.[route];
         if (wData && wData['Total Reparadas']) {
@@ -4155,7 +4155,7 @@ useEffect(() => {
       let maiorIndisponiveis = null;
       let temIndisponiveisRegistrado = false;
       
-      for (let i = quarterConfig[selectedQuarter].start; i <= selectedWeekNum; i++) {
+      for (let i = QUARTER_CONFIG[selectedQuarter].start; i <= selectedWeekNum; i++) {
         const w = `W${i}`;
         const wData = data[selectedOperator]?.[w]?.[route];
         
@@ -4201,7 +4201,7 @@ useEffect(() => {
             id: alertaId,
             tipo: 'info',
             rota: route,
-            provincia: routeToProvince[route],
+            provincia: ROUTE_TO_PROVINCE[route],
             reparadasAcumulado: totalReparadasAcumulado,
             indisponiveis: maiorIndisponiveis,
             diferenca: totalReparadasAcumulado - maiorIndisponiveis,
@@ -4251,7 +4251,7 @@ useEffect(() => {
             id: alertaId,
             tipo: 'indisponivel-sem-explicacao',
             rota: route,
-            provincia: routeToProvince[route],
+            provincia: ROUTE_TO_PROVINCE[route],
             indisponiveis: indisponiveis,
             somaJustificativas: somaJustificativas,
             diferenca: diferenca,
@@ -4286,12 +4286,12 @@ useEffect(() => {
   // ============================================================================
   const rotasMaisIntervencionadas = useMemo(() => {
     const quarterWeeks = ALL_WEEKS.slice(
-      quarterConfig[selectedQuarter].start - 1,
-      quarterConfig[selectedQuarter].end
+      QUARTER_CONFIG[selectedQuarter].start - 1,
+      QUARTER_CONFIG[selectedQuarter].end
     );
     
     const routesToProcess = selectedProvince !== 'Todas'
-      ? ROUTES_BY_PSM[selectedOperator].filter(route => routeToProvince[route] === selectedProvince)
+      ? ROUTES_BY_PSM[selectedOperator].filter(route => ROUTE_TO_PROVINCE[route] === selectedProvince)
       : ROUTES_BY_PSM[selectedOperator];
     
     // Calcular total de reparadas por rota
@@ -4342,12 +4342,12 @@ useEffect(() => {
   // ============================================================================
   const rotasSemIntervencao = useMemo(() => {
     const quarterWeeks = ALL_WEEKS.slice(
-      quarterConfig[selectedQuarter].start - 1,
-      quarterConfig[selectedQuarter].end
+      QUARTER_CONFIG[selectedQuarter].start - 1,
+      QUARTER_CONFIG[selectedQuarter].end
     );
     
     const routesToProcess = selectedProvince !== 'Todas'
-      ? ROUTES_BY_PSM[selectedOperator].filter(route => routeToProvince[route] === selectedProvince)
+      ? ROUTES_BY_PSM[selectedOperator].filter(route => ROUTE_TO_PROVINCE[route] === selectedProvince)
       : ROUTES_BY_PSM[selectedOperator];
     
     // Encontrar rotas SEM reparadas
@@ -4625,8 +4625,8 @@ useEffect(() => {
 
     // Obter semanas do quadrimestre selecionado
     const quarterWeeks = ALL_WEEKS.slice(
-      quarterConfig[selectedQuarter].start - 1,
-      quarterConfig[selectedQuarter].end
+      QUARTER_CONFIG[selectedQuarter].start - 1,
+      QUARTER_CONFIG[selectedQuarter].end
     );
     
     // v3.40.76: Validação inicial
@@ -4637,7 +4637,7 @@ useEffect(() => {
     
     // v3.19.0 FASE 3: Filtrar rotas por província
     const routesToProcess = selectedProvince !== 'Todas'
-      ? ROUTES_BY_PSM[selectedOperator].filter(route => routeToProvince[route] === selectedProvince)
+      ? ROUTES_BY_PSM[selectedOperator].filter(route => ROUTE_TO_PROVINCE[route] === selectedProvince)
       : ROUTES_BY_PSM[selectedOperator];
     
     console.log('📊 EVOLUÇÃO TEMPORAL - Filtro Provincial:', {
@@ -4779,13 +4779,13 @@ useEffect(() => {
 
     // v3.13.25: Obter semanas do quadrimestre SELECIONADO
     const quarterWeeks = ALL_WEEKS.slice(
-      quarterConfig[selectedQuarter].start - 1,
-      quarterConfig[selectedQuarter].end
+      QUARTER_CONFIG[selectedQuarter].start - 1,
+      QUARTER_CONFIG[selectedQuarter].end
     );
     
     // v3.19.0 FASE 3: Filtrar rotas por província
     const routesToProcess = selectedProvince !== 'Todas'
-      ? ROUTES_BY_PSM[selectedOperator].filter(route => routeToProvince[route] === selectedProvince)
+      ? ROUTES_BY_PSM[selectedOperator].filter(route => ROUTE_TO_PROVINCE[route] === selectedProvince)
       : ROUTES_BY_PSM[selectedOperator];
     
     console.log('📊 DISTRIBUIÇÃO POR STATUS - Filtro Provincial:', {
@@ -5250,7 +5250,7 @@ useEffect(() => {
                         
                         // Rotas a processar (com filtro de província se aplicável)
                         const routesToProcess = selectedProvince !== 'Todas'
-                          ? ROUTES_BY_PSM[selectedOperator].filter(route => routeToProvince[route] === selectedProvince)
+                          ? ROUTES_BY_PSM[selectedOperator].filter(route => ROUTE_TO_PROVINCE[route] === selectedProvince)
                           : ROUTES_BY_PSM[selectedOperator];
                         
                         // Percorrer todas as rotas e semanas do quarter
@@ -5551,7 +5551,7 @@ useEffect(() => {
                         let percentagemReparadas = 0;
                         
                         if (selectedStatusDrilldown.label.includes('Indisponíveis')) {
-                          const quarterLimits = quarterConfig[selectedQuarter];
+                          const quarterLimits = QUARTER_CONFIG[selectedQuarter];
                           for (let i = quarterLimits.start; i <= quarterLimits.end; i++) {
                             const week = 'W' + i;
                             const val = data[selectedOperator]?.[week]?.[rota.rota]?.['Total Reparadas'];
@@ -5888,7 +5888,7 @@ useEffect(() => {
                       
                       if (selectedStatusDrilldown.label === 'Indisponíveis' || selectedStatusDrilldown.label.includes('Indisponíveis')) {
                         // Buscar total de reparadas para esta rota no quarter
-                        const quarterLimits = quarterConfig[selectedQuarter];
+                        const quarterLimits = QUARTER_CONFIG[selectedQuarter];
                         for (let i = quarterLimits.start; i <= quarterLimits.end; i++) {
                           const week = 'W' + i;
                           const val = data[selectedOperator]?.[week]?.[rota.rota]?.['Total Reparadas'];
@@ -6217,7 +6217,7 @@ useEffect(() => {
                 className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
               >
                 <option value="Todas">Todas as Províncias</option>
-                {operatorToProvinces[selectedOperator].map(prov => (
+                {OPERATOR_TO_PROVINCES[selectedOperator].map(prov => (
                   <option key={prov} value={prov}>{prov}</option>
                 ))}
               </select>
@@ -7394,7 +7394,7 @@ Gerado por: PSM Monitor v3.42.03
                     
                     // Rotas a processar (com filtro de província se aplicável)
                     const routesToProcess = selectedProvince !== 'Todas'
-                      ? ROUTES_BY_PSM[selectedOperator].filter(route => routeToProvince[route] === selectedProvince)
+                      ? ROUTES_BY_PSM[selectedOperator].filter(route => ROUTE_TO_PROVINCE[route] === selectedProvince)
                       : ROUTES_BY_PSM[selectedOperator];
                     
                     // Percorrer todas as rotas e semanas do quarter
@@ -7594,7 +7594,7 @@ Gerado por: PSM Monitor v3.42.03
                     // MODO PSM: Calcular por PROVÍNCIA (código original)
                     const provinciasParaCalcular = selectedProvince !== 'Todas'
                       ? [selectedProvince]
-                      : operatorToProvinces[selectedOperator];
+                      : OPERATOR_TO_PROVINCES[selectedOperator];
                     
                     console.log('🗺️ CARDS MODO PSM - Calculando por Província');
                     console.log('  PSM:', selectedOperator);
@@ -7602,7 +7602,7 @@ Gerado por: PSM Monitor v3.42.03
                     console.log('  Províncias a calcular:', provinciasParaCalcular);
                     
                     entidadesDados = provinciasParaCalcular.map(prov => {
-                    const rotasProv = ROUTES_BY_PSM[selectedOperator].filter(route => routeToProvince[route] === prov);
+                    const rotasProv = ROUTES_BY_PSM[selectedOperator].filter(route => ROUTE_TO_PROVINCE[route] === prov);
                     
                     console.log(`  📍 ${prov}:`);
                     console.log(`     Total rotas: ${rotasProv.length}`);
@@ -7855,9 +7855,9 @@ Gerado por: PSM Monitor v3.42.03
                         <div className="flex justify-center items-center">
                           {(() => {
                             // CALCULAR TOTAL DE TODAS AS PROVÍNCIAS DO PSM (não só as filtradas)
-                            const todasProvinciasPSM = operatorToProvinces[selectedOperator];
+                            const todasProvinciasPSM = OPERATOR_TO_PROVINCES[selectedOperator];
                             const totalGeralIndisponiveis = todasProvinciasPSM.reduce((sum, prov) => {
-                              const rotasProv = ROUTES_BY_PSM[selectedOperator].filter(route => routeToProvince[route] === prov);
+                              const rotasProv = ROUTES_BY_PSM[selectedOperator].filter(route => ROUTE_TO_PROVINCE[route] === prov);
                               let indisponiveisProvTotal = 0;
                               
                               rotasProv.forEach(route => {
@@ -8546,7 +8546,7 @@ Gerado por: PSM Monitor v3.42.03
                     {(() => {
                       // v3.20.5: Calcular intervenções e reparações das 2 últimas semanas
                       const routesToProcess = selectedProvince !== 'Todas'
-                        ? ROUTES_BY_PSM[selectedOperator].filter(route => routeToProvince[route] === selectedProvince)
+                        ? ROUTES_BY_PSM[selectedOperator].filter(route => ROUTE_TO_PROVINCE[route] === selectedProvince)
                         : ROUTES_BY_PSM[selectedOperator];
                       
                       // Semana atual - contar intervenções e total de reparações
@@ -9763,8 +9763,8 @@ Gerado por: PSM Monitor v3.42.03
                   .map(rota => {
                     // Encontrar primeira semana com dados para esta rota no quadrimestre
                     const quarterWeeks = ALL_WEEKS.slice(
-                      quarterConfig[selectedQuarter].start - 1,
-                      quarterConfig[selectedQuarter].end
+                      QUARTER_CONFIG[selectedQuarter].start - 1,
+                      QUARTER_CONFIG[selectedQuarter].end
                     );
                     
                     let primeiraSemanaDados = null;
@@ -9849,7 +9849,7 @@ Gerado por: PSM Monitor v3.42.03
                   .filter(r => r !== null) // Remover rotas sem dados até semana selecionada
                   .filter(r => (r.transporte + r.indisponiveis + r.totalReparadas + r.reconhecidas + r.depPassagem + r.depLicenca + r.depCutover + r.fibrasDep) > 0)
                   // v3.20.0 FASE 4: Filtrar por província ANTES da classificação (afeta DADOS GERAIS)
-                  .filter(r => selectedProvince === 'Todas' || routeToProvince[r.rota] === selectedProvince);
+                  .filter(r => selectedProvince === 'Todas' || ROUTE_TO_PROVINCE[r.rota] === selectedProvince);
                 
                 console.log('📊 GRÁFICOS POR CLASSIFICAÇÃO - Acumulado desde introdução:', {
                   provincia: selectedProvince,
@@ -9875,17 +9875,17 @@ Gerado por: PSM Monitor v3.42.03
                 const renderProvincialDashboard = () => {
                   if (selectedProvince === 'Todas') return null;
                   
-                  const rotasProvincia = Object.entries(routeToProvince)
+                  const rotasProvincia = Object.entries(ROUTE_TO_PROVINCE)
                     .filter(([_, prov]) => prov === selectedProvince)
                     .map(([rota]) => rota);
                   
-                  const rotasDegradadasProv = routesData.filter(r => r.transporte < r.indisponiveis && routeToProvince[r.rota] === selectedProvince);
-                  const rotasGanhoProv = routesData.filter(r => r.transporte > r.indisponiveis && routeToProvince[r.rota] === selectedProvince);
-                  const rotasEstaveisProv = routesData.filter(r => r.transporte === r.indisponiveis && routeToProvince[r.rota] === selectedProvince);
+                  const rotasDegradadasProv = routesData.filter(r => r.transporte < r.indisponiveis && ROUTE_TO_PROVINCE[r.rota] === selectedProvince);
+                  const rotasGanhoProv = routesData.filter(r => r.transporte > r.indisponiveis && ROUTE_TO_PROVINCE[r.rota] === selectedProvince);
+                  const rotasEstaveisProv = routesData.filter(r => r.transporte === r.indisponiveis && ROUTE_TO_PROVINCE[r.rota] === selectedProvince);
                   
-                  const totalTransporte = routesData.filter(r => routeToProvince[r.rota] === selectedProvince).reduce((sum, r) => sum + r.transporte, 0);
-                  const totalIndisponiveis = routesData.filter(r => routeToProvince[r.rota] === selectedProvince).reduce((sum, r) => sum + r.indisponiveis, 0);
-                  const totalReparadas = routesData.filter(r => routeToProvince[r.rota] === selectedProvince).reduce((sum, r) => sum + r.totalReparadas, 0);
+                  const totalTransporte = routesData.filter(r => ROUTE_TO_PROVINCE[r.rota] === selectedProvince).reduce((sum, r) => sum + r.transporte, 0);
+                  const totalIndisponiveis = routesData.filter(r => ROUTE_TO_PROVINCE[r.rota] === selectedProvince).reduce((sum, r) => sum + r.indisponiveis, 0);
+                  const totalReparadas = routesData.filter(r => ROUTE_TO_PROVINCE[r.rota] === selectedProvince).reduce((sum, r) => sum + r.totalReparadas, 0);
                   const totalGeral = totalTransporte + totalIndisponiveis + totalReparadas;
                   
                   return (
