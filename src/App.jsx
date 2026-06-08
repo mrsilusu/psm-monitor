@@ -4,6 +4,11 @@ import { BarChart3, TrendingUp, Users, AlertTriangle, CheckCircle, XCircle, Cloc
 import { lerTudoDoSupabase, salvarTudoNoSupabase, salvarJustificativasNoSupabase, lerJustificativasDoSupabase } from './services/supabaseService';
 import { salvarDistribuicaoNoSupabase, carregarDistribuicaoDoSupabase, limparDistribuicaoNoSupabase } from './services/supabaseDistribuicaoService';
 
+import { CURRENT_DATA_VERSION, ALL_WEEKS, STATUS_CATEGORIES } from './config/constants';
+import { QUARTER_CONFIG } from './config/quarterConfig';
+import { ROUTES_BY_PSM } from './config/routeConfig';
+import { ROUTE_TO_PROVINCE, PROVINCE_TO_OPERATOR, OPERATOR_TO_PROVINCES } from './config/provinceConfig';
+
 const PSMMonitorApp = () => {
   console.log("🚀 PSM Monitor 5.10.19 - FIX CRÍTICO: Salva apenas no Quarter correto da semana! ✅");
   
@@ -15,7 +20,7 @@ const PSMMonitorApp = () => {
    * VERSÃO ATUAL DO SCHEMA DE DADOS
    * Incrementar quando houver mudanças incompatíveis
    */
-  const CURRENT_DATA_VERSION = 2; // V5.08.19: Versão 2
+  // CURRENT_DATA_VERSION moved to src/config/constants.js
   
   /**
    * Função para limpar localStorage corrompido ou antigo
@@ -83,195 +88,25 @@ const PSMMonitorApp = () => {
     }
   }, []); // Executar apenas uma vez no mount
   
-  // ============================================================================
-  // MAPEAMENTO DE ROTAS PARA PROVÍNCIAS
-  // ============================================================================
-  const routeToProvince = {
-    // CABINDA (17 rotas - ISISTEL)
-    'BSC_Cabinda - Quatro': 'Cabinda',
-    'BSC_Cabinda - Resistencia (Cabo_1)': 'Cabinda',
-    'BSC_Cabinda - Resistencia (Cabo_2)': 'Cabinda',
-    'Cine_Popular - BSC_Cabinda': 'Cabinda',
-    'Corda_Expansão_Cabassango': 'Cabinda',
-    'Hoji_Cacongo - Belize': 'Cabinda',
-    'Hoji_Cacongo - Massabe_Fronteira': 'Cabinda',
-    'Lucola - Hoji_Cacongo': 'Cabinda',
-    'Lucola - Tchizu_O': 'Cabinda',
-    'Massabi_Fronteira - Belize': 'Cabinda',
-    'PV_Grande_NT - Tchizu_O': 'Cabinda',
-    'PV_Grande_NT - Yema_Fronteira': 'Cabinda',
-    'Quatro - PV_Grande_NT': 'Cabinda',
-    'Quatro - Tchizu_O': 'Cabinda',
-    'Resistencia - Cine_Popular': 'Cabinda',
-    'Resistencia - Lucola': 'Cabinda',
-    'Tchizu_O - Cine_Popular': 'Cabinda',
-    
-    // ZAIRE (v3.40.0: 22 rotas - nomes padronizados)
-    'Mucula - Soyo': 'Zaire',
-    'Nzeto - Mucula': 'Zaire',
-    'Nzeto - Soyo': 'Zaire',
-    'Ambriz - N\'zeto': 'Zaire',
-    'Lucenga - Mucula': 'Zaire',
-    'Mbanza Congo - Noqui': 'Zaire',
-    'Cuimba - Nguabi': 'Zaire',
-    'Mbaza Centro - Cuimba': 'Zaire',
-    'Tomboco - Lussenga': 'Zaire',
-    'Tomboco - Mbanza Congo': 'Zaire',
-    'Nzeto - Lussenga': 'Zaire',
-    'Mbanza Congo_Sul - BSC ODF 3 (11 de Novembro)': 'Zaire',
-    'Mbanza Congo_Sul - BSC ODF 4': 'Zaire',
-    'Kimbumba - Soyo_Centro': 'Zaire',
-    'Kwanda_DCS - Kwanda_O': 'Zaire',
-    'Kwanda_DCS - Porto': 'Zaire',
-    'Kwanda_DCS - Loja': 'Zaire',
-    'Kwanda_O - Loja': 'Zaire',
-    'Kwanda_O - Porto': 'Zaire',
-    'Kwanda_DCS- ODFB1- JFO(288)ALNG': 'Zaire',
-    'Kwanada_O (ODFB2)- JFO11 Porto': 'Zaire',
-    'Kwanda_O (ODFB3)- JFO(288)- Azul Energi': 'Zaire',
-    
-    // UÍGE
-    'Kimbundo - Uige (Inca)': 'Uíge',
-    'Muquiama - Kimbundo': 'Uíge',
-    'Nguabi - Damba': 'Uíge',
-    'Damba - Uige(Negage_CRT)': 'Uíge',
-    'Negage - Camabatela': 'Uíge',
-    'Uíge - Negage': 'Uíge',
-    'Camabatela - Lucala': 'Uíge',
-    'Uíge_CTR - Unipop_Oeste ODF 2': 'Uíge',
-    'Uíge_CTR - Unipop_Oeste ODF 1': 'Uíge',
-    
-    // MALANGE (v3.38.0: Nomes padronizados com routesByPSM.FIBRASOL)
-    'Malange (Vila Matilde) - Mulo': 'Malanje',
-    'Mulo - Cuango': 'Malanje',
-    'Mussende - Malange (Catepa)': 'Malanje',
-    'Calucinga - Mussende': 'Malanje',
-    'Malange (Lumbo) - Lucala': 'Malanje',
-    'BSC_Malange - Canambua': 'Malanje',
-    'Hospital - Lumbo': 'Malanje',
-    'Malange_CTR - Lumbo e Bsc': 'Malanje',
-    'Lumbo - BSC_Malange': 'Malanje',
-    'Canambua - Vila_Matilde': 'Malanje',
-    'Vila_Matilde - Hospital': 'Malanje',
-    'Maxinde (Expansão) - Lumbo': 'Malanje',
-    'Maxinde (Expansão) - BSC': 'Malanje',
-    
-    // CUANZA NORTE (v3.40.1: 7 rotas - conforme imagem de referência)
-    'Maria teresa Gulungo_Alto - Nadalatando': 'Cuanza Norte',
-    'Alto Dondo - Quibala': 'Cuanza Norte',
-    'Ndalatando - Alto_Dondo': 'Cuanza Norte',
-    'Lucala - Ndalatando': 'Cuanza Norte',
-    'Ndala Norte - Ndala_Leste': 'Cuanza Norte',
-    'Ndala Norte - KN_Azul': 'Cuanza Norte',
-    'Ndala_CTR(BSC Ndalatando) - KN_Azul': 'Cuanza Norte',
-    
-    // v3.35.0: CUANGO transferido para MALANJE (conforme imagem de referência)
-    'Cuango - Cafunfo': 'Malanje',
-    'Cuango - Caungula': 'Malanje',
-    
-    // LUNDA NORTE
-    'Aeroporto - Estadio': 'Lunda Norte',
-    'Cambacumba - Dundo': 'Lunda Norte',
-    'Camissombo (Lucapa) - Dundo': 'Lunda Norte',
-    'Caungula - Cuilo': 'Lunda Norte',
-    'Chitato - Luachimo': 'Lunda Norte',
-    'Cuilo - Cambacumba': 'Lunda Norte',
-    'Dundo_CRT - Dundo_Norte': 'Lunda Norte',
-    'Dundo_CRT - Samanhonga': 'Lunda Norte',
-    'Dundo_CRT ODF1 - Dundo_CRT ODF2': 'Lunda Norte',
-    'Dundo_Norte - Chitato': 'Lunda Norte',
-    'Estadio - Loja_Dundo': 'Lunda Norte',
-    'Loja_Dundo - Dundo_CRT': 'Lunda Norte',
-    'Luachimo - Dundo_CRT': 'Lunda Norte',
-    'Lucapa - Dundo': 'Lunda Norte',
-    'Samanhonga - Aeroporto': 'Lunda Norte',
-    
-    // LUNDA SUL
-    'Cazombo -- Karipande': 'Lunda Sul',
-    'Cazombo - Karipande': 'Lunda Sul',
-    'Dala - Saurimo': 'Lunda Sul',
-    'Luau -- Massibi': 'Lunda Sul',
-    'Luau - Massibi': 'Lunda Sul',
-    'Massibi -- Cazombo': 'Lunda Sul',
-    'Massibi - Cazombo': 'Lunda Sul',
-    'Muconda -- Luau': 'Lunda Sul',
-    'Muconda - Luau': 'Lunda Sul',
-    'Neto - Santo Antonio': 'Lunda Sul',
-    'Neto - Terra_Nova (Saurimo_Sul)': 'Lunda Sul',
-    'Santo Antonio - Terra Nova': 'Lunda Sul',
-    'Saurimo - Muconda': 'Lunda Sul',
-    'Saurimo - Lucapa (Camissombo)': 'Lunda Sul',
-    'Saurimo - Dala': 'Lunda Sul',
-    'Saurimo(Br_Muconda) - Muconda': 'Lunda Sul',
-    'Saurimo Norte -- IEIA': 'Lunda Sul',
-    'Saurimo_CRT - IEIA': 'Lunda Sul',
-    'Saurimo_Norte - Neto': 'Lunda Sul',
-    'Stº António - Saurimo_sul': 'Lunda Sul',
-    'Terra_Nova - Saurimo_CRT': 'Lunda Sul',
-    
-    // MOXICO
-    'Br_Capango_Sul - Sacalunda': 'Moxico',
-    'Cangumbe - Luena': 'Moxico',
-    'Cuemba - Cangumbe': 'Moxico',
-    'Dom_Bosco - Luena_CTR': 'Moxico',
-    'Lucusse - Lutembo': 'Moxico',
-    'Luena - Dala': 'Moxico',
-    'Luena - Lucusse': 'Moxico',
-    'Luena_CTR - Luena_Largo': 'Moxico',
-    'Luena_Largo - Zorro': 'Moxico',
-    'Lumbala Nguimbo - Ninda': 'Moxico',
-    'Lutembo - Lumbala Nguimbo': 'Moxico',
-    'Ninda - Malundo': 'Moxico',
-    'Sacalunda - Dom_Bosco': 'Moxico',
-    'Zorro - Br_Capango_Sul': 'Moxico'
-  };
+  // ROUTE_TO_PROVINCE moved to src/config/provinceConfig.js
   
-  // MAPEAMENTO DE PROVÍNCIA PARA PSM
-  // v3.37.0: Lunda Norte agora é exclusiva da ANGLOBAL
-  const provinceToOperator = {
-    'Cabinda': 'ISISTEL',
-    'Zaire': 'FIBRASOL',
-    'Uíge': 'FIBRASOL',
-    'Malange': 'FIBRASOL',
-    'Cuanza Norte': 'FIBRASOL',
-    'Lunda Norte': 'ANGLOBAL',
-    'Lunda Sul': 'ANGLOBAL',
-    'Moxico': 'ANGLOBAL'
-  };
+  // PROVINCE_TO_OPERATOR moved to src/config/provinceConfig.js
   
   // MAPEAMENTO DE PSM PARA PROVÍNCIAS DISPONÍVEIS
   // v3.37.0: Lunda Norte REMOVIDA da FIBRASOL (Cuango está em Malanje)
-  const operatorToProvinces = {
-    'ISISTEL': ['Cabinda'],
-    'FIBRASOL': ['Zaire', 'Uíge', 'Malanje', 'Cuanza Norte'],
-    'ANGLOBAL': ['Lunda Norte', 'Lunda Sul', 'Moxico']
-  };
+  // OPERATOR_TO_PROVINCES moved to src/config/provinceConfig.js
   
   // ============================================================================
   // FASE 7: ESTRUTURA DE DADOS CENTRAL
   // ============================================================================
 
-  // Configuração de quadrimestres
-  const quarterConfig = {
-    Q1: { start: 1, end: 18, weeks: 18 },   // W1-W18
-    Q2: { start: 19, end: 35, weeks: 17 },  // W19-W35
-    Q3: { start: 36, end: 52, weeks: 17 }   // W36-W52
-  };
+  // QUARTER_CONFIG moved to src/config/quarterConfig.js
 
   // Gerar array de semanas [W1, W2, ..., W52]
-  const allWeeks = Array.from({ length: 52 }, (_, i) => `W${i + 1}`);
+  // ALL_WEEKS moved to src/config/constants.js
 
   // Definição das 8 categorias de status
-  const statusCategories = [
-    'Transporte',
-    'Indisponíveis',
-    'Total Reparadas',
-    'Reconhecidas',
-    'Dep. de Passagem de Cabo',
-    'Dep. de Licença',
-    'Dep. de Cutover',
-    'Fibras Dependentes' // Será "Fibras dependentes da [PSM]"
-  ];
+  // STATUS_CATEGORIES moved to src/config/constants.js
 
   // Definição das rotas por PSM (Total: 104 rotas)
   const routesByPSM = {
