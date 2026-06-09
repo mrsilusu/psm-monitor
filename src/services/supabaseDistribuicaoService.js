@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase';
+import { supabase } from './supabaseClient.js';
 
 /**
  * V5.08.2: Salvar distribuição de reparações no Supabase (OTIMIZADO)

@@ -3,11 +3,19 @@ import { BarChart3, TrendingUp, Users, AlertTriangle, CheckCircle, XCircle, Cloc
 
 import { lerTudoDoSupabase, salvarTudoNoSupabase, salvarJustificativasNoSupabase, lerJustificativasDoSupabase } from './services/supabaseService';
 import { salvarDistribuicaoNoSupabase, carregarDistribuicaoDoSupabase, limparDistribuicaoNoSupabase } from './services/supabaseDistribuicaoService';
+import { cleanupOldData } from './services/localStorageService';
 
 import { CURRENT_DATA_VERSION, ALL_WEEKS, STATUS_CATEGORIES } from './config/constants';
 import { QUARTER_CONFIG } from './config/quarterConfig';
 import { ROUTES_BY_PSM } from './config/routeConfig';
 import { ROUTE_TO_PROVINCE, PROVINCE_TO_OPERATOR, OPERATOR_TO_PROVINCES } from './config/provinceConfig';
+import { getQuarterFromWeek, getWeeksForQuarter, getQuarterAnterior } from './utils/dateUtils.js';
+import { isValidNumericInput } from './utils/validators.js';
+import { formatPercentage, formatNumber, formatWeekLabel, formatQuarterLabel } from './utils/formatters.js';
+import { buscarValorAnterior as buscarValorAnteriorUtil, getValorReduzido as getValorReduzidoUtil, getValorOriginal as getValorOriginalUtil } from './utils/valueUtils.js';
+import { findPSMForRoute as findPSMForRouteUtil, isRotaTestada as isRotaTestadaUtil, isRotaValidada as isRotaValidadaUtil, getSemanasTestadasNoQuarter as getSemanasTestadasNoQuarterUtil, getSemanasValidadasNoQuarter as getSemanasValidadasNoQuarterUtil, getSemanasTestadas as getSemanasTestadasUtil, getSemanasValidadas as getSemanasValidadasUtil, isRotaTestadaGlobalNoQuarter as isRotaTestadaGlobalNoQuarterUtil, isRotaValidadaGlobalNoQuarter as isRotaValidadaGlobalNoQuarterUtil, isRotaTestadaGlobal as isRotaTestadaGlobalUtil, isRotaValidadaGlobal as isRotaValidadaGlobalUtil, isRotaValidadaNoQuarter as isRotaValidadaNoQuarterUtil, isRotaTestadaNoQuarter as isRotaTestadaNoQuarterUtil } from './utils/routeUtils.js';
+import { calcularNovoEstadoFibras } from './utils/fibraLogic.js';
+import { buildBackupJSON, buildJustificativasCSV, downloadFile, parseCSVText } from './utils/exportImport.js';
 
 const PSMMonitorApp = () => {
   console.log("🚀 PSM Monitor 5.10.19 - FIX CRÍTICO: Salva apenas no Quarter correto da semana! ✅");
@@ -26,58 +34,11 @@ const PSMMonitorApp = () => {
    * Função para limpar localStorage corrompido ou antigo
    * Executada UMA VEZ ao carregar o app
    */
-  const cleanupLocalStorage = () => {
-    try {
-      // 1. Verificar versão salva
-      const savedVersion = localStorage.getItem('psm_data_version');
-      const versionNumber = savedVersion ? parseInt(savedVersion, 10) : 0;
-      
-      console.log(`🔍 [CLEANUP] Versão localStorage: ${versionNumber}, Versão atual: ${CURRENT_DATA_VERSION}`);
-      
-      // 2. Se versão antiga ou não existe, LIMPAR
-      if (versionNumber < CURRENT_DATA_VERSION) {
-        console.log('🧹 [CLEANUP] Limpando localStorage antigo...');
-        
-        // Lista de keys antigas que podem estar corrompidas
-        const keysToClean = [
-          'psm_distribuicao_reparacoes',     // Versão antiga (sem _v1)
-          'psm_distribuicao_reparacoes_v1',  // Pode estar corrompida
-          'psm_rotas_data_v2',                // Versões antigas de dados
-          'psm_rotas_data_v3',
-          'psm_justificativas',               // Versão antiga
-          'psm_justificativas_v1',
-        ];
-        
-        keysToClean.forEach(key => {
-          if (localStorage.getItem(key)) {
-            console.log(`🗑️ [CLEANUP] Removendo: ${key}`);
-            localStorage.removeItem(key);
-          }
-        });
-        
-        // 3. Salvar nova versão
-        localStorage.setItem('psm_data_version', CURRENT_DATA_VERSION.toString());
-        console.log('✅ [CLEANUP] localStorage limpo e atualizado para versão', CURRENT_DATA_VERSION);
-        
-        // 4. Mostrar notificação ao usuário (opcional)
-        console.log('ℹ️ [CLEANUP] Dados locais foram atualizados. Tudo será recarregado do servidor.');
-        
-        return true; // Limpeza foi feita
-      } else {
-        console.log('✅ [CLEANUP] localStorage já está na versão atual');
-        return false; // Não foi necessário limpar
-      }
-    } catch (error) {
-      console.error('❌ [CLEANUP] Erro ao limpar localStorage:', error);
-      return false;
-    }
-  };
-  
   // Executar limpeza UMA VEZ ao montar o componente
   // ANTES de inicializar qualquer estado
   React.useEffect(() => {
-    const wasCleanedUp = cleanupLocalStorage();
-    
+    const wasCleanedUp = cleanupOldData();
+
     if (wasCleanedUp) {
       // Se foi limpo, forçar reload para carregar dados frescos do Supabase
       console.log('🔄 [CLEANUP] Recarregando página para aplicar mudanças...');
@@ -367,112 +328,41 @@ useEffect(() => {
     return () => window.removeEventListener('resize', checkMobileDevice);
   }, []);
   
-  // v3.48.02: Função para obter quarter de uma semana
-  const getQuarterFromWeek = (week) => {
-    const weekNum = parseInt(week.substring(1));
-    if (weekNum >= 1 && weekNum <= 18) return 'Q1';
-    if (weekNum >= 19 && weekNum <= 35) return 'Q2';
-    if (weekNum >= 36 && weekNum <= 52) return 'Q3';
-    return 'Q1';
-  };
-  
-  // v3.48.02: FUNÇÕES AUXILIARES - Validação POR SEMANA E QUARTER
-  // Estrutura: { PSM: { semana: { rota: { testada: true } } } }
-  
-  const isRotaTestada = (psm, semana, rota) => {
-    // V5.10.16: Filtrar por ANO selecionado
-    return rotasTestadas[selectedYear]?.[psm]?.[semana]?.[rota]?.testada === true;
-  };
-  
-  const isRotaValidada = (psm, semana, rota) => {
-    // V5.10.16: Filtrar por ANO selecionado
-    return rotasValidadas[selectedYear]?.[psm]?.[semana]?.[rota]?.validada === true;
-  };
-  
-  // v3.48.02: Obter semanas testadas/validadas NO QUARTER SELECIONADO
-  const getSemanasTestadasNoQuarter = (psm, rota, quarter) => {
-    // V5.10.16: Filtrar por ANO selecionado
-    if (!rotasTestadas[selectedYear]?.[psm]) return [];
-    const semanas = [];
-    const quarterWeeks = ALL_WEEKS.slice(
-      QUARTER_CONFIG[quarter].start - 1,
-      QUARTER_CONFIG[quarter].end
-    );
-    
-    quarterWeeks.forEach(semana => {
-      if (rotasTestadas[selectedYear][psm][semana]?.[rota]?.testada === true) {
-        semanas.push(semana);
-      }
-    });
-    return semanas.sort();
-  };
-  
-  const getSemanasValidadasNoQuarter = (psm, rota, quarter) => {
-    // V5.10.16: Filtrar por ANO selecionado
-    if (!rotasValidadas[selectedYear]?.[psm]) return [];
-    const semanas = [];
-    const quarterWeeks = ALL_WEEKS.slice(
-      QUARTER_CONFIG[quarter].start - 1,
-      QUARTER_CONFIG[quarter].end
-    );
-    
-    quarterWeeks.forEach(semana => {
-      if (rotasValidadas[selectedYear][psm][semana]?.[rota]?.validada === true) {
-        semanas.push(semana);
-      }
-    });
-    return semanas.sort();
-  };
-  
-  const getSemanasTestadas = (psm, rota) => {
-    if (!rotasTestadas[psm]) return [];
-    const semanas = [];
-    Object.keys(rotasTestadas[psm]).forEach(semana => {
-      if (rotasTestadas[psm][semana][rota]?.testada === true) {
-        semanas.push(semana);
-      }
-    });
-    return semanas.sort();
-  };
-  
-  const getSemanasValidadas = (psm, rota) => {
-    if (!rotasValidadas[psm]) return [];
-    const semanas = [];
-    Object.keys(rotasValidadas[psm]).forEach(semana => {
-      if (rotasValidadas[psm][semana][rota]?.validada === true) {
-        semanas.push(semana);
-      }
-    });
-    return semanas.sort();
-  };
-  
-  // v3.48.02: Verificar se rota foi testada/validada em QUALQUER semana DO QUARTER
-  const isRotaTestadaGlobalNoQuarter = (psm, rota, quarter) => {
-    return getSemanasTestadasNoQuarter(psm, rota, quarter).length > 0;
-  };
-  
-  const isRotaValidadaGlobalNoQuarter = (psm, rota, quarter) => {
-    return getSemanasValidadasNoQuarter(psm, rota, quarter).length > 0;
-  };
-  
-  const isRotaTestadaGlobal = (psm, rota) => {
-    return getSemanasTestadas(psm, rota).length > 0;
-  };
-  
-  const isRotaValidadaGlobal = (psm, rota) => {
-    return getSemanasValidadas(psm, rota).length > 0;
-  };
-  
-  // v3.48.03: Verificar se rota foi validada em QUALQUER semana do quarter (status persiste)
-  const isRotaValidadaNoQuarter = (psm, rota, quarter) => {
-    const semanasValidadas = getSemanasValidadasNoQuarter(psm, rota, quarter);
-    return semanasValidadas.length > 0;
-  };
-  
-  const isRotaTestadaNoQuarter = (psm, rota, quarter) => {
-    const semanasTestadas = getSemanasTestadasNoQuarter(psm, rota, quarter);
-    return semanasTestadas.length > 0;
-  };
+  const isRotaTestada = (psm, semana, rota) =>
+    isRotaTestadaUtil(rotasTestadas, selectedYear, psm, semana, rota);
+
+  const isRotaValidada = (psm, semana, rota) =>
+    isRotaValidadaUtil(rotasValidadas, selectedYear, psm, semana, rota);
+
+  const getSemanasTestadasNoQuarter = (psm, rota, quarter) =>
+    getSemanasTestadasNoQuarterUtil(rotasTestadas, selectedYear, psm, rota, quarter);
+
+  const getSemanasValidadasNoQuarter = (psm, rota, quarter) =>
+    getSemanasValidadasNoQuarterUtil(rotasValidadas, selectedYear, psm, rota, quarter);
+
+  const getSemanasTestadas = (psm, rota) =>
+    getSemanasTestadasUtil(rotasTestadas, psm, rota);
+
+  const getSemanasValidadas = (psm, rota) =>
+    getSemanasValidadasUtil(rotasValidadas, psm, rota);
+
+  const isRotaTestadaGlobalNoQuarter = (psm, rota, quarter) =>
+    isRotaTestadaGlobalNoQuarterUtil(rotasTestadas, selectedYear, psm, rota, quarter);
+
+  const isRotaValidadaGlobalNoQuarter = (psm, rota, quarter) =>
+    isRotaValidadaGlobalNoQuarterUtil(rotasValidadas, selectedYear, psm, rota, quarter);
+
+  const isRotaTestadaGlobal = (psm, rota) =>
+    isRotaTestadaGlobalUtil(rotasTestadas, psm, rota);
+
+  const isRotaValidadaGlobal = (psm, rota) =>
+    isRotaValidadaGlobalUtil(rotasValidadas, psm, rota);
+
+  const isRotaValidadaNoQuarter = (psm, rota, quarter) =>
+    isRotaValidadaNoQuarterUtil(rotasValidadas, selectedYear, psm, rota, quarter);
+
+  const isRotaTestadaNoQuarter = (psm, rota, quarter) =>
+    isRotaTestadaNoQuarterUtil(rotasTestadas, selectedYear, psm, rota, quarter);
   
   // v3.40.7: Estados e ref para scroll inteligente do header
   const scrollContainerRef = useRef(null);
@@ -879,32 +769,7 @@ useEffect(() => {
    * FUNÇÃO 1: Detectar PSM baseado no nome da rota
    * Faz busca exata e normalizada (case-insensitive, sem espaços extras)
    */
-  const findPSMForRoute = (routeName) => {
-    const normalizedRoute = routeName.trim();
-
-    // Procura em cada PSM
-    for (const [psm, routes] of Object.entries(ROUTES_BY_PSM)) {
-      
-      // TENTATIVA 1: Comparação exata
-      if (routes.includes(normalizedRoute)) {
-        console.log('✅ Encontrado em', psm, '(match exato)');
-        return psm;
-      }
-      
-      // TENTATIVA 2: Comparação normalizada (case-insensitive)
-      const foundRoute = routes.find(r => 
-        r.toLowerCase().replace(/\s+/g, ' ').trim() === 
-        normalizedRoute.toLowerCase().replace(/\s+/g, ' ').trim()
-      );
-      
-      if (foundRoute) {
-        console.log('✅ Encontrado em', psm, '(match normalizado):', foundRoute);
-        return psm;
-      }
-    }
-
-    return null;
-  };
+  const findPSMForRoute = (routeName) => findPSMForRouteUtil(routeName);
 
   /**
    * FUNÇÃO 2: Carregar biblioteca XLSX dinamicamente
@@ -2604,7 +2469,7 @@ useEffect(() => {
    */
   const handleInputChange = (psm, week, route, category, value) => {
     // Validação: aceitar apenas números ou campo vazio
-    if (value !== '' && !/^\d+$/.test(value)) {
+    if (!isValidNumericInput(value)) {
       console.warn('⚠️ Valor inválido ignorado:', value, '(apenas números são aceitos)');
       return;
     }
@@ -2922,32 +2787,8 @@ useEffect(() => {
    * @param {string} tipo - Tipo de indisponibilidade
    * @returns {number} Último valor conhecido ou 0
    */
-  const buscarValorAnterior = (psm, week, route, tipo) => {
-    if (!data[psm]) return 0;
-    
-    // Obter número da semana atual
-    const weekNum = parseInt(week.replace('W', ''));
-    
-    // Determinar limites do trimestre atual
-    const trimestreAtual = QUARTER_CONFIG[selectedQuarter];
-    const semanaMinima = trimestreAtual.start;
-    
-    console.log(`🔍 Buscando ${tipo} em ${selectedQuarter} (W${semanaMinima}-W${weekNum-1})`);
-    
-    // Buscar de trás para frente DENTRO DO TRIMESTRE
-    for (let w = weekNum - 1; w >= semanaMinima; w--) {
-      const semanaAnterior = `W${w}`;
-      const valor = parseInt(data[psm]?.[semanaAnterior]?.[route]?.[tipo], 10) || 0;
-      
-      if (valor > 0) {
-        console.log(`✅ Encontrado ${tipo}=${valor} em ${semanaAnterior} (${selectedQuarter})`);
-        return valor;
-      }
-    }
-    
-    console.log(`⚠️ ${tipo} não encontrado em ${selectedQuarter}`);
-    return 0;
-  };
+  const buscarValorAnterior = (psm, week, route, tipo) =>
+    buscarValorAnteriorUtil(data, selectedQuarter, QUARTER_CONFIG, psm, week, route, tipo);
 
   /**
    * Função auxiliar para obter valor do estado 'data'
@@ -2969,37 +2810,15 @@ useEffect(() => {
    * V5.07.0: Obtém valor REDUZIDO para Dashboard Executivo
    * Calcula: Valor Original - Desconto ACUMULADO de todas as semanas até a atual
    */
-  const getValorReduzido = (psm, week, route, tipo) => {
-    // Pegar valor original
-    let original = parseInt(data[psm]?.[week]?.[route]?.[tipo], 10) || 0;
-    
-    // Se não houver, buscar em semanas anteriores
-    if (original === 0) {
-      original = buscarValorAnterior(psm, week, route, tipo);
-    }
-    
-    // V5.10.16: SOMAR descontos APENAS do ANO SELECIONADO
-    const weekNum = parseInt(week.replace('W', ''), 10);
-    const trimestreAtual = QUARTER_CONFIG[selectedQuarter];
-    
-    let descontoAcumulado = 0;
-    for (let w = trimestreAtual.start; w <= weekNum; w++) {
-      const semana = `W${w}`;
-      // V5.10.16: Acessar com ANO - distribuicaoReparacoes[ano][psm][week][route][tipo]
-      const descontoDaSemana = distribuicaoReparacoes[selectedYear]?.[psm]?.[semana]?.[route]?.[tipo] || 0;
-      descontoAcumulado += descontoDaSemana;
-    }
-    
-    return Math.max(0, original - descontoAcumulado);
-  };
+  const getValorReduzido = (psm, week, route, tipo) =>
+    getValorReduzidoUtil(data, distribuicaoReparacoes, selectedQuarter, selectedYear, QUARTER_CONFIG, psm, week, route, tipo);
 
   /**
    * V5.06.0: Obtém valor ORIGINAL para Cards Header
    * Retorna valor sem aplicar desconto de reparações
    */
-  const getValorOriginal = (psm, week, route, tipo) => {
-    return parseInt(data[psm]?.[week]?.[route]?.[tipo], 10) || 0;
-  };
+  const getValorOriginal = (psm, week, route, tipo) =>
+    getValorOriginalUtil(data, psm, week, route, tipo);
 
   // ============================================================================
   // FASE 11: CÁLCULO DINÂMICO DO DASHBOARD EXECUTIVO COM useMemo

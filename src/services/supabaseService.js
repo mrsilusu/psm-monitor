@@ -3,7 +3,7 @@
 // Versão que preserva testada/validada entre dispositivos
 // ============================================
 
-import { supabase } from '../lib/supabase';
+import { supabase } from './supabaseClient.js';
 
 // ============================================
 // MAPEAR CAMPOS localStorage → Supabase
