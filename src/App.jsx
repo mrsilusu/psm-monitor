@@ -16,6 +16,10 @@ import { buscarValorAnterior as buscarValorAnteriorUtil, getValorReduzido as get
 import { findPSMForRoute as findPSMForRouteUtil, isRotaTestada as isRotaTestadaUtil, isRotaValidada as isRotaValidadaUtil, getSemanasTestadasNoQuarter as getSemanasTestadasNoQuarterUtil, getSemanasValidadasNoQuarter as getSemanasValidadasNoQuarterUtil, getSemanasTestadas as getSemanasTestadasUtil, getSemanasValidadas as getSemanasValidadasUtil, isRotaTestadaGlobalNoQuarter as isRotaTestadaGlobalNoQuarterUtil, isRotaValidadaGlobalNoQuarter as isRotaValidadaGlobalNoQuarterUtil, isRotaTestadaGlobal as isRotaTestadaGlobalUtil, isRotaValidadaGlobal as isRotaValidadaGlobalUtil, isRotaValidadaNoQuarter as isRotaValidadaNoQuarterUtil, isRotaTestadaNoQuarter as isRotaTestadaNoQuarterUtil } from './utils/routeUtils.js';
 import { calcularNovoEstadoFibras } from './utils/fibraLogic.js';
 import { buildBackupJSON, buildJustificativasCSV, downloadFile, parseCSVText } from './utils/exportImport.js';
+import { useFilters } from './hooks/state/useFilters.js';
+import { useAppState } from './hooks/state/useAppState.js';
+import { usePersistence } from './hooks/state/usePersistence.js';
+import { useScrollHeader } from './hooks/state/useScrollHeader.js';
 
 const PSMMonitorApp = () => {
   console.log("🚀 PSM Monitor 5.10.19 - FIX CRÍTICO: Salva apenas no Quarter correto da semana! ✅");
@@ -69,123 +73,102 @@ const PSMMonitorApp = () => {
   // ROTAS_BY_PSM moved to src/config/routeConfig.js
   // Importado no topo: import { ROUTES_BY_PSM } from './config/routeConfig';
 
-  // ESTADO PRINCIPAL: DATA
-  // Estrutura: { PSM: { SEMANA: { ROTA: { categoria: valor } } } }
-  const [data, setData] = useState(() => {
-    // Tentar carregar do localStorage
-    const saved = window.localStorage.getItem('psm_rotas_data_v3');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error('Erro ao carregar dados:', e);
-      }
-    }
+  const {
+    data,
+    setData,
+    distribuicaoReparacoes,
+    setDistribuicaoReparacoes,
+    justificativas,
+    setJustificativas,
+    alertasAbertos,
+    setAlertasAbertos,
+    alertasLidos,
+    setAlertasLidos,
+    efetividadeMode,
+    setEfetividadeMode,
+    showTestesAnalises,
+    setShowTestesAnalises,
+    testesData,
+    setTestesData,
+    todosTestesData,
+    setTodosTestesData,
+    rotasTestadas,
+    setRotasTestadas,
+    rotasValidadas,
+    setRotasValidadas,
+    tabelaValidacaoAberta,
+    setTabelaValidacaoAberta,
+    isMobileDevice,
+    setIsMobileDevice,
+    showMobileWarning,
+    setShowMobileWarning,
+    menuOpen,
+    setMenuOpen,
+    manualDataExpanded,
+    setManualDataExpanded,
+    presentationMode,
+    setPresentationMode,
+    currentSlide,
+    setCurrentSlide,
+    viewMode,
+    setViewMode,
+    viewModeClassificacao,
+    setViewModeClassificacao,
+    currentGraph,
+    setCurrentGraph,
+    currentGraphClassificacao,
+    setCurrentGraphClassificacao,
+    saveStatus,
+    setSaveStatus,
+    lastSaveTime,
+    setLastSaveTime,
+    showModal,
+    setShowModal,
+    selectedRota,
+    setSelectedRota,
+    showRepairTypeModal,
+    setShowRepairTypeModal,
+    pendingRepairData,
+    setPendingRepairData,
+    currentPageDrilldown,
+    setCurrentPageDrilldown,
+    currentPageAcomp,
+    setCurrentPageAcomp,
+    currentPageNormalizadas,
+    setCurrentPageNormalizadas,
+    currentPageIntervencoes,
+    setCurrentPageIntervencoes,
+    currentPageSemIntervencao,
+    setCurrentPageSemIntervencao,
+  } = useAppState();
 
-    // Inicializar estrutura vazia
-    const initialData = {};
-    Object.keys(ROUTES_BY_PSM).forEach(psm => {
-      initialData[psm] = {};
-      ALL_WEEKS.forEach(week => {
-        initialData[psm][week] = {};
-        ROUTES_BY_PSM[psm].forEach(route => {
-          initialData[psm][week][route] = {
-            'Transporte': '',
-            'Indisponíveis': '',
-            'Total Reparadas': '',
-            'Reconhecidas': '',
-            'Dep. de Passagem de Cabo': '',
-            'Dep. de Licença': '',
-            'Dep. de Cutover': '',
-            [`Fibras dependentes da ${psm}`]: ''
-          };
-        });
-      });
-    });
+  const {
+    selectedOperator,
+    setSelectedOperator,
+    selectedWeek,
+    setSelectedWeek,
+    selectedQuarter,
+    setSelectedQuarter,
+    selectedYear,
+    setSelectedYear,
+    selectedProvince,
+    setSelectedProvince,
+  } = useFilters();
 
-    return initialData;
+  const { isLoadingDistribuicao } = usePersistence({
+    data,
+    justificativas,
+    distribuicaoReparacoes,
+    selectedYear,
+    selectedQuarter,
+    rotasTestadas,
+    rotasValidadas,
+    setDistribuicaoReparacoes,
+    setSaveStatus,
+    setLastSaveTime,
   });
 
-  // ESTADO: DISTRIBUIÇÃO DE REPARAÇÕES (V5.06.0)
-  // Estrutura: { PSM: { Week: { Rota: { 'Reconhecidas': 10, 'Dep. Cutover': 5 } } } }
-  // Guarda QUANTO foi descontado de cada tipo de indisponibilidade
-  // V5.08.19: Usar key versionada para evitar conflitos
-  const [distribuicaoReparacoes, setDistribuicaoReparacoes] = useState(() => {
-    const saved = window.localStorage.getItem('psm_distribuicao_reparacoes_v3'); // V5.10.16: v3 com ANO
-    if (saved) {
-      try {
-        console.log('📥 [DISTRIBUIÇÃO] Carregado do localStorage v3 (com ano)');
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error('❌ [DISTRIBUIÇÃO] Erro ao carregar:', e);
-        return {};
-      }
-    }
-    return {};
-  });
-
-
-  // ESTADO: JUSTIFICATIVAS
-  // Estrutura: { 'PSM_Rota': { seccao, regiao, transporteQ2, indisponiveis, delta, justificativa } }
-  const [justificativas, setJustificativas] = useState(() => {
-    const saved = window.localStorage.getItem('psm_justificativas_v1');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error('Erro ao carregar justificativas:', e);
-        return {};
-      }
-    }
-    return {};
-  });
-
-  // ============================================================================
-  // ESTADOS DE UI (mantidos da v1.5.0)
-  // ============================================================================
-  
-  // v3.49.24: Estados para detecção mobile e aviso
-  const [isMobileDevice, setIsMobileDevice] = useState(false);
-  const [showMobileWarning, setShowMobileWarning] = useState(true);
-  
-  // Estados para os filtros e menu
-  const [selectedOperator, setSelectedOperator] = useState(() => {
-  return localStorage.getItem('psm_selectedOperator') || 'FIBRASOL';
-  });
-
-  const [selectedWeek, setSelectedWeek] = useState(() => {
-  return localStorage.getItem('psm_selectedWeek') || 'W1';
-  });
-  const [selectedQuarter, setSelectedQuarter] = useState(() => {
-  return localStorage.getItem('psm_selectedQuarter') || 'Q1';
-  });
-  const [selectedYear, setSelectedYear] = useState(() => {
-  return parseInt(localStorage.getItem('psm_selectedYear')) || new Date().getFullYear();
-  });
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [manualDataExpanded, setManualDataExpanded] = useState(true);
-  
-  // Estados para modo apresentação
-  const [presentationMode, setPresentationMode] = useState(false);
-  const [currentSlide, setCurrentSlide] = useState(0);
-
-
-    //  useEffects para salvar filtros no localStorage 
-useEffect(() => {
-  localStorage.setItem('psm_selectedOperator', selectedOperator);
-}, [selectedOperator]);
-
-useEffect(() => {
-  localStorage.setItem('psm_selectedWeek', selectedWeek);
-}, [selectedWeek]);
-
-useEffect(() => {
-  localStorage.setItem('psm_selectedQuarter', selectedQuarter);
-}, [selectedQuarter]);
-
-useEffect(() => {
-  localStorage.setItem('psm_selectedYear', String(selectedYear));
-}, [selectedYear]);
+  const { scrollContainerRef, headerVisible } = useScrollHeader();
 
 // Cleanup do timer do modal ao desmontar
 useEffect(() => {
@@ -243,76 +226,6 @@ useEffect(() => {
     carregarDadosDoSupabase();
   }, [selectedYear]); // ✅ Recarregar quando mudar o ano!
   
-  // v3.40.27: Estados para sino de alertas
-  const [alertasAbertos, setAlertasAbertos] = useState(false);
-  const [alertasLidos, setAlertasLidos] = useState([]);
-  
-  // v3.40.73: Estado para toggle Efetividade (Global ou PSM)
-  const [efetividadeMode, setEfetividadeMode] = useState('global'); // 'global' ou 'psm'
-  
-  // v3.42.00: Estado para painel Testes e Análises
-  const [showTestesAnalises, setShowTestesAnalises] = useState(false);
-  
-  // v3.42.01: Estados para dados de Testes e Análises
-  const [testesData, setTestesData] = useState({
-    cadastradas: 0,
-    testadas: 0,
-    validadas: 0,      // v3.49.10: Adicionar
-    pendentes: 0,
-    naoTestadas: 0,    // v3.49.10: Adicionar
-    semIndisponibilidade: 0,
-    semIndisponibilidadeTecnica: 0,  // v3.49.10: Adicionar
-    estaveis: 0,
-    concluidas: 0,
-    comGanho: 0,
-    degradadas: 0,     // v3.49.10: Adicionar
-    comIndisponibilidades: 0
-  });
-  
-  // v3.42.03: Estados para dados de todos os PSMs (comparação)
-  const [todosTestesData, setTodosTestesData] = useState({
-    FIBRASOL: null,
-    ISISTEL: null,
-    ANGLOBAL: null
-  });
-  
-  // v3.48.00: Estados para validação POR SEMANA
-  // Estrutura: { PSM: { semana: { rota: { testada: true } } } }
-  const [rotasTestadas, setRotasTestadas] = useState(() => {
-    const saved = window.localStorage.getItem('psm_rotas_testadas_v2');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error('Erro ao carregar rotas testadas:', e);
-      }
-    }
-    return {};
-  });
-  
-  const [rotasValidadas, setRotasValidadas] = useState(() => {
-    const saved = window.localStorage.getItem('psm_rotas_validadas_v2');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error('Erro ao carregar rotas validadas:', e);
-      }
-    }
-    return {};
-  });
-  
-  const [tabelaValidacaoAberta, setTabelaValidacaoAberta] = useState(false);
-  
-  // v3.48.00: Salvar validações no localStorage automaticamente
-  useEffect(() => {
-    try {
-      window.localStorage.setItem('psm_rotas_testadas_v2', JSON.stringify(rotasTestadas));
-      window.localStorage.setItem('psm_rotas_validadas_v2', JSON.stringify(rotasValidadas));
-    } catch (e) {
-      console.error('Erro ao salvar validações:', e);
-    }
-  }, [rotasTestadas, rotasValidadas]);
   
   // v3.49.24: Detecção automática de dispositivo mobile
   useEffect(() => {
@@ -364,40 +277,7 @@ useEffect(() => {
   const isRotaTestadaNoQuarter = (psm, rota, quarter) =>
     isRotaTestadaNoQuarterUtil(rotasTestadas, selectedYear, psm, rota, quarter);
   
-  // v3.40.7: Estados e ref para scroll inteligente do header
-  const scrollContainerRef = useRef(null);
-  const [lastScrollY, setLastScrollY] = useState(0);
-  const [headerVisible, setHeaderVisible] = useState(true);
-  
-  // V5.08.20: Refs e state para controle de salvamento inteligente
-  const lastSavedDistribuicaoRef = useRef(null);
-  const saveDistribuicaoTimerRef = useRef(null);
-  const [isLoadingDistribuicao, setIsLoadingDistribuicao] = useState(false);
-  
-  // v3.40.7: Detectar scroll do container para mostrar/ocultar header
-  useEffect(() => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
-    
-    const handleScroll = () => {
-      const currentScrollY = container.scrollTop;
-      
-      // Só esconde header se scrollar para baixo mais de 50px
-      if (currentScrollY > lastScrollY && currentScrollY > 50) {
-        // Scrolling DOWN - esconde header
-        setHeaderVisible(false);
-      } else if (currentScrollY < lastScrollY) {
-        // Scrolling UP - mostra header
-        setHeaderVisible(true);
-      }
-      
-      setLastScrollY(currentScrollY);
-    };
-    
-    container.addEventListener('scroll', handleScroll, { passive: true });
-    
-    return () => container.removeEventListener('scroll', handleScroll);
-  }, [lastScrollY]);
+  const { scrollContainerRef, headerVisible } = useScrollHeader();
   
   // v3.43.01: Calcular dados baseado em VALIDAÇÕES MANUAIS (lógica corrigida)
   useEffect(() => {
@@ -652,32 +532,7 @@ useEffect(() => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [alertasAbertos]);
   
-  // FASE 1: Filtro de província
-  const [selectedProvince, setSelectedProvince] = useState('Todas'); // 'Todas' ou nome da província
-  
   // v3.21.1: Removido showProvincialDashboard (dashboard redundante)
-
-  // v3.17.4: Resetar província quando PSM muda e província não pertence ao novo PSM
-  useEffect(() => {
-    if (selectedProvince !== 'Todas') {
-      const provincesOfOperator = OPERATOR_TO_PROVINCES[selectedOperator];
-      if (!provincesOfOperator.includes(selectedProvince)) {
-        setSelectedProvince('Todas');
-      }
-    }
-  }, [selectedOperator]);
-
-  // Sincronizar Week quando Quarter muda
-  useEffect(() => {
-    const config = QUARTER_CONFIG[selectedQuarter];
-    const weekNumber = parseInt(selectedWeek.substring(1));
-    
-    // Se a semana atual não está no range do quadrimestre selecionado
-    if (weekNumber < config.start || weekNumber > config.end) {
-      // Ajustar para a primeira semana do quadrimestre
-      setSelectedWeek(`W${config.start}`);
-    }
-  }, [selectedQuarter]);
 
   // Função para obter semanas de um quadrimestre
   const getWeeksForQuarter = (quarter) => {
@@ -692,25 +547,18 @@ useEffect(() => {
   // v3.7.0: ESTADOS PARA CARROSSEL DE GRÁFICOS
   // ============================================================================
   
-  const [viewMode, setViewMode] = useState('carousel'); // 'carousel' ou 'all'
-  const [viewModeClassificacao, setViewModeClassificacao] = useState('all'); // PADRÃO: Ver Resumo (all=resumo, carousel=detalhado)
-  const [currentGraph, setCurrentGraph] = useState(0); // 0=Degradadas, 1=Com Ganho, 2=Estáveis
-  const [currentGraphClassificacao, setCurrentGraphClassificacao] = useState(0); // para carrossel de classificação
-
+  // v3.40.66: Paginação Rotas Sem Intervenção
+  const [hoveredPieSlice, setHoveredPieSlice] = useState(null);
+  const [hoveredWeekIndex, setHoveredWeekIndex] = useState(null);
+  
+  // v3.25.1: Tooltip do carrossel
+  const [tooltipData, setTooltipData] = useState(null);
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+  
   // ============================================================================
   // FASE 8: ESTADOS DE FEEDBACK DE SALVAMENTO
   // ============================================================================
   
-  const [saveStatus, setSaveStatus] = useState('');
-  const [lastSaveTime, setLastSaveTime] = useState(null);
-  
-  // FASE 1: Estados do modal
-  const [showModal, setShowModal] = useState(false);
-  const [selectedRota, setSelectedRota] = useState(null);
-  
-  // Estados para modal de seleção de tipo de reparação
-  const [showRepairTypeModal, setShowRepairTypeModal] = useState(false);
-  const [pendingRepairData, setPendingRepairData] = useState(null);
   const modalTimerRef = useRef(null);
   const valorOriginalRef = useRef(null); // Guarda valor antes de começar a editar
   const skipNextSaveRef = useRef(false); // V5.08.17: Flag para evitar salvamento após delete
@@ -726,14 +574,6 @@ useEffect(() => {
   // Paginação Acompanhamento
   const [currentPageAcomp, setCurrentPageAcomp] = useState(0);
   const itemsPerPageAcomp = 10;
-  
-  // Estados para tooltips dos gráficos
-  const [hoveredPieSlice, setHoveredPieSlice] = useState(null);
-  const [hoveredWeekIndex, setHoveredWeekIndex] = useState(null);
-  
-  // v3.25.1: Tooltip do carrossel
-  const [tooltipData, setTooltipData] = useState(null);
-  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   
   // Paginação Rotas Normalizadas
   const [currentPageNormalizadas, setCurrentPageNormalizadas] = useState(0);

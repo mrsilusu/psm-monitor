@@ -1,1 +1,266 @@
-// TODO: Fase 5 — Sincronização Supabase + localStorage
+import { useEffect, useRef, useState } from 'react';
+import { LS_KEYS } from '../../services/localStorageService.js';
+import { getQuarterFromWeek } from '../../utils/dateUtils.js';
+import { salvarTudoNoSupabase, salvarJustificativasNoSupabase } from '../../services/supabaseService.js';
+import { carregarDistribuicaoDoSupabase, salvarDistribuicaoNoSupabase } from '../../services/supabaseDistribuicaoService.js';
+import { ROUTE_TO_PROVINCE } from '../../config/provinceConfig.js';
+
+export const usePersistence = ({
+  data,
+  justificativas,
+  distribuicaoReparacoes,
+  selectedYear,
+  selectedQuarter,
+  rotasTestadas,
+  rotasValidadas,
+  setDistribuicaoReparacoes,
+  setSaveStatus,
+  setLastSaveTime
+}) => {
+  const saveTimerRef = useRef(null);
+  const justificativasTimerRef = useRef(null);
+  const distribuicaoTimerRef = useRef(null);
+  const lastSavedDistribuicaoRef = useRef(null);
+  const [isLoadingDistribuicao, setIsLoadingDistribuicao] = useState(false);
+  const skipNextSaveRef = useRef(false);
+
+  useEffect(() => {
+    if (Object.keys(data).length === 0) return;
+
+    setSaveStatus('saving');
+
+    try {
+      window.localStorage.setItem(LS_KEYS.DATA, JSON.stringify(data));
+    } catch (error) {
+      console.error('[DATA] Erro ao salvar localmente:', error);
+    }
+
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+    }
+
+    saveTimerRef.current = window.setTimeout(async () => {
+      console.log('💾 [DATA] Salvando no Supabase para o ano:', selectedYear);
+      const resultado = await salvarTudoNoSupabase(
+        data,
+        selectedQuarter,
+        selectedYear,
+        ROUTE_TO_PROVINCE,
+        rotasTestadas,
+        rotasValidadas
+      );
+
+      if (resultado.success) {
+        console.log('✅ [DATA] Dados salvos no Supabase!', resultado);
+      } else {
+        console.error('❌ [DATA] Erro ao salvar no Supabase:', resultado.error);
+      }
+    }, 5000);
+
+    const statusTimer = window.setTimeout(() => {
+      setSaveStatus('');
+    }, 2000);
+
+    setSaveStatus('saved');
+    setLastSaveTime(new Date());
+
+    return () => {
+      clearTimeout(statusTimer);
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+      }
+    };
+  }, [data, selectedQuarter, rotasTestadas, rotasValidadas, selectedYear, setLastSaveTime, setSaveStatus]);
+
+  useEffect(() => {
+    console.log('🔄 [JUSTIFICATIVAS] useEffect executado', {
+      quantidade: Object.keys(justificativas).length,
+      ano: selectedYear
+    });
+
+    try {
+      window.localStorage.setItem(LS_KEYS.JUSTIFICATIVAS, JSON.stringify(justificativas));
+    } catch (error) {
+      console.error('[JUSTIFICATIVAS] Erro ao salvar localmente:', error);
+    }
+
+    if (justificativasTimerRef.current) {
+      clearTimeout(justificativasTimerRef.current);
+    }
+
+    justificativasTimerRef.current = window.setTimeout(async () => {
+      console.log('💾 [JUSTIFICATIVAS] Salvando no Supabase para o ano:', selectedYear);
+      try {
+        const resultado = await salvarJustificativasNoSupabase(justificativas, selectedYear);
+        if (resultado.success) {
+          console.log('✅ [JUSTIFICATIVAS] Salvas no Supabase!', resultado);
+        } else {
+          console.error('❌ [JUSTIFICATIVAS] Erro ao salvar:', resultado.error);
+        }
+      } catch (error) {
+        console.error('❌ [JUSTIFICATIVAS] Exceção ao salvar:', error);
+      }
+    }, 3000);
+
+    return () => {
+      if (justificativasTimerRef.current) {
+        clearTimeout(justificativasTimerRef.current);
+      }
+    };
+  }, [justificativas, selectedYear]);
+
+  useEffect(() => {
+    const carregarDistribuicaoInicial = async () => {
+      setIsLoadingDistribuicao(true);
+      console.log(`📥 [DISTRIBUIÇÃO] Carregando TODOS os quarters de ${selectedYear}...`);
+
+      const dadosCompletos = {};
+
+      for (const quarter of ['Q1', 'Q2', 'Q3']) {
+        const distrib = await carregarDistribuicaoDoSupabase(quarter, selectedYear);
+
+        if (Object.keys(distrib).length > 0) {
+          console.log(`✅ [DISTRIBUIÇÃO] ${selectedYear}/${quarter} carregado (${Object.keys(distrib).length} PSMs)`);
+          Object.keys(distrib).forEach((psm) => {
+            if (!dadosCompletos[psm]) dadosCompletos[psm] = {};
+            Object.assign(dadosCompletos[psm], distrib[psm]);
+          });
+        } else {
+          console.log(`ℹ️ [DISTRIBUIÇÃO] ${selectedYear}/${quarter} sem dados`);
+        }
+      }
+
+      if (Object.keys(dadosCompletos).length > 0) {
+        setDistribuicaoReparicoes((prev) => {
+          const updated = JSON.parse(JSON.stringify(prev));
+          updated[selectedYear] = dadosCompletos;
+          console.log(`✅ [DISTRIBUIÇÃO] Todos os dados de ${selectedYear} carregados e mesclados`);
+          return updated;
+        });
+
+        lastSavedDistribuicaoRef.current = JSON.stringify({
+          ...dadosCompletos ? { [selectedYear]: dadosCompletos } : {},
+          ...distribuicaoReparacoes
+        });
+      } else {
+        console.log(`ℹ️ [DISTRIBUIÇÃO] Nenhum dado encontrado para ${selectedYear}`);
+        setDistribuicaoReparicoes((prev) => {
+          const updated = JSON.parse(JSON.stringify(prev));
+          delete updated[selectedYear];
+          return updated;
+        });
+        lastSavedDistribuicaoRef.current = JSON.stringify(distribuicaoReparacoes);
+      }
+
+      setIsLoadingDistribuicao(false);
+    };
+
+    carregarDistribuicaoInicial();
+  }, [selectedYear, setDistribuicaoReparicoes]);
+
+  useEffect(() => {
+    if (skipNextSaveRef.current) {
+      console.log('⏭️ [DISTRIBUIÇÃO] Pulando salvamento (após delete)');
+      skipNextSaveRef.current = false;
+      return;
+    }
+
+    if (isLoadingDistribuicao) {
+      console.log('⏭️ [DISTRIBUIÇÃO] Carregando dados, pulando salvamento');
+      return;
+    }
+
+    if (Object.keys(distribuicaoReparacoes).length === 0) {
+      console.log('⏭️ [DISTRIBUIÇÃO] Sem dados para salvar');
+      return;
+    }
+
+    const dadosAtuais = JSON.stringify(distribuicaoReparacoes);
+    if (dadosAtuais === lastSavedDistribuicaoRef.current) {
+      console.log('⏭️ [DISTRIBUIÇÃO] Dados não mudaram, pulando salvamento');
+      return;
+    }
+
+    if (distribuicaoTimerRef.current) {
+      clearTimeout(distribuicaoTimerRef.current);
+      console.log('⏱️ [DISTRIBUIÇÃO] Timer anterior cancelado');
+    }
+
+    distribuicaoTimerRef.current = window.setTimeout(async () => {
+      console.log('💾 [DISTRIBUIÇÃO] Salvando após debounce (1s)...');
+      lastSavedDistribuicaoRef.current = dadosAtuais;
+
+      try {
+        window.localStorage.setItem(LS_KEYS.DISTRIBUICAO, dadosAtuais);
+        console.log('💾 [DISTRIBUIÇÃO] Salvo no localStorage v3 (com ano)');
+      } catch (error) {
+        console.error('❌ [DISTRIBUIÇÃO] Erro ao salvar no localStorage:', error);
+      }
+
+      try {
+        const dadosDoAno = distribuicaoReparacoes[selectedYear] || {};
+        const dadosPorQuarter = { Q1: {}, Q2: {}, Q3: {} };
+
+        Object.keys(dadosDoAno).forEach((psm) => {
+          Object.keys(dadosDoAno[psm] || {}).forEach((week) => {
+            const quarterDaSemana = getQuarterFromWeek(week);
+            if (!dadosPorQuarter[quarterDaSemana][psm]) {
+              dadosPorQuarter[quarterDaSemana][psm] = {};
+            }
+            dadosPorQuarter[quarterDaSemana][psm][week] = dadosDoAno[psm][week];
+          });
+        });
+
+        for (const quarter of ['Q1', 'Q2', 'Q3']) {
+          const dadosDoQuarter = dadosPorQuarter[quarter];
+          if (Object.keys(dadosDoQuarter).length > 0) {
+            console.log(`💾 [DISTRIBUIÇÃO] Salvando ${selectedYear}/${quarter}...`);
+            const resultado = await salvarDistribuicaoNoSupabase(
+              dadosDoQuarter,
+              quarter,
+              selectedYear
+            );
+            if (resultado.success) {
+              console.log(`✅ [DISTRIBUIÇÃO] ${selectedYear}/${quarter} salvo com sucesso`);
+            } else {
+              console.error(`❌ [DISTRIBUIÇÃO] Erro ao salvar ${selectedYear}/${quarter}:`, resultado.error);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('❌ [DISTRIBUIÇÃO] Erro ao salvar no Supabase:', error);
+      }
+    }, 1000);
+
+    return () => {
+      if (distribuicaoTimerRef.current) {
+        clearTimeout(distribuicaoTimerRef.current);
+      }
+    };
+  }, [distribuicaoReparacoes, selectedQuarter, selectedYear, isLoadingDistribuicao]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(LS_KEYS.TESTED_ROUTES, JSON.stringify(rotasTestadas));
+      window.localStorage.setItem(LS_KEYS.VALIDATED_ROUTES, JSON.stringify(rotasValidadas));
+    } catch (error) {
+      console.error('[VALIDAÇÕES] Erro ao salvar no localStorage:', error);
+    }
+  }, [rotasTestadas, rotasValidadas]);
+
+  useEffect(() => {
+    return () => {
+      if (distribuicaoTimerRef.current) {
+        clearTimeout(distribuicaoTimerRef.current);
+      }
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+      }
+      if (justificativasTimerRef.current) {
+        clearTimeout(justificativasTimerRef.current);
+      }
+    };
+  }, []);
+
+  return { isLoadingDistribuicao };
+};

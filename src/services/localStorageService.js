@@ -1,6 +1,6 @@
 // src/services/localStorageService.js
 // Responsabilidade: abstração de localStorage e limpeza de keys antigas
-// Máx. 80 linhas
+// Máx. 120 linhas
 
 import { CURRENT_DATA_VERSION } from '../config/constants.js';
 
@@ -11,11 +11,47 @@ export const LS_KEYS = {
   JUSTIFICATIVAS: 'psm_justificativas_v1',
   TESTED_ROUTES: 'psm_rotas_testadas_v2',
   VALIDATED_ROUTES: 'psm_rotas_validadas_v2',
+  OPERATOR: 'psm_selectedOperator',
+  WEEK: 'psm_selectedWeek',
+  QUARTER: 'psm_selectedQuarter',
+  YEAR: 'psm_selectedYear',
+  PROVINCE: 'psm_selectedProvince',
   LEGACY_DISTRIBUICAO: 'psm_distribuicao_reparacoes',
   LEGACY_DISTRIBUICAO_V1: 'psm_distribuicao_reparacoes_v1',
   LEGACY_DATA: 'psm_rotas_data_v2',
   LEGACY_JUSTIFICATIVAS: 'psm_justificativas',
 };
+
+const parseJSON = (value) => {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+};
+
+export const lsGet = (key) => {
+  try {
+    const rawValue = window.localStorage.getItem(key);
+    if (rawValue === null) return null;
+    return parseJSON(rawValue);
+  } catch (error) {
+    console.error('[localStorage] Erro ao ler chave:', key, error);
+    return null;
+  }
+};
+
+export const lsSet = (key, value) => {
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  } catch (error) {
+    console.error('[localStorage] Erro ao gravar chave:', key, error);
+  }
+};
+
+export const lsGetRaw = (key) => window.localStorage.getItem(key);
+export const lsSetRaw = (key, value) => window.localStorage.setItem(key, value);
+export const lsRemove = (key) => window.localStorage.removeItem(key);
 
 export const cleanupOldData = () => {
   try {
