@@ -277,8 +277,6 @@ useEffect(() => {
   const isRotaTestadaNoQuarter = (psm, rota, quarter) =>
     isRotaTestadaNoQuarterUtil(rotasTestadas, selectedYear, psm, rota, quarter);
   
-  const { scrollContainerRef, headerVisible } = useScrollHeader();
-  
   // v3.43.01: Calcular dados baseado em VALIDAÇÕES MANUAIS (lógica corrigida)
   useEffect(() => {
     if (!selectedOperator || selectedOperator === 'Global') return;
@@ -566,25 +564,12 @@ useEffect(() => {
   // Modal de drill-down de status
   const [showStatusDrilldown, setShowStatusDrilldown] = useState(false);
   const [selectedStatusDrilldown, setSelectedStatusDrilldown] = useState(null);
-  
-  // Paginação do drill-down (16 rotas por página)
-  const [currentPageDrilldown, setCurrentPageDrilldown] = useState(0);
+
+  // Constantes de paginação (estados vêm de useAppState)
   const itemsPerPageDrilldown = 16;
-  
-  // Paginação Acompanhamento
-  const [currentPageAcomp, setCurrentPageAcomp] = useState(0);
   const itemsPerPageAcomp = 10;
-  
-  // Paginação Rotas Normalizadas
-  const [currentPageNormalizadas, setCurrentPageNormalizadas] = useState(0);
   const itemsPerPageNormalizadas = 6;
-  
-  // v3.20.1: Paginação Intervenções Recentes
-  const [currentPageIntervencoes, setCurrentPageIntervencoes] = useState(0);
   const itemsPerPageIntervencoes = 5;
-  
-  // v3.40.66: Paginação Rotas Sem Intervenção
-  const [currentPageSemIntervencao, setCurrentPageSemIntervencao] = useState(0);
   const itemsPerPageSemIntervencao = 7;
 
   // ============================================================================
@@ -2308,214 +2293,34 @@ useEffect(() => {
    * @param {string} value - Novo valor digitado
    */
   const handleInputChange = (psm, week, route, category, value) => {
-    // Validação: aceitar apenas números ou campo vazio
-    if (!isValidNumericInput(value)) {
-      console.warn('⚠️ Valor inválido ignorado:', value, '(apenas números são aceitos)');
-      return;
-    }
+    if (!isValidNumericInput(value)) return;
 
-    // ✅ CORREÇÃO: Converter vazio para string vazia (será tratado como 0 no save)
-    // O campo visual pode ficar vazio, mas ao salvar será convertido para 0
-    const valorFinal = value; // Mantém vazio no UI, será 0 no banco
-
-    // ============================================================================
-    // FASE 10: LÓGICA DE NEGÓCIO - REDUÇÃO AUTOMÁTICA DE FIBRAS DEPENDENTES
-    // ============================================================================
-
-    // Atualizar o estado 'data' de forma imutável
     setData(prevData => {
-      // Criar cópia profunda da estrutura
-      const newData = JSON.parse(JSON.stringify(prevData));
-      
-      // Garantir que a estrutura existe
-      if (!newData[psm]) newData[psm] = {};
-      if (!newData[psm][week]) newData[psm][week] = {};
-      if (!newData[psm][week][route]) {
-        newData[psm][week][route] = {
-          'Transporte': '',
-          'Indisponíveis': '',
-          'Total Reparadas': '',
-          'Reconhecidas': '',
-          'Dep. de Passagem de Cabo': '',
-          'Dep. de Licença': '',
-          'Dep. de Cutover': '',
-          [`Fibras dependentes da ${psm}`]: ''
-        };
-      }
-
-      // Obter valores atuais
-      const currentData = newData[psm][week][route];
-      const currentTotalReparadas = parseInt(currentData['Total Reparadas'], 10) || 0;
-      const newTotalReparadas = category === 'Total Reparadas' ? (parseInt(valorFinal, 10) || 0) : currentTotalReparadas;
-      
-      console.log(`📝 INPUT CHANGE:`, {
-        category,
-        valorFinal,
-        currentTotalReparadas,
-        newTotalReparadas
+      const result = calcularNovoEstadoFibras({
+        prevData,
+        psm, week, route, category,
+        value,
+        distribuicaoReparacoes,
+        selectedQuarter,
+        selectedYear,
+        pendingRepairData,
+        valorOriginal: valorOriginalRef.current,
+        quarterConfig: QUARTER_CONFIG,
+        buscarValorAnteriorFn: buscarValorAnterior,
       });
-      
-      // LÓGICA DE NEGÓCIO: SELEÇÃO DO TIPO DE REPARAÇÃO
-      if (category === 'Total Reparadas') {
-        // V5.06.5: Se campo estiver VAZIO, limpar distribuição
-        if (valorFinal === '' || valorFinal === '0') {
-          console.log('🧹 Campo vazio/zerado - limpando distribuição');
-          
-          // V5.08.17: Ativar flag para evitar salvamento após delete
-          skipNextSaveRef.current = true;
-          
-          setDistribuicaoReparacoes(prev => {
-            const updated = JSON.parse(JSON.stringify(prev));
-            
-            // V5.10.18: Limpar APENAS a semana atual DO ANO SELECIONADO
-            if (updated[selectedYear]?.[psm]?.[week]?.[route]) {
-              delete updated[selectedYear][psm][week][route];
-              
-              // V5.08.0: Limpar também no Supabase
-              limparDistribuicaoNoSupabase(psm, week, route, selectedQuarter, selectedYear);
-            }
-            
-            return updated;
-          });
-          
-          // Limpar valorOriginalRef para próxima edição
-          valorOriginalRef.current = null;
-          setPendingRepairData(null);
-          
-          currentData[category] = valorFinal;
-          return newData;
-        }
-        
-        // V5.06.3: Calcular diferença baseada no VALOR ORIGINAL (antes de editar)
-        // Se é a primeira mudança, guardar o valor original
-        if (!pendingRepairData && valorOriginalRef.current === null) {
-          valorOriginalRef.current = currentTotalReparadas;
-        }
-        
-        // Diferença = novo valor - valor ORIGINAL (não o valor anterior de cada tecla)
-        const valorOriginal = valorOriginalRef.current !== null ? valorOriginalRef.current : currentTotalReparadas;
-        const diferenca = newTotalReparadas - valorOriginal;
-        
-        console.log(`🔢 DIFERENÇA: ${diferenca} (novo: ${newTotalReparadas} - original: ${valorOriginal})`);
-        
-        if (diferenca > 0) {
-          // Total Reparadas AUMENTOU → Verificar tipos disponíveis
-          // Buscar valores ORIGINAIS na semana atual, ou nas anteriores se não houver
-          let reconhecidasOriginal = parseInt(currentData['Reconhecidas'], 10) || 0;
-          let depPassagemOriginal = parseInt(currentData['Dep. de Passagem de Cabo'], 10) || 0;
-          let depLicencaOriginal = parseInt(currentData['Dep. de Licença'], 10) || 0;
-          let depCutoverOriginal = parseInt(currentData['Dep. de Cutover'], 10) || 0;
-          let fibrasDependentesOriginal = parseInt(currentData[`Fibras dependentes da ${psm}`], 10) || 0;
-          
-          // Se não houver valores na semana atual, buscar nas anteriores
-          if (reconhecidasOriginal === 0) {
-            reconhecidasOriginal = buscarValorAnterior(psm, week, route, 'Reconhecidas');
-          }
-          if (depPassagemOriginal === 0) {
-            depPassagemOriginal = buscarValorAnterior(psm, week, route, 'Dep. de Passagem de Cabo');
-          }
-          if (depLicencaOriginal === 0) {
-            depLicencaOriginal = buscarValorAnterior(psm, week, route, 'Dep. de Licença');
-          }
-          if (depCutoverOriginal === 0) {
-            depCutoverOriginal = buscarValorAnterior(psm, week, route, 'Dep. de Cutover');
-          }
-          if (fibrasDependentesOriginal === 0) {
-            fibrasDependentesOriginal = buscarValorAnterior(psm, week, route, `Fibras dependentes da ${psm}`);
-          }
-          
-          // V5.07.1: Subtrair distribuição ACUMULADA (todas semanas até atual)
-          const weekNum = parseInt(week.replace('W', ''), 10);
-          const trimestreAtual = QUARTER_CONFIG[selectedQuarter];
-          
-          // Somar descontos de TODAS as semanas até a atual
-          let descontoAcumuladoReconh = 0;
-          let descontoAcumuladoDepPass = 0;
-          let descontoAcumuladoDepLic = 0;
-          let descontoAcumuladoDepCut = 0;
-          let descontoAcumuladoFibras = 0;
-          
-          for (let w = trimestreAtual.start; w <= weekNum; w++) {
-            const semana = `W${w}`;
-            const distDaSemana = distribuicaoReparacoes[selectedYear]?.[psm]?.[semana]?.[route] || {};
-            descontoAcumuladoReconh += distDaSemana['Reconhecidas'] || 0;
-            descontoAcumuladoDepPass += distDaSemana['Dep. de Passagem de Cabo'] || 0;
-            descontoAcumuladoDepLic += distDaSemana['Dep. de Licença'] || 0;
-            descontoAcumuladoDepCut += distDaSemana['Dep. de Cutover'] || 0;
-            descontoAcumuladoFibras += distDaSemana[`Fibras dependentes da ${psm}`] || 0;
-          }
-          
-          const reconhecidas = Math.max(0, reconhecidasOriginal - descontoAcumuladoReconh);
-          const depPassagem = Math.max(0, depPassagemOriginal - descontoAcumuladoDepPass);
-          const depLicenca = Math.max(0, depLicencaOriginal - descontoAcumuladoDepLic);
-          const depCutover = Math.max(0, depCutoverOriginal - descontoAcumuladoDepCut);
-          const fibrasDependentes = Math.max(0, fibrasDependentesOriginal - descontoAcumuladoFibras);
-          
-          console.log(`📊 Modal - Valores disponíveis:`, {
-            reconhecidas: `${reconhecidasOriginal} - ${descontoAcumuladoReconh} = ${reconhecidas}`,
-            depPassagem: `${depPassagemOriginal} - ${descontoAcumuladoDepPass} = ${depPassagem}`,
-            fibrasDep: `${fibrasDependentesOriginal} - ${descontoAcumuladoFibras} = ${fibrasDependentes}`
-          });
-          
-          const tiposComValor = [
-            { tipo: 'Reconhecidas', valor: reconhecidas },
-            { tipo: 'Dep. de Passagem de Cabo', valor: depPassagem },
-            { tipo: 'Dep. de Licença', valor: depLicenca },
-            { tipo: 'Dep. de Cutover', valor: depCutover },
-            { tipo: `Fibras dependentes da ${psm}`, valor: fibrasDependentes }
-          ].filter(item => item.valor > 0);
-          
-          if (tiposComValor.length > 1) {
-            // MÚLTIPLOS TIPOS → Preparar dados (modal abrirá no onBlur)
-            
-            currentData[category] = valorFinal;
-            
-            setPendingRepairData({
-              psm,
-              week,
-              route,
-              diferenca,
-              valorAnterior: valorOriginalRef.current, // Já foi guardado no início
-              tiposDisponiveis: tiposComValor,
-              newData: newData
-            });
-            
-            console.log(`⏳ Múltiplos tipos. Original: ${valorOriginalRef.current}, Novo: ${newTotalReparadas}`);
-            return newData;
-            
-          } else if (tiposComValor.length === 1) {
-            // V5.06.4: APENAS 1 TIPO → Registrar distribuição e propagar
-            const tipoUnico = tiposComValor[0];
-            const descontoAplicado = Math.min(tipoUnico.valor, diferenca);
-            
-            // V5.07.0: Registrar distribuição APENAS na semana atual (não propagar)
-            setDistribuicaoReparacoes(prev => {
-              const updated = JSON.parse(JSON.stringify(prev));
-              // V5.10.16: Incluir ANO na estrutura
-              if (!updated[selectedYear]) updated[selectedYear] = {};
-              if (!updated[selectedYear][psm]) updated[selectedYear][psm] = {};
-              if (!updated[selectedYear][psm][week]) updated[selectedYear][psm][week] = {};
-              if (!updated[selectedYear][psm][week][route]) updated[selectedYear][psm][week][route] = {};
-              
-              // Guardar desconto APENAS desta semana
-              updated[selectedYear][psm][week][route][tipoUnico.tipo] = descontoAplicado;
-              
-              return updated;
-            });
-            
-            console.log(`🔄 Auto: ${tipoUnico.tipo} desconto ${descontoAplicado} registrado em ${week}`);
-          }
-        }
+
+      if (result.shouldSkipNextSave) skipNextSaveRef.current = true;
+      if (result.clearValorOriginal) valorOriginalRef.current = null;
+      if (result.setValorOriginal !== null) valorOriginalRef.current = result.setValorOriginal;
+      if (result.newDistribuicao) setDistribuicaoReparacoes(result.newDistribuicao);
+      if (result.shouldClearDistribuicao && result.clearDistribuicaoArgs) {
+        const { psm: p, week: w, route: r, selectedQuarter: q, selectedYear: y } = result.clearDistribuicaoArgs;
+        limparDistribuicaoNoSupabase(p, w, r, q, y);
       }
+      if (result.newPendingRepairData !== undefined) setPendingRepairData(result.newPendingRepairData);
 
-      // Atualizar o valor específico (para outros casos)
-      currentData[category] = valorFinal;
-
-      return newData;
+      return result.newData;
     });
-
-    // Log de confirmação
-    console.log(`✓ Atualizado: ${route} -> ${category} = ${valorFinal || '(vazio → será salvo como 0)'}`);
   };
 
   const aplicarReparacaoPorTipo = (tipoSelecionado) => {
