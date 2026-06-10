@@ -117,6 +117,16 @@ export const useAppState = () => {
   const [currentPageIntervencoes, setCurrentPageIntervencoes] = useState(0);
   const [currentPageSemIntervencao, setCurrentPageSemIntervencao] = useState(0);
 
+  // Hover e tooltip
+  const [hoveredPieSlice, setHoveredPieSlice] = useState(null);
+  const [hoveredWeekIndex, setHoveredWeekIndex] = useState(null);
+  const [tooltipData, setTooltipData] = useState(null);
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+
+  // Drilldown de status
+  const [showStatusDrilldown, setShowStatusDrilldown] = useState(false);
+  const [selectedStatusDrilldown, setSelectedStatusDrilldown] = useState(null);
+
   return {
     data,
     setData,
@@ -184,5 +194,17 @@ export const useAppState = () => {
     setCurrentPageIntervencoes,
     currentPageSemIntervencao,
     setCurrentPageSemIntervencao,
+    hoveredPieSlice,
+    setHoveredPieSlice,
+    hoveredWeekIndex,
+    setHoveredWeekIndex,
+    tooltipData,
+    setTooltipData,
+    tooltipPosition,
+    setTooltipPosition,
+    showStatusDrilldown,
+    setShowStatusDrilldown,
+    selectedStatusDrilldown,
+    setSelectedStatusDrilldown,
   };
 };

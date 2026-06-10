@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { BarChart3, TrendingUp, Users, AlertTriangle, CheckCircle, XCircle, Clock, MapPin, TrendingDown, Home, Upload, FileJson, Download, Calendar, BarChart, FileText, Menu, PieChart, DownloadCloud, Trash2, AlertCircle } from 'lucide-react';
 
-import { lerTudoDoSupabase, salvarTudoNoSupabase, salvarJustificativasNoSupabase, lerJustificativasDoSupabase } from './services/supabaseService';
-import { salvarDistribuicaoNoSupabase, carregarDistribuicaoDoSupabase, limparDistribuicaoNoSupabase } from './services/supabaseDistribuicaoService';
+import { limparDistribuicaoNoSupabase } from './services/supabaseDistribuicaoService';
 import { cleanupOldData } from './services/localStorageService';
 
 import { CURRENT_DATA_VERSION, ALL_WEEKS, STATUS_CATEGORIES } from './config/constants';
@@ -140,6 +139,18 @@ const PSMMonitorApp = () => {
     setCurrentPageIntervencoes,
     currentPageSemIntervencao,
     setCurrentPageSemIntervencao,
+    hoveredPieSlice,
+    setHoveredPieSlice,
+    hoveredWeekIndex,
+    setHoveredWeekIndex,
+    tooltipData,
+    setTooltipData,
+    tooltipPosition,
+    setTooltipPosition,
+    showStatusDrilldown,
+    setShowStatusDrilldown,
+    selectedStatusDrilldown,
+    setSelectedStatusDrilldown,
   } = useAppState();
 
   const {
@@ -163,6 +174,10 @@ const PSMMonitorApp = () => {
     selectedQuarter,
     rotasTestadas,
     rotasValidadas,
+    setData,
+    setJustificativas,
+    setRotasTestadas,
+    setRotasValidadas,
     setDistribuicaoReparacoes,
     setSaveStatus,
     setLastSaveTime,
@@ -180,51 +195,7 @@ useEffect(() => {
   };
 }, []);
 
-// ============================================================================
-  // CARREGAR DADOS DO SUPABASE AO INICIAR E QUANDO MUDAR O ANO
-  // ============================================================================
-  useEffect(() => {
-    const carregarDadosDoSupabase = async () => {
-      console.log('🔄 Carregando dados do Supabase para o ano:', selectedYear);
-      
-      const resultado = await lerTudoDoSupabase(selectedYear);
-      
-      if (resultado.success && resultado.data && Object.keys(resultado.data).length > 0) {
-        console.log('✅ Dados carregados do Supabase!', resultado.data);
-        setData(resultado.data);
-        
-        // ✅ CORREÇÃO: Carregar também os estados de teste e validação
-        if (resultado.rotasTestadas && Object.keys(resultado.rotasTestadas).length > 0) {
-          console.log('✅ Rotas testadas carregadas do Supabase:', resultado.rotasTestadas);
-          setRotasTestadas(resultado.rotasTestadas);
-        }
-        
-        if (resultado.rotasValidadas && Object.keys(resultado.rotasValidadas).length > 0) {
-          console.log('✅ Rotas validadas carregadas do Supabase:', resultado.rotasValidadas);
-          setRotasValidadas(resultado.rotasValidadas);
-        }
-      } else {
-        console.log('⚠️ Sem dados no Supabase para o ano', selectedYear);
-        // Limpar dados se não houver nada para o ano selecionado
-        setData({ ISISTEL: {}, FIBRASOL: {}, ANGLOBAL: {} });
-        setRotasTestadas({});
-        setRotasValidadas({});
-      }
-      
-      // ✅ Carregar justificativas do Supabase
-      const resultadoJust = await lerJustificativasDoSupabase(selectedYear);
-      if (resultadoJust.success && resultadoJust.data && Object.keys(resultadoJust.data).length > 0) {
-        console.log('✅ Justificativas carregadas do Supabase!', Object.keys(resultadoJust.data).length);
-        setJustificativas(resultadoJust.data);
-      } else {
-        console.log('⚠️ Sem justificativas no Supabase para o ano', selectedYear);
-        setJustificativas({});
-      }
-    };
-    
-    // Executar carregamento
-    carregarDadosDoSupabase();
-  }, [selectedYear]); // ✅ Recarregar quando mudar o ano!
+// Carregamento de dados do Supabase gerido por usePersistence (src/hooks/state/usePersistence.js)
   
   
   // v3.49.24: Detecção automática de dispositivo mobile
@@ -545,25 +516,13 @@ useEffect(() => {
   // v3.7.0: ESTADOS PARA CARROSSEL DE GRÁFICOS
   // ============================================================================
   
-  // v3.40.66: Paginação Rotas Sem Intervenção
-  const [hoveredPieSlice, setHoveredPieSlice] = useState(null);
-  const [hoveredWeekIndex, setHoveredWeekIndex] = useState(null);
-  
-  // v3.25.1: Tooltip do carrossel
-  const [tooltipData, setTooltipData] = useState(null);
-  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
-  
   // ============================================================================
   // FASE 8: ESTADOS DE FEEDBACK DE SALVAMENTO
   // ============================================================================
-  
+
   const modalTimerRef = useRef(null);
   const valorOriginalRef = useRef(null); // Guarda valor antes de começar a editar
   const skipNextSaveRef = useRef(false); // V5.08.17: Flag para evitar salvamento após delete
-  
-  // Modal de drill-down de status
-  const [showStatusDrilldown, setShowStatusDrilldown] = useState(false);
-  const [selectedStatusDrilldown, setSelectedStatusDrilldown] = useState(null);
 
   // Constantes de paginação (estados vêm de useAppState)
   const itemsPerPageDrilldown = 16;
@@ -1101,310 +1060,7 @@ useEffect(() => {
     );
   };
 
-  // ============================================================================
-  // FASE 8: PERSISTÊNCIA AUTOMÁTICA COM useEffect
-  // ============================================================================
-
-  // useEffect #1: Salvar estado 'data' no localStorage E SUPABASE automaticamente
-  // useEffect #1: Salvar estado 'data' no localStorage E SUPABASE automaticamente
-  useEffect(() => {
-    if (Object.keys(data).length > 0) {
-      setSaveStatus('saving');
-      
-      try {
-        // 1. Salvar no localStorage (backup local + rápido)
-        window.localStorage.setItem('psm_rotas_data_v3', JSON.stringify(data));
-        
-        // 2. Salvar no Supabase (compartilhado, com debounce)
-        clearTimeout(window.salvarSupabaseTimeout);
-        window.salvarSupabaseTimeout = setTimeout(async () => {
-          console.log('💾 [DATA] Salvando no Supabase para o ano:', selectedYear);
-          
-          const resultado = await salvarTudoNoSupabase(
-            data,
-            selectedQuarter,
-            selectedYear, // ✅ Usar ano selecionado
-            ROUTE_TO_PROVINCE,
-            rotasTestadas,  
-            rotasValidadas  
-          );
-          
-          if (resultado.success) {
-            console.log('✅ [DATA] Dados salvos no Supabase!', {
-              atualizados: resultado.updated,
-              inseridos: resultado.inserted,
-              ano: selectedYear
-            });
-          } else {
-            console.error('❌ [DATA] Erro ao salvar no Supabase:', resultado.error);
-          }
-        }, 5000); // Espera 5 segundos sem mudanças antes de salvar
-        
-        // Feedback visual de sucesso (localStorage)
-        setSaveStatus('saved');
-        setLastSaveTime(new Date());
-        
-        // Limpar status após 2 segundos
-        const timer = setTimeout(() => {
-          setSaveStatus('');
-        }, 2000);
-        
-        return () => {
-          clearTimeout(timer);
-          clearTimeout(window.salvarSupabaseTimeout);
-        };
-      } catch (error) {
-        console.error('Erro ao salvar dados:', error);
-        setSaveStatus('error');
-        
-        // Limpar status de erro após 3 segundos
-        const timer = setTimeout(() => {
-          setSaveStatus('');
-        }, 3000);
-        
-        return () => clearTimeout(timer);
-      }
-    }
-  }, [data, selectedQuarter, rotasTestadas, rotasValidadas]); // Adicionar selectedQuarter como dependência
-
-  // useEffect #2: Salvar estado 'justificativas' no localStorage E SUPABASE automaticamente
-  useEffect(() => {
-    console.log('🔄 [JUSTIFICATIVAS] useEffect executado', {
-      quantidade: Object.keys(justificativas).length,
-      timestamp: new Date().toISOString()
-    });
-    
-    if (Object.keys(justificativas).length > 0) {
-      // 1. Salvar no localStorage (backup local + rápido)
-      try {
-        window.localStorage.setItem('psm_justificativas_v1', JSON.stringify(justificativas));
-        console.log('✓ [JUSTIFICATIVAS] Salvas no localStorage:', Object.keys(justificativas).length, 'registros');
-      } catch (error) {
-        console.error('❌ [JUSTIFICATIVAS] Erro ao salvar no localStorage:', error);
-      }
-      
-      // 2. Salvar no Supabase (compartilhado, com debounce)
-      clearTimeout(window.salvarJustificativasTimeout);
-      console.log('⏱️ [JUSTIFICATIVAS] Timeout iniciado - aguardando 3 segundos...');
-      
-      window.salvarJustificativasTimeout = setTimeout(async () => {
-        console.log('💾 [JUSTIFICATIVAS] Iniciando salvamento no Supabase para o ano:', selectedYear);
-        
-        try {
-          const resultado = await salvarJustificativasNoSupabase(justificativas, selectedYear);
-          
-          if (resultado.success) {
-            console.log('✅ [JUSTIFICATIVAS] Salvas no Supabase!', {
-              atualizadas: resultado.updated,
-              inseridas: resultado.inserted,
-              total: resultado.total,
-              ano: selectedYear
-            });
-          } else {
-            console.error('❌ [JUSTIFICATIVAS] Erro ao salvar:', resultado.error);
-          }
-        } catch (error) {
-          console.error('❌ [JUSTIFICATIVAS] Exceção ao salvar:', error);
-        }
-      }, 3000); // Espera 3 segundos sem mudanças antes de salvar
-    } else {
-      console.log('⚠️ [JUSTIFICATIVAS] Estado vazio - nada para salvar');
-    }
-    
-    // Cleanup: limpar timeout quando componente desmontar ou justificativas mudarem
-    return () => {
-      console.log('🧹 [JUSTIFICATIVAS] Limpando timeout');
-      clearTimeout(window.salvarJustificativasTimeout);
-    };
-  }, [justificativas, selectedYear]); // Executar sempre que 'justificativas' ou 'selectedYear' mudar
-
-  // V5.08.20: useEffect #2.5 REESCRITO - Salvamento inteligente com deep compare e debounce
-  useEffect(() => {
-    // V5.08.17: Se flag estiver ativa, pular este salvamento (após delete)
-    if (skipNextSaveRef.current) {
-      console.log('⏭️ [DISTRIBUIÇÃO] Pulando salvamento (após delete)');
-      skipNextSaveRef.current = false;
-      return;
-    }
-    
-    // V5.08.20: CAMADA 2 - Não salvar durante carregamento inicial
-    if (isLoadingDistribuicao) {
-      console.log('⏭️ [DISTRIBUIÇÃO] Carregando dados, pulando salvamento');
-      return;
-    }
-    
-    // Verificar se tem dados
-    if (Object.keys(distribuicaoReparacoes).length === 0) {
-      console.log('⏭️ [DISTRIBUIÇÃO] Sem dados para salvar');
-      return;
-    }
-    
-    // V5.08.20: CAMADA 1 - Comparação profunda (Deep Compare)
-    const dadosAtuais = JSON.stringify(distribuicaoReparacoes);
-    const dadosAnteriores = lastSavedDistribuicaoRef.current;
-    
-    if (dadosAtuais === dadosAnteriores) {
-      console.log('⏭️ [DISTRIBUIÇÃO] Dados não mudaram, pulando salvamento');
-      return;
-    }
-    
-    console.log('🔄 [DISTRIBUIÇÃO] Dados mudaram, preparando salvamento...');
-    
-    // V5.08.20: CAMADA 3 - Cancelar timer anterior (se existir)
-    if (saveDistribuicaoTimerRef.current) {
-      clearTimeout(saveDistribuicaoTimerRef.current);
-      console.log('⏱️ [DISTRIBUIÇÃO] Timer anterior cancelado');
-    }
-    
-    // V5.08.20: CAMADA 3 - Debounce de 1 segundo
-    saveDistribuicaoTimerRef.current = setTimeout(async () => {
-      console.log('💾 [DISTRIBUIÇÃO] Salvando após debounce (1s)...');
-      
-      // Atualizar lastSaved ANTES de salvar (evita race condition)
-      lastSavedDistribuicaoRef.current = dadosAtuais;
-      
-      // 1. Salvar localStorage
-      try {
-        window.localStorage.setItem('psm_distribuicao_reparacoes_v3', dadosAtuais); // V5.10.16: v3 com ano
-        console.log('💾 [DISTRIBUIÇÃO] Salvo no localStorage v3 (com ano)');
-      } catch (error) {
-        console.error('❌ [DISTRIBUIÇÃO] Erro ao salvar no localStorage:', error);
-      }
-      
-      // 2. Salvar Supabase
-      try {
-        // V5.10.19: SEPARAR dados por quarter antes de salvar
-        const dadosDoAno = distribuicaoReparacoes[selectedYear] || {};
-        
-        // V5.10.19: Organizar dados por quarter
-        const dadosPorQuarter = {
-          Q1: {},
-          Q2: {},
-          Q3: {}
-        };
-        
-        // Processar cada PSM
-        Object.keys(dadosDoAno).forEach(psm => {
-          Object.keys(dadosDoAno[psm] || {}).forEach(week => {
-            // V5.10.19: DETERMINAR quarter da semana
-            const quarterDaSemana = getQuarterFromWeek(week);
-            
-            // Inicializar estrutura se necessário
-            if (!dadosPorQuarter[quarterDaSemana][psm]) {
-              dadosPorQuarter[quarterDaSemana][psm] = {};
-            }
-            
-            // Copiar dados da semana para o quarter correto
-            dadosPorQuarter[quarterDaSemana][psm][week] = dadosDoAno[psm][week];
-          });
-        });
-        
-        // V5.10.19: Salvar CADA quarter separadamente
-        for (const quarter of ['Q1', 'Q2', 'Q3']) {
-          const dadosDoQuarter = dadosPorQuarter[quarter];
-          
-          // Só salvar se houver dados neste quarter
-          if (Object.keys(dadosDoQuarter).length > 0) {
-            console.log(`💾 [DISTRIBUIÇÃO] Salvando ${selectedYear}/${quarter}...`);
-            
-            const resultado = await salvarDistribuicaoNoSupabase(
-              dadosDoQuarter,
-              quarter,  // V5.10.19: Quarter correto da semana
-              selectedYear
-            );
-            
-            if (resultado.success) {
-              console.log(`✅ [DISTRIBUIÇÃO] ${selectedYear}/${quarter} salvo com sucesso`);
-            } else {
-              console.error(`❌ [DISTRIBUIÇÃO] Erro ao salvar ${selectedYear}/${quarter}:`, resultado.error);
-            }
-          }
-        }
-        
-      } catch (error) {
-        console.error('❌ [DISTRIBUIÇÃO] Erro ao salvar no Supabase:', error);
-      }
-    }, 1000); // 1 segundo de debounce
-    
-  }, [distribuicaoReparacoes, selectedQuarter, selectedYear, isLoadingDistribuicao]);
-
-  // V5.08.20: useEffect #2.6 ATUALIZADO - Carregar com flag de loading
-  useEffect(() => {
-    const carregarDistribuicaoInicial = async () => {
-      // V5.08.20: Ativar flag de loading ANTES de carregar
-      setIsLoadingDistribuicao(true);
-      
-      console.log(`📥 [DISTRIBUIÇÃO] Carregando TODOS os quarters de ${selectedYear}...`);
-      
-      // V5.10.19: Carregar TODOS os quarters do ano
-      const dadosCompletos = {};
-      
-      for (const quarter of ['Q1', 'Q2', 'Q3']) {
-        const distrib = await carregarDistribuicaoDoSupabase(quarter, selectedYear);
-        
-        if (Object.keys(distrib).length > 0) {
-          console.log(`✅ [DISTRIBUIÇÃO] ${selectedYear}/${quarter} carregado (${Object.keys(distrib).length} PSMs)`);
-          
-          // Merge dos dados deste quarter
-          Object.keys(distrib).forEach(psm => {
-            if (!dadosCompletos[psm]) dadosCompletos[psm] = {};
-            Object.assign(dadosCompletos[psm], distrib[psm]);
-          });
-        } else {
-          console.log(`ℹ️ [DISTRIBUIÇÃO] ${selectedYear}/${quarter} sem dados`);
-        }
-      }
-      
-      if (Object.keys(dadosCompletos).length > 0) {
-        // V5.10.19: MERGE - Manter dados de outros anos, atualizar ano atual completo
-        setDistribuicaoReparacoes(prev => {
-          const updated = JSON.parse(JSON.stringify(prev));
-          updated[selectedYear] = dadosCompletos;
-          
-          console.log(`✅ [DISTRIBUIÇÃO] Todos os dados de ${selectedYear} carregados e mesclados`);
-          return updated;
-        });
-        
-        // V5.08.20: Atualizar lastSaved
-        lastSavedDistribuicaoRef.current = JSON.stringify({ 
-          ...distribuicaoReparacoes, 
-          [selectedYear]: dadosCompletos 
-        });
-        
-      } else {
-        console.log(`ℹ️ [DISTRIBUIÇÃO] Nenhum dado encontrado para ${selectedYear}`);
-        
-        // V5.10.18: Se não há dados, limpar apenas o ano atual
-        setDistribuicaoReparacoes(prev => {
-          const updated = JSON.parse(JSON.stringify(prev));
-          delete updated[selectedYear];
-          return updated;
-        });
-        
-        lastSavedDistribuicaoRef.current = JSON.stringify(distribuicaoReparacoes);
-      }
-      
-      // V5.08.20: Desativar flag de loading APÓS carregar
-      setIsLoadingDistribuicao(false);
-    };
-    
-    carregarDistribuicaoInicial();
-  }, [selectedYear]); // V5.10.19: Remover selectedQuarter - carrega TODOS quarters
-
-  // V5.08.20: Cleanup do timer de salvamento ao desmontar
-  useEffect(() => {
-    return () => {
-      if (saveDistribuicaoTimerRef.current) {
-        clearTimeout(saveDistribuicaoTimerRef.current);
-        console.log('🧹 [DISTRIBUIÇÃO] Timer de salvamento limpo ao desmontar');
-      }
-    };
-  }, []);
-
-  // useEffect #3: Log de inicialização (apenas uma vez)
-  useEffect(() => {
-
-  }, []); // Executar apenas no mount do componente
+  // Persistência automática gerida por usePersistence (src/hooks/state/usePersistence.js)
 
   // ============================================================================
   // FASE 7.1: FUNÇÕES DOS BOTÕES DO MENU

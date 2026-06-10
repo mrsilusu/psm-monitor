@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { LS_KEYS } from '../../services/localStorageService.js';
 import { getQuarterFromWeek } from '../../utils/dateUtils.js';
-import { salvarTudoNoSupabase, salvarJustificativasNoSupabase } from '../../services/supabaseService.js';
+import { lerTudoDoSupabase, salvarTudoNoSupabase, salvarJustificativasNoSupabase, lerJustificativasDoSupabase } from '../../services/supabaseService.js';
 import { carregarDistribuicaoDoSupabase, salvarDistribuicaoNoSupabase } from '../../services/supabaseDistribuicaoService.js';
 import { ROUTE_TO_PROVINCE } from '../../config/provinceConfig.js';
 
@@ -13,6 +13,10 @@ export const usePersistence = ({
   selectedQuarter,
   rotasTestadas,
   rotasValidadas,
+  setData,
+  setJustificativas,
+  setRotasTestadas,
+  setRotasValidadas,
   setDistribuicaoReparacoes,
   setSaveStatus,
   setLastSaveTime
@@ -23,6 +27,41 @@ export const usePersistence = ({
   const lastSavedDistribuicaoRef = useRef(null);
   const [isLoadingDistribuicao, setIsLoadingDistribuicao] = useState(false);
   const skipNextSaveRef = useRef(false);
+
+  // useEffect #1: Carregar dados do Supabase ao iniciar e quando mudar o ano
+  useEffect(() => {
+    const carregarDadosDoSupabase = async () => {
+      console.log('🔄 Carregando dados do Supabase para o ano:', selectedYear);
+
+      const resultado = await lerTudoDoSupabase(selectedYear);
+
+      if (resultado.success && resultado.data && Object.keys(resultado.data).length > 0) {
+        console.log('✅ Dados carregados do Supabase!', resultado.data);
+        setData(resultado.data);
+
+        if (resultado.rotasTestadas && Object.keys(resultado.rotasTestadas).length > 0) {
+          setRotasTestadas(resultado.rotasTestadas);
+        }
+        if (resultado.rotasValidadas && Object.keys(resultado.rotasValidadas).length > 0) {
+          setRotasValidadas(resultado.rotasValidadas);
+        }
+      } else {
+        console.log('⚠️ Sem dados no Supabase para o ano', selectedYear);
+        setData({ ISISTEL: {}, FIBRASOL: {}, ANGLOBAL: {} });
+        setRotasTestadas({});
+        setRotasValidadas({});
+      }
+
+      const resultadoJust = await lerJustificativasDoSupabase(selectedYear);
+      if (resultadoJust.success && resultadoJust.data && Object.keys(resultadoJust.data).length > 0) {
+        setJustificativas(resultadoJust.data);
+      } else {
+        setJustificativas({});
+      }
+    };
+
+    carregarDadosDoSupabase();
+  }, [selectedYear, setData, setJustificativas, setRotasTestadas, setRotasValidadas]);
 
   useEffect(() => {
     if (Object.keys(data).length === 0) return;
@@ -131,7 +170,7 @@ export const usePersistence = ({
       }
 
       if (Object.keys(dadosCompletos).length > 0) {
-        setDistribuicaoReparicoes((prev) => {
+        setDistribuicaoReparacoes((prev) => {
           const updated = JSON.parse(JSON.stringify(prev));
           updated[selectedYear] = dadosCompletos;
           console.log(`✅ [DISTRIBUIÇÃO] Todos os dados de ${selectedYear} carregados e mesclados`);
@@ -144,7 +183,7 @@ export const usePersistence = ({
         });
       } else {
         console.log(`ℹ️ [DISTRIBUIÇÃO] Nenhum dado encontrado para ${selectedYear}`);
-        setDistribuicaoReparicoes((prev) => {
+        setDistribuicaoReparacoes((prev) => {
           const updated = JSON.parse(JSON.stringify(prev));
           delete updated[selectedYear];
           return updated;
@@ -156,7 +195,7 @@ export const usePersistence = ({
     };
 
     carregarDistribuicaoInicial();
-  }, [selectedYear, setDistribuicaoReparicoes]);
+  }, [selectedYear, setDistribuicaoReparacoes]);
 
   useEffect(() => {
     if (skipNextSaveRef.current) {
