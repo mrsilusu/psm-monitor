@@ -2759,6 +2759,7 @@ useEffect(() => {
             selectedYear={selectedYear}
             handleRotaClick={handleRotaClick}
             data={data}
+            distribuicaoReparacoes={distribuicaoReparacoes}
             viewMode={viewMode}
             setViewMode={setViewMode}
             viewModeClassificacao={viewModeClassificacao}
@@ -2795,6 +2796,7 @@ useEffect(() => {
             getInputValue={getInputValue}
             manualDataExpanded={manualDataExpanded}
             setManualDataExpanded={setManualDataExpanded}
+            handleBlurTotalReparadas={handleBlurTotalReparadas}
           />
         </div>
       </div>

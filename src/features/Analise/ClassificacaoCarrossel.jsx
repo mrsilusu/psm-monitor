@@ -1,6 +1,7 @@
 import React from 'react';
 import { ROUTES_BY_PSM } from '../../config/routeConfig';
 import { QUARTER_CONFIG } from '../../config/quarterConfig';
+import { getValorReduzido as getValorReduzidoUtil } from '../../utils/valueUtils.js';
 
 const ClassificacaoCarrossel = ({
   selectedOperator,
@@ -10,6 +11,7 @@ const ClassificacaoCarrossel = ({
   selectedYear,
   handleRotaClick,
   data,
+  distribuicaoReparacoes,
   viewMode,
   setViewMode,
   viewModeClassificacao,
@@ -32,6 +34,9 @@ const ClassificacaoCarrossel = ({
   tooltipPosition,
   setTooltipPosition,
 }) => {
+  const getValorReduzido = (psm, week, route, tipo) =>
+    getValorReduzidoUtil(data, distribuicaoReparacoes, selectedQuarter, selectedYear, QUARTER_CONFIG, psm, week, route, tipo);
+
   return (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 mt-6">
             {/* HEADER COM BOTÃO TOGGLE */}

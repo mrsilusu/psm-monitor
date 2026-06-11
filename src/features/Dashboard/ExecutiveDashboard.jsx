@@ -2,6 +2,8 @@ import React from 'react';
 import { BarChart3 } from 'lucide-react';
 import { ROUTES_BY_PSM } from '../../config/routeConfig';
 import { ROUTE_TO_PROVINCE, OPERATOR_TO_PROVINCES } from '../../config/provinceConfig';
+import { QUARTER_CONFIG } from '../../config/quarterConfig';
+import { getValorReduzido as getValorReduzidoUtil } from '../../utils/valueUtils.js';
 
 const ExecutiveDashboard = ({
   selectedOperator,
@@ -19,6 +21,9 @@ const ExecutiveDashboard = ({
   efetividadePSMMedia,
   data,
 }) => {
+  const getValorReduzido = (psm, week, route, tipo) =>
+    getValorReduzidoUtil(data, distribuicaoReparacoes, selectedQuarter, selectedYear, QUARTER_CONFIG, psm, week, route, tipo);
+
   return (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200">
             <div className="py-4 px-4 border-b border-gray-200 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors">
