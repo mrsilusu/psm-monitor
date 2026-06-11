@@ -324,15 +324,6 @@ useEffect(() => {
   
   // v3.21.1: Removido showProvincialDashboard (dashboard redundante)
 
-  // Função para obter semanas de um quadrimestre
-  const getWeeksForQuarter = (quarter) => {
-    const config = QUARTER_CONFIG[quarter];
-    return Array.from(
-      { length: config.weeks },
-      (_, i) => `W${config.start + i}`
-    );
-  };
-
   // ============================================================================
   // v3.7.0: ESTADOS PARA CARROSSEL DE GRÁFICOS
   // ============================================================================
@@ -828,64 +819,6 @@ useEffect(() => {
    * FUNÇÃO LIMPAR JUSTIFICATIVAS
    * Remove todas as justificativas importadas do PSM e Quarter selecionados
    */
-  const handleLimparJustificativas = () => {
-    const countBefore = Object.keys(justificativas).length;
-    const countFiltered = Object.values(justificativas).filter(j => 
-      j.psm === selectedOperator && j.quarter === selectedQuarter
-    ).length;
-
-    if (countFiltered === 0) {
-      alert('⚠️ Não há justificativas para limpar!\n\n' +
-            `PSM: ${selectedOperator}\n` +
-            `Quarter: ${selectedQuarter}\n\n` +
-            'Nenhum dado encontrado.');
-      return;
-    }
-
-    const confirmar = confirm(
-      `🗑️ LIMPAR JUSTIFICATIVAS\n\n` +
-      `Deseja realmente limpar TODAS as justificativas de:\n\n` +
-      `PSM: ${selectedOperator}\n` +
-      `Quarter: ${selectedQuarter}\n\n` +
-      `Total a remover: ${countFiltered} secções\n\n` +
-      `Esta ação não pode ser desfeita!`
-    );
-
-    if (!confirmar) {
-
-      return;
-    }
-
-    // Filtrar e remover apenas do PSM/Quarter selecionado
-    const updated = {};
-    let removed = 0;
-
-    Object.entries(justificativas).forEach(([key, just]) => {
-      if (just.psm === selectedOperator && just.quarter === selectedQuarter) {
-        removed++;
-
-      } else {
-        updated[key] = just;
-      }
-    });
-
-    setJustificativas(updated);
-
-    console.log('✅ Limpeza concluída:', {
-      antes: countBefore,
-      removidas: removed,
-      depois: Object.keys(updated).length
-    });
-
-    alert(
-      `✅ Justificativas limpas com sucesso!\n\n` +
-      `PSM: ${selectedOperator}\n` +
-      `Quarter: ${selectedQuarter}\n\n` +
-      `Removidas: ${removed} secções\n` +
-      `Restantes no sistema: ${Object.keys(updated).length}`
-    );
-  };
-
   // Persistência automática gerida por usePersistence (src/hooks/state/usePersistence.js)
 
   // ============================================================================
@@ -1741,27 +1674,7 @@ useEffect(() => {
   };
 
   // Função: Selecionar Semanas para Comparação
-  const handleSelectWeeks = () => {
-    alert('📅 Comparação de Semanas\n\n' +
-          '⚠️ Esta funcionalidade será implementada na Fase 24.\n\n' +
-          'Recursos planejados:\n' +
-          '- Selecionar até 4 semanas\n' +
-          '- Comparação lado a lado\n' +
-          '- Destaque de diferenças\n' +
-          '- Gráficos comparativos');
-  };
-
   // Função: Ver Top 5 Semanas
-  const handleViewTop5 = () => {
-    alert('📊 Top 5 Semanas com Mais Indisponíveis\n\n' +
-          '⚠️ Esta funcionalidade será implementada em breve.\n\n' +
-          'Mostrará:\n' +
-          '- Ranking de semanas críticas\n' +
-          '- Total de indisponíveis por semana\n' +
-          '- Rotas mais afetadas\n' +
-          '- Tendências de degradação');
-  };
-
   // ============================================================================
   // FASE 9: TABELA EDITÁVEL - FUNÇÕES DE INPUT
   // ============================================================================
@@ -1932,20 +1845,6 @@ useEffect(() => {
       return '';
     }
   };
-
-  /**
-   * V5.07.0: Obtém valor REDUZIDO para Dashboard Executivo
-   * Calcula: Valor Original - Desconto ACUMULADO de todas as semanas até a atual
-   */
-  const getValorReduzido = (psm, week, route, tipo) =>
-    getValorReduzidoUtil(data, distribuicaoReparacoes, selectedQuarter, selectedYear, QUARTER_CONFIG, psm, week, route, tipo);
-
-  /**
-   * V5.06.0: Obtém valor ORIGINAL para Cards Header
-   * Retorna valor sem aplicar desconto de reparações
-   */
-  const getValorOriginal = (psm, week, route, tipo) =>
-    getValorOriginalUtil(data, psm, week, route, tipo);
 
   // v3.40.71: USA headerCardsData (valores ORIGINAIS, exceto Total Reparadas)
   const summaryCards = [
@@ -2162,285 +2061,13 @@ useEffect(() => {
 
 
 
-  // Dependencies: recalcula quando qualquer um desses valores mudar
 
-  // Extrair arrays para os gráficos
-  const rotasDegradadasData = classificacaoRotas.degradadas;
-  const rotasComGanhoData = classificacaoRotas.comGanho;
-  const rotasEstaveisData = classificacaoRotas.estaveis;
-
-  // ============================================================================
-  // FUNÇÕES AUXILIARES PARA GRÁFICOS (conforme documentação original)
-  // ============================================================================
-
-  /**
-   * Preparar dados para o gráfico de barras
-   * Busca valores de cada status da semana mais recente
-   */
-  const prepareChartData = (routesList) => {
-    return routesList.map(routeInfo => {
-      const rotaData = { name: routeInfo.rota };
-      
-      // Adicionar cada status ao objeto
-      const statusCategorias = [
-        'Transporte',
-        'Indisponíveis',
-        'Total Reparadas',
-        'Reconhecidas',
-        'Dep. de Passagem de Cabo',
-        'Dep. de Licença',
-        'Dep. de Cutover',
-        `Fibras dependentes da ${selectedOperator}`
-      ];
-
-      statusCategorias.forEach(status => {
-        // Buscar semana mais recente com dados
-        let mostRecentWeek = null;
-        const weekNum = parseInt(selectedWeek.substring(1));
-        
-        for (let i = weekNum; i >= 1; i--) {
-          const checkWeek = 'W' + i;
-          const weekData = data[selectedOperator]?.[checkWeek]?.[routeInfo.rota] || {};
-          
-          if ((weekData[status] || 0) > 0) {
-            mostRecentWeek = checkWeek;
-            break;
-          }
-        }
-        
-        // Pegar valor ou zero
-        if (mostRecentWeek) {
-          const weekData = data[selectedOperator]?.[mostRecentWeek]?.[routeInfo.rota] || {};
-          rotaData[status] = weekData[status] || 0;
-        } else {
-          rotaData[status] = 0;
-        }
-      });
-      
-      return rotaData;
-    });
-  };
-
-  /**
-   * Calcular altura do eixo X baseado no tamanho dos nomes
-   */
-  const getXAxisHeight = (routesList) => {
-    if (routesList.length === 0) return 75;
-    
-    const maxLength = Math.max(...routesList.map(r => r.rota.length));
-    return Math.max(80, 80 + Math.floor((maxLength - 20) / 4) * 8);
-  };
-
-  /**
-   * Calcular margem inferior
-   */
-  const getBottomMargin = (routesList) => {
-    if (routesList.length === 0) return 90;
-    
-    const maxLength = Math.max(...routesList.map(r => r.rota.length));
-    return Math.max(100, 100 + Math.floor((maxLength - 20) / 5) * 10);
-  };
-
-  /**
-   * Calcular altura do gráfico
-   */
-  const getChartHeight = (routesList) => {
-    const baseHeight = 400;
-    const additionalHeight = Math.max(0, (routesList.length - 8) * 15);
-    return baseHeight + additionalHeight;
-  };
-
-  /**
-   * Tick customizado do eixo X
-   * Mostra nome em verde/negrito se foi reparada na semana atual
-   */
-  const CustomXAxisTick = ({ x, y, payload }) => {
-    const allRoutes = classificacaoRotas.degradadas.concat(
-      classificacaoRotas.comGanho,
-      classificacaoRotas.estaveis
-    );
-    const routeInfo = allRoutes.find(r => r.rota === payload.value);
-    const isRepaired = routeInfo?.isRepaired || false;
-    
-    return (
-      <g transform={`translate(${x},${y})`}>
-        <text
-          x={0}
-          y={0}
-          dy={18}
-          textAnchor="end"
-          fill={isRepaired ? "#00A000" : "#666"}
-          fontWeight={isRepaired ? "bold" : "normal"}
-          fontSize={10}
-          transform="rotate(-45)"
-        >
-          {payload.value}
-        </text>
-      </g>
-    );
-  };
-
-  // Mapa de cores para os status - CORES EXATAS DO DASHBOARD EXECUTIVO
-  const colorMap = {
-    "Transporte": "#475569",              // Cinza escuro (slate-600)
-    "Indisponíveis": "#EF4444",           // Vermelho (red-500)
-    "Total Reparadas": "#22C55E",         // Verde (green-500)
-    "Reconhecidas": "#06B6D4",            // Ciano/Azul claro (cyan-500)
-    "Dep. de Passagem de Cabo": "#3B82F6", // Azul (blue-500)
-    "Dep. de Licença": "#F97316",         // Laranja (orange-500)
-    "Dep. de Cutover": "#A855F7",         // Roxo (purple-500)
-    [`Fibras dependentes da ${selectedOperator}`]: "#64748B"  // Cinza médio (slate-500)
-  };
-
-  // ============================================================================
-  // FASE 16: GRÁFICOS DE TENDÊNCIAS DINÂMICOS COM useMemo
-
-
-  // ============================================================================
-
-  // FASE 16: trendData agora é dinâmico (calculado via useMemo acima)
-
-  // Dados para a Tabela de Introdução Manual
-  const manualDataRows = [
-    { rota: 'Alto Dondo - Quiela', transporte: '', indisponiveis: '', totalReparadas: '', reconhecidas: '', depPassagem: '', depLicenca: '', depCutover: '', fibrasDep: '' },
-    { rota: 'Ambriz - N\'zeto', transporte: '', indisponiveis: '', totalReparadas: '', reconhecidas: '', depPassagem: '', depLicenca: '', depCutover: '', fibrasDep: '' },
-    { rota: 'BSC Malange - Cazenga', transporte: '', indisponiveis: '', totalReparadas: '', reconhecidas: '', depPassagem: '', depLicenca: '', depCutover: '', fibrasDep: '' },
-    { rota: 'Calunga - Mussureda', transporte: '', indisponiveis: 6, totalReparadas: 6, reconhecidas: '', depPassagem: '', depLicenca: '', depCutover: '', fibrasDep: 6 },
-    { rota: 'Camalamba - Lucala', transporte: '', indisponiveis: '', totalReparadas: '', reconhecidas: '', depPassagem: '', depLicenca: '', depCutover: '', fibrasDep: '' },
-    { rota: 'Caxambua - Vila Matibie', transporte: '', indisponiveis: '', totalReparadas: '', reconhecidas: '', depPassagem: '', depLicenca: '', depCutover: '', fibrasDep: '' },
-    { rota: 'Guango - Cafurifo', transporte: '', indisponiveis: '', totalReparadas: '', reconhecidas: '', depPassagem: '', depLicenca: '', depCutover: '', fibrasDep: '' },
-    { rota: 'Guango - Camipala', transporte: '', indisponiveis: '', totalReparadas: '', reconhecidas: '', depPassagem: '', depLicenca: '', depCutover: '', fibrasDep: '' },
-    { rota: 'Cuimba - Ngunhi', transporte: '', indisponiveis: '', totalReparadas: '', reconhecidas: '', depPassagem: '', depLicenca: '', depCutover: '', fibrasDep: '' },
-    { rota: 'Damião - Uíge(Negage-CTR)', transporte: '', indisponiveis: '', totalReparadas: '', reconhecidas: '', depPassagem: '', depLicenca: '', depCutover: '', fibrasDep: '' },
-    { rota: 'Hospital - Lumbo', transporte: '', indisponiveis: '', totalReparadas: '', reconhecidas: '', depPassagem: '', depLicenca: '', depCutover: '', fibrasDep: '' }
-  ];
-
-  // FASE 15: Arrays de classificação agora são dinâmicos (calculados via useMemo acima)
-  // rotasDegradadasData, rotasComGanhoData, rotasEstaveisData
-
-  // NOVO: Dados para Tabela de Acompanhamento Transporte vs Degradação (Página 4 do PDF)
-  // Combina dados mock com justificativas importadas
-  
-  // Função para calcular o trimestre anterior
-  const getQuarterAnterior = (currentQuarter, currentYear) => {
-    const quarterMap = {
-      'Q1': { quarter: 'Q3', yearOffset: -1 },
-      'Q2': { quarter: 'Q1', yearOffset: 0 },
-      'Q3': { quarter: 'Q2', yearOffset: 0 }
-    };
-    
-    const result = quarterMap[currentQuarter];
-    if (!result) return { quarter: 'Q1', year: currentYear, label: 'Q1' };
-    
-    const year = currentYear + result.yearOffset;
-    
-    // Formatar label: se ano diferente, mostrar ano
-    let label = result.quarter;
-    if (result.yearOffset !== 0) {
-      label = `${result.quarter} ${year}`;
-    }
-    
-    return { quarter: result.quarter, year, label };
-  };
-  
-  const quarterAnterior = getQuarterAnterior(selectedQuarter, selectedYear);
-  
-
-  // Paginação do Acompanhamento
-  const totalPagesAcomp = Math.ceil(acompanhamentoData.length / itemsPerPageAcomp);
-  const startIndexAcomp = currentPageAcomp * itemsPerPageAcomp;
-  const endIndexAcomp = startIndexAcomp + itemsPerPageAcomp;
-  const currentDataAcomp = acompanhamentoData.slice(startIndexAcomp, endIndexAcomp);
-
-  const goToNextPageAcomp = () => {
-    if (currentPageAcomp < totalPagesAcomp - 1) {
-      setCurrentPageAcomp(currentPageAcomp + 1);
-    }
-  };
-
-  const goToPrevPageAcomp = () => {
-    if (currentPageAcomp > 0) {
-      setCurrentPageAcomp(currentPageAcomp - 1);
-    }
-  };
-
-  // Paginação das Rotas Normalizadas
-  const totalPagesNormalizadas = Math.ceil(rotasNormalizadas.length / itemsPerPageNormalizadas);
-  const startIndexNormalizadas = currentPageNormalizadas * itemsPerPageNormalizadas;
-  const endIndexNormalizadas = startIndexNormalizadas + itemsPerPageNormalizadas;
-  const currentDataNormalizadas = rotasNormalizadas.slice(startIndexNormalizadas, endIndexNormalizadas);
-
-  const goToNextPageNormalizadas = () => {
-    if (currentPageNormalizadas < totalPagesNormalizadas - 1) {
-      setCurrentPageNormalizadas(currentPageNormalizadas + 1);
-    }
-  };
-
-  const goToPrevPageNormalizadas = () => {
-    if (currentPageNormalizadas > 0) {
-      setCurrentPageNormalizadas(currentPageNormalizadas - 1);
-    }
-  };
-  
-  // v3.20.1: Funções de navegação para Intervenções Recentes
-  const goToNextPageIntervencoes = () => {
-    const totalPagesIntervencoes = Math.ceil(intervencoesRecentes.length / itemsPerPageIntervencoes);
-    if (currentPageIntervencoes < totalPagesIntervencoes - 1) {
-      setCurrentPageIntervencoes(currentPageIntervencoes + 1);
-    }
-  };
-
-  const goToPrevPageIntervencoes = () => {
-    if (currentPageIntervencoes > 0) {
-      setCurrentPageIntervencoes(currentPageIntervencoes - 1);
-    }
-  };
-  
-  // v3.40.66: Funções de navegação para Rotas Sem Intervenção
-  const goToNextPageSemIntervencao = () => {
-    const totalPagesSemIntervencao = Math.ceil(rotasSemIntervencao.length / itemsPerPageSemIntervencao);
-    if (currentPageSemIntervencao < totalPagesSemIntervencao - 1) {
-      setCurrentPageSemIntervencao(currentPageSemIntervencao + 1);
-    }
-  };
-
-  const goToPrevPageSemIntervencao = () => {
-    if (currentPageSemIntervencao > 0) {
-      setCurrentPageSemIntervencao(currentPageSemIntervencao - 1);
-    }
-  };
-
-  // Reset página ao mudar PSM ou Quarter
   useEffect(() => {
     setCurrentPageAcomp(0);
     setCurrentPageNormalizadas(0);
     setCurrentPageIntervencoes(0); // v3.20.1
     setCurrentPageSemIntervencao(0); // v3.40.66
   }, [selectedOperator, selectedQuarter]);
-
-  // Função para criar o path do setor do gráfico de pizza
-  const createPieSlice = (startAngle, endAngle, radius = 100, innerRadius = 0) => {
-    const start = polarToCartesian(120, 120, radius, endAngle);
-    const end = polarToCartesian(120, 120, radius, startAngle);
-    const largeArcFlag = endAngle - startAngle <= 180 ? '0' : '1';
-    
-    if (innerRadius === 0) {
-      return [
-        'M', 120, 120,
-        'L', start.x, start.y,
-        'A', radius, radius, 0, largeArcFlag, 0, end.x, end.y,
-        'Z'
-      ].join(' ');
-    }
-  };
-
-  const polarToCartesian = (centerX, centerY, radius, angleInDegrees) => {
-    const angleInRadians = ((angleInDegrees - 90) * Math.PI) / 180.0;
-    return {
-      x: centerX + radius * Math.cos(angleInRadians),
-      y: centerY + radius * Math.sin(angleInRadians)
-    };
-  };
 
   // Mapeamento de cores por categoria
   const categoryColors = {
