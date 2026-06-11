@@ -1,5 +1,5 @@
 import React from 'react';
-import { BarChart3, Menu } from 'lucide-react';
+import { BarChart3, Menu, TrendingUp, XCircle, CheckCircle, AlertTriangle, Users, Clock, MapPin } from 'lucide-react';
 import { OPERATOR_TO_PROVINCES } from '../../config/provinceConfig';
 import { getWeeksForQuarter } from '../../utils/dateUtils.js';
 import SaveStatus from '../../components/feedback/SaveStatus.jsx';
@@ -29,10 +29,21 @@ const HeaderFilters = ({
   alertas,
   alertasLidos,
   setAlertasLidos,
-  summaryCards,
+  headerCardsData,
   handleStatusClick,
   isVisible,
 }) => {
+  const summaryCards = headerCardsData ? [
+    { label: headerCardsData.transporteQ2.label, value: headerCardsData.transporteQ2.value, bgColor: headerCardsData.transporteQ2.color, icon: <TrendingUp className="w-3 h-3" /> },
+    { label: headerCardsData.indisponiveis.label, value: headerCardsData.indisponiveis.value, bgColor: headerCardsData.indisponiveis.color, icon: <XCircle className="w-3 h-3" /> },
+    { label: headerCardsData.totalReparadas.label, value: headerCardsData.totalReparadas.value, bgColor: headerCardsData.totalReparadas.color, icon: <CheckCircle className="w-3 h-3" /> },
+    { label: headerCardsData.reconhecidas.label, value: headerCardsData.reconhecidas.value, bgColor: headerCardsData.reconhecidas.color, icon: <AlertTriangle className="w-3 h-3" /> },
+    { label: headerCardsData.depPassagens.label, value: headerCardsData.depPassagens.value, bgColor: headerCardsData.depPassagens.color, icon: <Users className="w-3 h-3" /> },
+    { label: headerCardsData.depLicenca.label, value: headerCardsData.depLicenca.value, bgColor: headerCardsData.depLicenca.color, icon: <Clock className="w-3 h-3" /> },
+    { label: headerCardsData.depCutover.label, value: headerCardsData.depCutover.value, bgColor: headerCardsData.depCutover.color, icon: <MapPin className="w-3 h-3" /> },
+    { label: headerCardsData.fibrasDep.label, value: headerCardsData.fibrasDep.value, bgColor: headerCardsData.fibrasDep.color, icon: <TrendingUp className="w-3 h-3" /> },
+  ] : [];
+
   return (
     <div
       className={`sticky z-50 bg-white shadow-md transition-all duration-300 ${

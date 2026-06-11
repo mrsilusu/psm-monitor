@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { TrendingUp, Users, AlertTriangle, CheckCircle, XCircle, Clock, MapPin } from 'lucide-react';
 
 import { cleanupOldData } from './services/localStorageService';
 
 import { ALL_WEEKS } from './config/constants';
 import { QUARTER_CONFIG } from './config/quarterConfig';
 import { ROUTES_BY_PSM } from './config/routeConfig';
-import { isRotaTestada as isRotaTestadaUtil, isRotaValidada as isRotaValidadaUtil, getSemanasTestadasNoQuarter as getSemanasTestadasNoQuarterUtil, getSemanasValidadasNoQuarter as getSemanasValidadasNoQuarterUtil, getSemanasTestadas as getSemanasTestadasUtil, getSemanasValidadas as getSemanasValidadasUtil, isRotaTestadaGlobalNoQuarter as isRotaTestadaGlobalNoQuarterUtil, isRotaValidadaGlobalNoQuarter as isRotaValidadaGlobalNoQuarterUtil, isRotaTestadaGlobal as isRotaTestadaGlobalUtil, isRotaValidadaGlobal as isRotaValidadaGlobalUtil, isRotaValidadaNoQuarter as isRotaValidadaNoQuarterUtil, isRotaTestadaNoQuarter as isRotaTestadaNoQuarterUtil } from './utils/routeUtils.js';
+import { useRouteChecks } from './hooks/business/useRouteChecks.js';
 import { useFilters } from './hooks/state/useFilters.js';
 import { useAppState } from './hooks/state/useAppState.js';
 import { usePersistence } from './hooks/state/usePersistence.js';
@@ -173,9 +172,6 @@ useEffect(() => {
   };
 }, []);
 
-// Carregamento de dados do Supabase gerido por usePersistence (src/hooks/state/usePersistence.js)
-  
-  
   // v3.49.24: Detecção automática de dispositivo mobile
   useEffect(() => {
     const checkMobileDevice = () => {
@@ -190,45 +186,20 @@ useEffect(() => {
     return () => window.removeEventListener('resize', checkMobileDevice);
   }, []);
   
-  const isRotaTestada = (psm, semana, rota) =>
-    isRotaTestadaUtil(rotasTestadas, selectedYear, psm, semana, rota);
-
-  const isRotaValidada = (psm, semana, rota) =>
-    isRotaValidadaUtil(rotasValidadas, selectedYear, psm, semana, rota);
-
-  const getSemanasTestadasNoQuarter = (psm, rota, quarter) =>
-    getSemanasTestadasNoQuarterUtil(rotasTestadas, selectedYear, psm, rota, quarter);
-
-  const getSemanasValidadasNoQuarter = (psm, rota, quarter) =>
-    getSemanasValidadasNoQuarterUtil(rotasValidadas, selectedYear, psm, rota, quarter);
-
-  const getSemanasTestadas = (psm, rota) =>
-    getSemanasTestadasUtil(rotasTestadas, psm, rota);
-
-  const getSemanasValidadas = (psm, rota) =>
-    getSemanasValidadasUtil(rotasValidadas, psm, rota);
-
-  const isRotaTestadaGlobalNoQuarter = (psm, rota, quarter) =>
-    isRotaTestadaGlobalNoQuarterUtil(rotasTestadas, selectedYear, psm, rota, quarter);
-
-  const isRotaValidadaGlobalNoQuarter = (psm, rota, quarter) =>
-    isRotaValidadaGlobalNoQuarterUtil(rotasValidadas, selectedYear, psm, rota, quarter);
-
-  const isRotaTestadaGlobal = (psm, rota) =>
-    isRotaTestadaGlobalUtil(rotasTestadas, psm, rota);
-
-  const isRotaValidadaGlobal = (psm, rota) =>
-    isRotaValidadaGlobalUtil(rotasValidadas, psm, rota);
-
-  const isRotaValidadaNoQuarter = (psm, rota, quarter) =>
-    isRotaValidadaNoQuarterUtil(rotasValidadas, selectedYear, psm, rota, quarter);
-
-  const isRotaTestadaNoQuarter = (psm, rota, quarter) =>
-    isRotaTestadaNoQuarterUtil(rotasTestadas, selectedYear, psm, rota, quarter);
-
-  // ============================================================================
-  // FASE 6: HOOKS DE LÓGICA DE NEGÓCIO
-  // ============================================================================
+  const {
+    isRotaTestada,
+    isRotaValidada,
+    getSemanasTestadasNoQuarter,
+    getSemanasValidadasNoQuarter,
+    getSemanasTestadas,
+    getSemanasValidadas,
+    isRotaTestadaGlobalNoQuarter,
+    isRotaValidadaGlobalNoQuarter,
+    isRotaTestadaGlobal,
+    isRotaValidadaGlobal,
+    isRotaValidadaNoQuarter,
+    isRotaTestadaNoQuarter,
+  } = useRouteChecks({ rotasTestadas, rotasValidadas, selectedYear });
 
   useTestes({
     data, rotasTestadas, rotasValidadas,
@@ -378,58 +349,6 @@ const { intervencoesRecentes, rotasNormalizadas, rotasMaisIntervencionadas, rota
     setCurrentPageSemIntervencao(0); // v3.40.66
   }, [selectedOperator, selectedQuarter]);
 
-  // v3.40.71: USA headerCardsData (valores ORIGINAIS, exceto Total Reparadas)
-  const summaryCards = [
-    {
-      label: headerCardsData.transporteQ2.label,
-      value: headerCardsData.transporteQ2.value,  // ORIGINAL
-      bgColor: headerCardsData.transporteQ2.color,
-      icon: <TrendingUp className="w-3 h-3" />
-    },
-    {
-      label: headerCardsData.indisponiveis.label,
-      value: headerCardsData.indisponiveis.value,  // ORIGINAL (sem redução)
-      bgColor: headerCardsData.indisponiveis.color,
-      icon: <XCircle className="w-3 h-3" />
-    },
-    {
-      label: headerCardsData.totalReparadas.label,
-      value: headerCardsData.totalReparadas.value,  // DINÂMICO ✅
-      bgColor: headerCardsData.totalReparadas.color,
-      icon: <CheckCircle className="w-3 h-3" />
-    },
-    {
-      label: headerCardsData.reconhecidas.label,
-      value: headerCardsData.reconhecidas.value,  // ORIGINAL (sem redução)
-      bgColor: headerCardsData.reconhecidas.color,
-      icon: <AlertTriangle className="w-3 h-3" />
-    },
-    {
-      label: headerCardsData.depPassagens.label,
-      value: headerCardsData.depPassagens.value,  // ORIGINAL (sem redução)
-      bgColor: headerCardsData.depPassagens.color,
-      icon: <Users className="w-3 h-3" />
-    },
-    {
-      label: headerCardsData.depLicenca.label,
-      value: headerCardsData.depLicenca.value,  // ORIGINAL (sem redução)
-      bgColor: headerCardsData.depLicenca.color,
-      icon: <Clock className="w-3 h-3" />
-    },
-    {
-      label: headerCardsData.depCutover.label,
-      value: headerCardsData.depCutover.value,  // ORIGINAL (sem redução)
-      bgColor: headerCardsData.depCutover.color,
-      icon: <MapPin className="w-3 h-3" />
-    },
-    {
-      label: headerCardsData.fibrasDep.label,
-      value: headerCardsData.fibrasDep.value,  // ORIGINAL (sem redução)
-      bgColor: headerCardsData.fibrasDep.color,
-      icon: <TrendingUp className="w-3 h-3" />
-    }
-  ];
-
   // Configuração dos slides para o modo de apresentação
   const slideConfig = {
     0: ["cards", "summary"],                          // Slide 0: Dashboard Executivo
@@ -467,7 +386,7 @@ const { intervencoesRecentes, rotasNormalizadas, rotasMaisIntervencionadas, rota
         efetividadeGlobalMedia={efetividadeGlobalMedia}
         efetividadePSMMedia={efetividadePSMMedia}
         distribuicaoReparacoes={distribuicaoReparacoes}
-        summaryCards={summaryCards}
+        headerCardsData={headerCardsData}
         quarterWeeks={quarterWeeks}
         showStatusDrilldown={showStatusDrilldown}
         setShowStatusDrilldown={setShowStatusDrilldown}
@@ -616,7 +535,7 @@ const { intervencoesRecentes, rotasNormalizadas, rotasMaisIntervencionadas, rota
           alertas={alertas}
           alertasLidos={alertasLidos}
           setAlertasLidos={setAlertasLidos}
-          summaryCards={summaryCards}
+          headerCardsData={headerCardsData}
           handleStatusClick={handleStatusClick}
           isVisible={isVisible}
         />

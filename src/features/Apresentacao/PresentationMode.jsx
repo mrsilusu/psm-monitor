@@ -1,5 +1,5 @@
 import React from 'react';
-import { BarChart3 } from 'lucide-react';
+import { BarChart3, TrendingUp, XCircle, CheckCircle, AlertTriangle, Users, Clock, MapPin } from 'lucide-react';
 import { ROUTES_BY_PSM } from '../../config/routeConfig';
 import { ROUTE_TO_PROVINCE } from '../../config/provinceConfig';
 import { QUARTER_CONFIG } from '../../config/quarterConfig';
@@ -19,7 +19,7 @@ const PresentationMode = ({
   efetividadeGlobalMedia,
   efetividadePSMMedia,
   distribuicaoReparacoes,
-  summaryCards,
+  headerCardsData,
   quarterWeeks,
   showStatusDrilldown,
   setShowStatusDrilldown,
@@ -30,6 +30,17 @@ const PresentationMode = ({
   data,
   handleStatusClick,
 }) => {
+  const summaryCards = headerCardsData ? [
+    { label: headerCardsData.transporteQ2.label, value: headerCardsData.transporteQ2.value, bgColor: headerCardsData.transporteQ2.color, icon: <TrendingUp className="w-3 h-3" /> },
+    { label: headerCardsData.indisponiveis.label, value: headerCardsData.indisponiveis.value, bgColor: headerCardsData.indisponiveis.color, icon: <XCircle className="w-3 h-3" /> },
+    { label: headerCardsData.totalReparadas.label, value: headerCardsData.totalReparadas.value, bgColor: headerCardsData.totalReparadas.color, icon: <CheckCircle className="w-3 h-3" /> },
+    { label: headerCardsData.reconhecidas.label, value: headerCardsData.reconhecidas.value, bgColor: headerCardsData.reconhecidas.color, icon: <AlertTriangle className="w-3 h-3" /> },
+    { label: headerCardsData.depPassagens.label, value: headerCardsData.depPassagens.value, bgColor: headerCardsData.depPassagens.color, icon: <Users className="w-3 h-3" /> },
+    { label: headerCardsData.depLicenca.label, value: headerCardsData.depLicenca.value, bgColor: headerCardsData.depLicenca.color, icon: <Clock className="w-3 h-3" /> },
+    { label: headerCardsData.depCutover.label, value: headerCardsData.depCutover.value, bgColor: headerCardsData.depCutover.color, icon: <MapPin className="w-3 h-3" /> },
+    { label: headerCardsData.fibrasDep.label, value: headerCardsData.fibrasDep.value, bgColor: headerCardsData.fibrasDep.color, icon: <TrendingUp className="w-3 h-3" /> },
+  ] : [];
+
   return (
     <div className="w-full h-screen bg-slate-950 text-white flex flex-col overflow-hidden">
       {/* Barra de Controle */}
