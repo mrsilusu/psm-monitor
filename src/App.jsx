@@ -353,6 +353,11 @@ useEffect(() => {
   const toggleViewMode = () => setViewMode((prev) => (prev === 'carousel' ? 'all' : 'carousel'));
   const toggleViewModeClassificacao = () => setViewModeClassificacao((prev) => (prev === 'carousel' ? 'all' : 'carousel'));
 
+  const quarterWeeks = ALL_WEEKS.slice(
+    QUARTER_CONFIG[selectedQuarter].start - 1,
+    QUARTER_CONFIG[selectedQuarter].end
+  );
+
   // ============================================================================
   // IMPORTAR JUSTIFICATIVAS - CÓDIGO COMPLETO
   // ============================================================================
