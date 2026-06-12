@@ -31,7 +31,6 @@ const HeaderFilters = ({
   setAlertasLidos,
   headerCardsData,
   handleStatusClick,
-  isVisible,
 }) => {
   const summaryCards = headerCardsData ? [
     { label: headerCardsData.transporteQ2.label, value: headerCardsData.transporteQ2.value, bgColor: headerCardsData.transporteQ2.color, icon: <TrendingUp className="w-3 h-3" /> },
@@ -350,7 +349,6 @@ const HeaderFilters = ({
       </div>
 
       {/* Cards de Resumo Superiores - COMPACTOS EM UMA LINHA (8 cards) */}
-      {isVisible("cards") && (
       <div className="grid grid-cols-8 gap-2">
         {summaryCards.map((card, index) => (
           <div
@@ -370,7 +368,6 @@ const HeaderFilters = ({
           </div>
         ))}
       </div>
-      )}
     </div>
     </div>
   );
