@@ -196,6 +196,27 @@ const MainPage = () => {
     setSelectedStatusDrilldown, setCurrentPageDrilldown, setShowStatusDrilldown,
   });
 
+  const handleLimparJustificativas = () => {
+    const countFiltered = Object.values(justificativas).filter(j =>
+      j.psm === selectedOperator && j.quarter === selectedQuarter
+    ).length;
+    if (countFiltered === 0) {
+      alert(`⚠️ Não há justificativas para limpar!\n\nPSM: ${selectedOperator}\nQuarter: ${selectedQuarter}`);
+      return;
+    }
+    const confirmar = confirm(
+      `🗑️ LIMPAR JUSTIFICATIVAS\n\nDeseja realmente limpar TODAS as justificativas de:\n\nPSM: ${selectedOperator}\nQuarter: ${selectedQuarter}\n\nTotal a remover: ${countFiltered} secções\n\nEsta ação não pode ser desfeita!`
+    );
+    if (!confirmar) return;
+    const updated = {};
+    Object.entries(justificativas).forEach(([key, just]) => {
+      if (!(just.psm === selectedOperator && just.quarter === selectedQuarter)) {
+        updated[key] = just;
+      }
+    });
+    setJustificativas(updated);
+  };
+
   useEffect(() => {
     setCurrentPageAcomp(0);
     setCurrentPageNormalizadas(0);
@@ -417,6 +438,7 @@ const MainPage = () => {
             manualDataExpanded={manualDataExpanded}
             setManualDataExpanded={setManualDataExpanded}
             handleBlurTotalReparadas={handleBlurTotalReparadas}
+            handleLimparJustificativas={handleLimparJustificativas}
           />
         </div>
       </div>

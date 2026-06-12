@@ -16,6 +16,7 @@ const AcompanhamentoTable = ({
   manualDataExpanded,
   setManualDataExpanded,
   handleBlurTotalReparadas,
+  handleLimparJustificativas,
 }) => {
   const totalPagesAcomp = Math.ceil(acompanhamentoData.length / itemsPerPageAcomp);
   const startIndexAcomp = currentPageAcomp * itemsPerPageAcomp;
