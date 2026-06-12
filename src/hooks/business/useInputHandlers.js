@@ -12,6 +12,7 @@ import { STATUS_CATEGORIES } from '../../config/constants';
 import { isValidNumericInput } from '../../utils/validators.js';
 import { buscarValorAnterior as buscarValorAnteriorUtil } from '../../utils/valueUtils.js';
 import { calcularNovoEstadoFibras } from '../../utils/fibraLogic.js';
+import { log } from '../../utils/logger';
 
 export function useInputHandlers({
   data,
@@ -104,7 +105,7 @@ export function useInputHandlers({
       const atual = updated[selectedYear][psm][week][route][tipoSelecionado] || 0;
       updated[selectedYear][psm][week][route][tipoSelecionado] = atual + descontoAplicado;
 
-      console.log(`✅ ${tipoSelecionado}: +${descontoAplicado} em ${week} (total: ${atual + descontoAplicado})`);
+      log(`✅ ${tipoSelecionado}: +${descontoAplicado} em ${week} (total: ${atual + descontoAplicado})`);
 
       return updated;
     });
@@ -128,18 +129,18 @@ export function useInputHandlers({
           diferenca: reparacoesRestantes,
           tiposDisponiveis: tiposAtualizados
         });
-        console.log(`⚠️ Restam ${reparacoesRestantes} reparações. Selecione outro tipo.`);
+        log(`⚠️ Restam ${reparacoesRestantes} reparações. Selecione outro tipo.`);
         // Modal permanece aberto
       } else {
         // Todos os tipos esgotados mas ainda sobram reparações
-        console.log(`⚠️ Todos os tipos esgotados. Ainda restam ${reparacoesRestantes} reparações não distribuídas.`);
+        log(`⚠️ Todos os tipos esgotados. Ainda restam ${reparacoesRestantes} reparações não distribuídas.`);
         setShowRepairTypeModal(false);
         setPendingRepairData(null);
         valorOriginalRef.current = null;
       }
     } else {
       // Todas as reparações foram distribuídas
-      console.log('✅ Todas as reparações distribuídas!');
+      log('✅ Todas as reparações distribuídas!');
       setShowRepairTypeModal(false);
       setPendingRepairData(null);
       valorOriginalRef.current = null;
@@ -158,7 +159,7 @@ export function useInputHandlers({
 
       currentData['Total Reparadas'] = valorAnterior.toString();
 
-      console.log(`❌ Modal cancelado. Total Reparadas revertido para: ${valorAnterior}`);
+      log(`❌ Modal cancelado. Total Reparadas revertido para: ${valorAnterior}`);
 
       return updatedData;
     });
@@ -171,7 +172,7 @@ export function useInputHandlers({
   const handleBlurTotalReparadas = () => {
     // Abrir modal se houver dados pendentes e modal ainda não estiver aberto
     if (pendingRepairData && !showRepairTypeModal) {
-      console.log('❓ Abrindo modal com dados:', {
+      log('❓ Abrindo modal com dados:', {
         diferenca: pendingRepairData.diferenca,
         tiposDisponiveis: pendingRepairData.tiposDisponiveis,
         week: pendingRepairData.week
@@ -245,7 +246,7 @@ export function useInputHandlers({
     // IMPORTANTE: Só usar a justificativa se for do quarter selecionado
     const just = (rawJust && rawJust.quarter === selectedQuarter) ? rawJust : null;
 
-    console.log('📝 Justificativa (filtrada por quarter):', just);
+    log('📝 Justificativa (filtrada por quarter):', just);
 
     setSelectedRota({ name: rota, stats, justification: just });
     setShowModal(true);
@@ -291,7 +292,7 @@ export function useInputHandlers({
       key = statusLabel;
     }
 
-    console.log('🔍 handleStatusClick:', { statusLabel, key, selectedOperator });
+    log('🔍 handleStatusClick:', { statusLabel, key, selectedOperator });
 
     // Iterar sobre todas as rotas do PSM
     ROUTES_BY_PSM[selectedOperator].forEach(route => {
@@ -338,7 +339,7 @@ export function useInputHandlers({
     // Calcular total
     const total = routesDetail.reduce((sum, r) => sum + r.valor, 0);
 
-    console.log('✅ Resultado:', { total, rotas: routesDetail.length });
+    log('✅ Resultado:', { total, rotas: routesDetail.length });
 
     setSelectedStatusDrilldown({
       label: statusLabel,

@@ -1,5 +1,6 @@
 import React from 'react';
 import { ROUTES_BY_PSM } from '../../config/routeConfig';
+import { log } from '../../utils/logger';
 
 const TestesAnalises = ({
   showTestesAnalises,
@@ -373,7 +374,7 @@ Gerado por: PSM Monitor v3.42.03
                         document.body.removeChild(a);
                         URL.revokeObjectURL(url);
                         
-                        console.log('📄 Relatório exportado!');
+                        log('📄 Relatório exportado!');
                       }}
                       className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors shadow-md"
                     >
@@ -554,7 +555,7 @@ Gerado por: PSM Monitor v3.42.03
                                 };
                               });
                               setRotasTestadas(novasTestadas);
-                              console.log('✅ Todas as rotas marcadas como testadas em', selectedWeek, selectedYear);
+                              log('✅ Todas as rotas marcadas como testadas em', selectedWeek, selectedYear);
                             }}
                             className="px-3 py-1.5 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors"
                           >
@@ -577,7 +578,7 @@ Gerado por: PSM Monitor v3.42.03
                                 }
                               });
                               setRotasValidadas(novasValidadas);
-                              console.log('✅ Todas as rotas testadas em', selectedWeek, selectedYear, 'marcadas como validadas');
+                              log('✅ Todas as rotas testadas em', selectedWeek, selectedYear, 'marcadas como validadas');
                             }}
                             className="px-3 py-1.5 bg-green-600 text-white rounded text-sm hover:bg-green-700 transition-colors"
                           >
@@ -597,16 +598,16 @@ Gerado por: PSM Monitor v3.42.03
                               // Limpar APENAS esta semana
                               if (novasTestadas[selectedOperator]?.[selectedWeek]) {
                                 delete novasTestadas[selectedOperator][selectedWeek];
-                                console.log(`🗑️ Testadas da semana ${selectedWeek} deletadas`);
+                                log(`🗑️ Testadas da semana ${selectedWeek} deletadas`);
                               }
                               if (novasValidadas[selectedOperator]?.[selectedWeek]) {
                                 delete novasValidadas[selectedOperator][selectedWeek];
-                                console.log(`🗑️ Validadas da semana ${selectedWeek} deletadas`);
+                                log(`🗑️ Validadas da semana ${selectedWeek} deletadas`);
                               }
                               
                               setRotasTestadas(novasTestadas);
                               setRotasValidadas(novasValidadas);
-                              console.log(`✅ Validações da semana ${selectedWeek} limpas com sucesso`);
+                              log(`✅ Validações da semana ${selectedWeek} limpas com sucesso`);
                             }}
                             className="px-3 py-1.5 bg-red-600 text-white rounded text-sm hover:bg-red-700 transition-colors"
                           >
@@ -697,7 +698,7 @@ Gerado por: PSM Monitor v3.42.03
                                         }
                                         
                                         setRotasTestadas(novas);
-                                        console.log(`🧪 ${rota} ${testada ? 'desmarcada' : 'marcada'} em ${selectedWeek}`);
+                                        log(`🧪 ${rota} ${testada ? 'desmarcada' : 'marcada'} em ${selectedWeek}`);
                                       }}
                                       className={`w-8 h-8 rounded-lg border-2 flex items-center justify-center transition-all ${
                                         testada 
@@ -761,7 +762,7 @@ Gerado por: PSM Monitor v3.42.03
                                         }
                                         
                                         setRotasValidadas(novas);
-                                        console.log(`✅ ${rota} ${validada ? 'desmarcada' : 'marcada'} em ${selectedWeek}`);
+                                        log(`✅ ${rota} ${validada ? 'desmarcada' : 'marcada'} em ${selectedWeek}`);
                                       }}
                                       className={`w-8 h-8 rounded-lg border-2 flex items-center justify-center transition-all ${
                                         validada 

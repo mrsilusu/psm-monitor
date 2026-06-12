@@ -380,7 +380,7 @@ export const useRealtimeData = (tableName, filters = {}, callback = null) => {
         .on('postgres_changes',
           { event: '*', schema: 'public', table: tableName },
           (payload) => {
-            console.log('Realtime update:', payload)
+            log('Realtime update:', payload)
 
             // Atualizar dados localmente
             if (payload.eventType === 'INSERT') {
@@ -604,11 +604,12 @@ function ImportComponent() {
 
 // 4. REALTIME
 import { useRealtimeData } from './hooks/useSupabase'
+import { log } from './utils/logger';
 
 function RealtimeComponent() {
   const { data, loading } = useRealtimeData('psm_data', 
     { psm: 'FIBRASOL', quarter: 'Q1' },
-    (payload) => console.log('Atualizado:', payload)
+    (payload) => log('Atualizado:', payload)
   )
 
   return (

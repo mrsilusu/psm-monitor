@@ -4,6 +4,7 @@ import { ROUTES_BY_PSM } from '../../config/routeConfig';
 import { ROUTE_TO_PROVINCE, OPERATOR_TO_PROVINCES } from '../../config/provinceConfig';
 import { QUARTER_CONFIG } from '../../config/quarterConfig';
 import { getValorReduzido as getValorReduzidoUtil } from '../../utils/valueUtils.js';
+import { log } from '../../utils/logger';
 
 const ExecutiveDashboard = ({
   selectedOperator,
@@ -45,7 +46,7 @@ const ExecutiveDashboard = ({
               </div>
               <div className="grid grid-cols-4 gap-1 mb-6" key={`dashboard-${selectedOperator}-${selectedProvince}-${selectedQuarter}`}>
                 {(() => {
-                  console.log('🎨 RENDERIZANDO CARDS:', {
+                  log('🎨 RENDERIZANDO CARDS:', {
                     provincia: selectedProvince,
                     psm: selectedOperator,
                     transporte: executiveDashboard.transporteQ2?.value,
@@ -177,7 +178,7 @@ const ExecutiveDashboard = ({
                   
                   if (isGlobalMode) {
                     // MODO GLOBAL: Calcular por PSM
-                    console.log('🌍 CARDS MODO GLOBAL - Calculando por PSM');
+                    log('🌍 CARDS MODO GLOBAL - Calculando por PSM');
                     
                     const psmsDisponiveis = ['FIBRASOL', 'ISISTEL', 'ANGLOBAL'];
                     
@@ -268,7 +269,7 @@ const ExecutiveDashboard = ({
                         efetividadePSM = Math.min(100, (fibrasPSMReparadas / fibrasDependentesPSMOriginal) * 100);
                       }
                       
-                      console.log(`  📊 ${psm}: Efet.Global=${efetividadeGlobal.toFixed(1)}%, Efet.PSM=${efetividadePSM.toFixed(1)}% (${fibrasPSMReparadas}/${fibrasDependentesPSMOriginal} ORIGINAL)`);
+                      log(`  📊 ${psm}: Efet.Global=${efetividadeGlobal.toFixed(1)}%, Efet.PSM=${efetividadePSM.toFixed(1)}% (${fibrasPSMReparadas}/${fibrasDependentesPSMOriginal} ORIGINAL)`);
                       
                       return {
                         provincia: psm, // Nome da entidade (será PSM neste caso)
@@ -288,21 +289,21 @@ const ExecutiveDashboard = ({
                       ? [selectedProvince]
                       : OPERATOR_TO_PROVINCES[selectedOperator];
                     
-                    console.log('🗺️ CARDS MODO PSM - Calculando por Província');
-                    console.log('  PSM:', selectedOperator);
-                    console.log('  Província filtrada:', selectedProvince);
-                    console.log('  Províncias a calcular:', provinciasParaCalcular);
+                    log('🗺️ CARDS MODO PSM - Calculando por Província');
+                    log('  PSM:', selectedOperator);
+                    log('  Província filtrada:', selectedProvince);
+                    log('  Províncias a calcular:', provinciasParaCalcular);
                     
                     entidadesDados = provinciasParaCalcular.map(prov => {
                     const rotasProv = ROUTES_BY_PSM[selectedOperator].filter(route => ROUTE_TO_PROVINCE[route] === prov);
                     
-                    console.log(`  📍 ${prov}:`);
-                    console.log(`     Total rotas: ${rotasProv.length}`);
+                    log(`  📍 ${prov}:`);
+                    log(`     Total rotas: ${rotasProv.length}`);
                     
                     // v3.36.0: Debug específico para Cuango
                     const rotasCuango = rotasProv.filter(r => r.includes('Cuango'));
                     if (rotasCuango.length > 0) {
-                      console.log(`     🔍 Rotas Cuango encontradas:`, rotasCuango);
+                      log(`     🔍 Rotas Cuango encontradas:`, rotasCuango);
                     }
                     
                     let indisponiveis = 0;
@@ -335,12 +336,12 @@ const ExecutiveDashboard = ({
                           
                           // Debug para Cuango (apenas na semana selecionada)
                           if (route.includes('Cuango') && week === selectedWeek) {
-                            console.log(`     🔍 ${route}:`);
-                            console.log(`        selectedWeek: ${selectedWeek}`);
-                            console.log(`        Tem dados?: ${!!weekData}`);
+                            log(`     🔍 ${route}:`);
+                            log(`        selectedWeek: ${selectedWeek}`);
+                            log(`        Tem dados?: ${!!weekData}`);
                             if (weekData) {
-                              console.log(`        Indisponíveis: ${weekData['Indisponíveis']}`);
-                              console.log(`        Total Reparadas acumulado: ${somaReparadas}`);
+                              log(`        Indisponíveis: ${weekData['Indisponíveis']}`);
+                              log(`        Total Reparadas acumulado: ${somaReparadas}`);
                             }
                           }
                           
@@ -379,17 +380,17 @@ const ExecutiveDashboard = ({
                       depCutover += ultimoDepCut;
                       
                       if (ultimoIndisp > 0 || somaReparadas > 0) {
-                        console.log(`     ${route}: ${ultimoIndisp} indisp (último), ${somaReparadas} reparadas (acumulado quadrimestre)`);
+                        log(`     ${route}: ${ultimoIndisp} indisp (último), ${somaReparadas} reparadas (acumulado quadrimestre)`);
                       }
                     });
                     
-                    console.log(`  ✅ ${prov} TOTAL: ${indisponiveis} indisp (último), ${reparadas} reparadas (acumulado)`);
+                    log(`  ✅ ${prov} TOTAL: ${indisponiveis} indisp (último), ${reparadas} reparadas (acumulado)`);
                     
                     // Calcular indisponibilidade LÍQUIDA = Indisponíveis - Total Reparadas
                     // Garantir que seja exatamente 0 se negativo ou muito pequeno
                     const indisponibilidadeLiquida = Math.max(0, Math.round(indisponiveis - reparadas));
                     
-                    console.log(`  💡 ${prov} INDISPONIBILIDADE LÍQUIDA: ${indisponibilidadeLiquida} (${indisponiveis} - ${reparadas})`);
+                    log(`  💡 ${prov} INDISPONIBILIDADE LÍQUIDA: ${indisponibilidadeLiquida} (${indisponiveis} - ${reparadas})`);
                     
                     // V5.07.1: CALCULAR DUAS EFETIVIDADES COM VALORES REDUZIDOS
                     
@@ -447,14 +448,14 @@ const ExecutiveDashboard = ({
                       // Percentagem = (reparadas de Fibras PSM / valor ORIGINAL) * 100
                       efetividadePSM = Math.min(100, (fibrasPSMReparadas / fibrasDependentesPSMOriginal) * 100);
                       
-                      console.log(`  📊 ${prov} Efetividade PSM: ${efetividadePSM.toFixed(1)}% (${fibrasPSMReparadas}/${fibrasDependentesPSMOriginal} ORIGINAL) - ${fibrasPSMReparadas >= fibrasDependentesPSMOriginal ? '✅ TODAS REPARADAS' : '⚠️ AINDA FALTAM'}`);
+                      log(`  📊 ${prov} Efetividade PSM: ${efetividadePSM.toFixed(1)}% (${fibrasPSMReparadas}/${fibrasDependentesPSMOriginal} ORIGINAL) - ${fibrasPSMReparadas >= fibrasDependentesPSMOriginal ? '✅ TODAS REPARADAS' : '⚠️ AINDA FALTAM'}`);
                     } else {
                       // Não há fibras dependentes do PSM
                       efetividadePSM = 0;
-                      console.log(`  📊 ${prov} Efetividade PSM: 0% (sem fibras dependentes do PSM) - outras causas: ${reconhecidasReduzido + depPassagemReduzido + depLicencaReduzido + depCutoverReduzido}`);
+                      log(`  📊 ${prov} Efetividade PSM: 0% (sem fibras dependentes do PSM) - outras causas: ${reconhecidasReduzido + depPassagemReduzido + depLicencaReduzido + depCutoverReduzido}`);
                     }
                     
-                    console.log(`  📊 ${prov} Efetividade Global: ${efetividadeGlobal.toFixed(1)}% (${reparadas}/${indisponiveis})`);
+                    log(`  📊 ${prov} Efetividade Global: ${efetividadeGlobal.toFixed(1)}% (${reparadas}/${indisponiveis})`);
                     
                     return { 
                       provincia: prov, 
@@ -487,15 +488,15 @@ const ExecutiveDashboard = ({
                   }, entidadesDados[0] || {});
                   
                   // v3.41.04: LOGS DETALHADOS DE DEBUG
-                  console.log('═══════════════════════════════════════════════');
-                  console.log('🔍 DEBUG CARD "PRECISA ATENÇÃO"');
-                  console.log('═══════════════════════════════════════════════');
-                  console.log(`📊 Modo Efetividade Selecionado: "${efetividadeMode}"`);
-                  console.log(`📊 Total de Entidades: ${entidadesDados.length}`);
-                  console.log('');
+                  log('═══════════════════════════════════════════════');
+                  log('🔍 DEBUG CARD "PRECISA ATENÇÃO"');
+                  log('═══════════════════════════════════════════════');
+                  log(`📊 Modo Efetividade Selecionado: "${efetividadeMode}"`);
+                  log(`📊 Total de Entidades: ${entidadesDados.length}`);
+                  log('');
                   
                   // Mostrar ranking completo
-                  console.log('📋 RANKING COMPLETO (por efetividade selecionada):');
+                  log('📋 RANKING COMPLETO (por efetividade selecionada):');
                   entidadesDados
                     .filter(p => p.indisponiveisOriginal > 0)
                     .sort((a, b) => {
@@ -506,25 +507,25 @@ const ExecutiveDashboard = ({
                     .forEach((p, idx) => {
                       const efet = efetividadeMode === 'psm' ? p.efetividadePSM : p.efetividadeGlobal;
                       const emoji = idx === 0 ? '🥇' : (idx === entidadesDados.filter(x => x.indisponiveisOriginal > 0).length - 1 ? '🚨' : '  ');
-                      console.log(`  ${emoji} ${idx + 1}º ${p.provincia}: ${efet.toFixed(1)}% (Indisp: ${p.indisponiveisOriginal}, Rep: ${p.reparadas})`);
+                      log(`  ${emoji} ${idx + 1}º ${p.provincia}: ${efet.toFixed(1)}% (Indisp: ${p.indisponiveisOriginal}, Rep: ${p.reparadas})`);
                     });
-                  console.log('');
+                  log('');
                   
                   // Mostrar cards calculados
-                  console.log('🎯 CARDS CALCULADOS:');
-                  console.log(`  ✅ Mais Efetiva: ${maisEfetiva.provincia}`);
-                  console.log(`     - Efet. Global: ${maisEfetiva.efetividadeGlobal?.toFixed(1)}%`);
-                  console.log(`     - Efet. PSM: ${maisEfetiva.efetividadePSM?.toFixed(1)}%`);
-                  console.log(`     - Usando: ${efetividadeMode === 'psm' ? maisEfetiva.efetividadePSM?.toFixed(1) : maisEfetiva.efetividadeGlobal?.toFixed(1)}%`);
-                  console.log('');
-                  console.log(`  ⚠️ Precisa Atenção: ${emAlerta.provincia}`);
-                  console.log(`     - Efet. Global: ${emAlerta.efetividadeGlobal?.toFixed(1)}%`);
-                  console.log(`     - Efet. PSM: ${emAlerta.efetividadePSM?.toFixed(1)}%`);
-                  console.log(`     - Usando: ${efetividadeMode === 'psm' ? emAlerta.efetividadePSM?.toFixed(1) : emAlerta.efetividadeGlobal?.toFixed(1)}%`);
-                  console.log(`     - Indisponíveis: ${emAlerta.indisponiveisOriginal}`);
-                  console.log(`     - Reparadas: ${emAlerta.reparadas}`);
-                  console.log('═══════════════════════════════════════════════');
-                  console.log('');
+                  log('🎯 CARDS CALCULADOS:');
+                  log(`  ✅ Mais Efetiva: ${maisEfetiva.provincia}`);
+                  log(`     - Efet. Global: ${maisEfetiva.efetividadeGlobal?.toFixed(1)}%`);
+                  log(`     - Efet. PSM: ${maisEfetiva.efetividadePSM?.toFixed(1)}%`);
+                  log(`     - Usando: ${efetividadeMode === 'psm' ? maisEfetiva.efetividadePSM?.toFixed(1) : maisEfetiva.efetividadeGlobal?.toFixed(1)}%`);
+                  log('');
+                  log(`  ⚠️ Precisa Atenção: ${emAlerta.provincia}`);
+                  log(`     - Efet. Global: ${emAlerta.efetividadeGlobal?.toFixed(1)}%`);
+                  log(`     - Efet. PSM: ${emAlerta.efetividadePSM?.toFixed(1)}%`);
+                  log(`     - Usando: ${efetividadeMode === 'psm' ? emAlerta.efetividadePSM?.toFixed(1) : emAlerta.efetividadeGlobal?.toFixed(1)}%`);
+                  log(`     - Indisponíveis: ${emAlerta.indisponiveisOriginal}`);
+                  log(`     - Reparadas: ${emAlerta.reparadas}`);
+                  log('═══════════════════════════════════════════════');
+                  log('');
                   
                   // Cores para o gráfico pizza
                   const cores = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];

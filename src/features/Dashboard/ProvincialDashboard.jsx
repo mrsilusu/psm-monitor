@@ -1,6 +1,7 @@
 import React from 'react';
 import { TrendingDown, AlertCircle } from 'lucide-react';
 import { ROUTES_BY_PSM } from '../../config/routeConfig';
+import { log } from '../../utils/logger';
 
 const ProvincialDashboard = ({
   selectedOperator,
@@ -169,7 +170,7 @@ const ProvincialDashboard = ({
                       const endIdx = startIdx + itemsPerPageIntervencoes;
                       const paginatedItems = intervencoesRecentes.slice(startIdx, endIdx);
                       
-                      console.log('📄 PAGINAÇÃO INTERVENÇÕES:', {
+                      log('📄 PAGINAÇÃO INTERVENÇÕES:', {
                         totalItems: intervencoesRecentes.length,
                         currentPage: currentPageIntervencoes,
                         itemsPerPage: itemsPerPageIntervencoes,

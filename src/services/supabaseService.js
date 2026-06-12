@@ -4,6 +4,7 @@
 // ============================================
 
 import { supabase } from './supabaseClient.js';
+import { log } from '../utils/logger';
 
 // ============================================
 // MAPEAR CAMPOS localStorage → Supabase
@@ -54,12 +55,12 @@ const mapSupabaseToLocalStorage = (supabaseData) => {
 // ============================================
 export const salvarTudoNoSupabase = async (allData, quarter, year, routesToProvinceMap, rotasTestadas, rotasValidadas) => {
   try {
-    console.log('🚀 Iniciando salvamento OTIMIZADO no Supabase...');
+    log('🚀 Iniciando salvamento OTIMIZADO no Supabase...');
     
     const anoAtual = year || new Date().getFullYear();
     
     // 1. Buscar TODOS os registros existentes do ano de UMA VEZ
-    console.log('📥 Buscando registros existentes...');
+    log('📥 Buscando registros existentes...');
     const { data: registrosExistentes, error: fetchError } = await supabase
       .from('psm_data')
       .select('id, psm, week, route, testada, validada')
@@ -78,7 +79,7 @@ export const salvarTudoNoSupabase = async (allData, quarter, year, routesToProvi
       });
     }
     
-    console.log(`📊 Encontrados ${Object.keys(mapaExistentes).length} registros existentes`);
+    log(`📊 Encontrados ${Object.keys(mapaExistentes).length} registros existentes`);
     
     // 2. Preparar lotes de UPDATE e INSERT
     const paraAtualizar = [];
@@ -109,7 +110,7 @@ export const salvarTudoNoSupabase = async (allData, quarter, year, routesToProvi
               const chave = `${psmName}|${week}|${route}`;
               if (!rotasParaProcessar.has(chave)) {
                 rotasParaProcessar.set(chave, { psm: psmName, week, route });
-                console.log(`📌 Adicionando rota TESTADA sem dados: ${chave}`);
+                log(`📌 Adicionando rota TESTADA sem dados: ${chave}`);
               }
             }
           }
@@ -126,7 +127,7 @@ export const salvarTudoNoSupabase = async (allData, quarter, year, routesToProvi
               const chave = `${psmName}|${week}|${route}`;
               if (!rotasParaProcessar.has(chave)) {
                 rotasParaProcessar.set(chave, { psm: psmName, week, route });
-                console.log(`📌 Adicionando rota VALIDADA sem dados: ${chave}`);
+                log(`📌 Adicionando rota VALIDADA sem dados: ${chave}`);
               }
             }
           }
@@ -134,7 +135,7 @@ export const salvarTudoNoSupabase = async (allData, quarter, year, routesToProvi
       }
     }
     
-    console.log(`📊 Total de rotas para processar: ${rotasParaProcessar.size}`);
+    log(`📊 Total de rotas para processar: ${rotasParaProcessar.size}`);
     
     // 3. Processar todas as rotas (com ou sem dados numéricos)
     for (const [chave, { psm: psmName, week, route }] of rotasParaProcessar) {
@@ -208,7 +209,7 @@ export const salvarTudoNoSupabase = async (allData, quarter, year, routesToProvi
                              dadosBase.total_reparadas === 0;
             
             if (todosZero) {
-              console.log(`🔄 Atualizando para ZERO: ${psmName} | ${week} | ${route}`);
+              log(`🔄 Atualizando para ZERO: ${psmName} | ${week} | ${route}`);
             }
             
             paraAtualizar.push({
@@ -228,19 +229,19 @@ export const salvarTudoNoSupabase = async (allData, quarter, year, routesToProvi
               });
               
               if (!temDadosNaoZero && (foiTestada || foiValidada)) {
-                console.log(`📌 Criando registro só com teste/validação: ${psmName} | ${week} | ${route}`);
+                log(`📌 Criando registro só com teste/validação: ${psmName} | ${week} | ${route}`);
               }
             }
           }
         }
     
-    console.log(`📦 Para atualizar: ${paraAtualizar.length}`);
-    console.log(`📦 Para inserir: ${paraInserir.length}`);
+    log(`📦 Para atualizar: ${paraAtualizar.length}`);
+    log(`📦 Para inserir: ${paraInserir.length}`);
     
     // 3. Executar UPDATEs em batch
     let totalAtualizado = 0;
     if (paraAtualizar.length > 0) {
-      console.log('🔄 Atualizando registros existentes...');
+      log('🔄 Atualizando registros existentes...');
       const BATCH_SIZE = 50; // Reduzir para evitar timeout
       
       for (let i = 0; i < paraAtualizar.length; i += BATCH_SIZE) {
@@ -258,7 +259,7 @@ export const salvarTudoNoSupabase = async (allData, quarter, year, routesToProvi
         await Promise.all(promises);
         totalAtualizado += batch.length;
         
-        console.log(`✅ Atualizados ${Math.min(i + BATCH_SIZE, paraAtualizar.length)}/${paraAtualizar.length}`);
+        log(`✅ Atualizados ${Math.min(i + BATCH_SIZE, paraAtualizar.length)}/${paraAtualizar.length}`);
         
         // Pequeno delay entre batches
         if (i + BATCH_SIZE < paraAtualizar.length) {
@@ -270,7 +271,7 @@ export const salvarTudoNoSupabase = async (allData, quarter, year, routesToProvi
     // 4. Executar INSERTs em batch
     let totalInserido = 0;
     if (paraInserir.length > 0) {
-      console.log('➕ Inserindo novos registros...');
+      log('➕ Inserindo novos registros...');
       const BATCH_SIZE = 100;
       
       for (let i = 0; i < paraInserir.length; i += BATCH_SIZE) {
@@ -285,7 +286,7 @@ export const salvarTudoNoSupabase = async (allData, quarter, year, routesToProvi
           console.error(`❌ Erro no INSERT batch ${i}:`, error);
         } else {
           totalInserido += batch.length;
-          console.log(`✅ Inseridos ${Math.min(i + BATCH_SIZE, paraInserir.length)}/${paraInserir.length}`);
+          log(`✅ Inseridos ${Math.min(i + BATCH_SIZE, paraInserir.length)}/${paraInserir.length}`);
         }
         
         if (i + BATCH_SIZE < paraInserir.length) {
@@ -294,7 +295,7 @@ export const salvarTudoNoSupabase = async (allData, quarter, year, routesToProvi
       }
     }
     
-    console.log(`✅ Salvamento completo! ${totalAtualizado} atualizados, ${totalInserido} inseridos`);
+    log(`✅ Salvamento completo! ${totalAtualizado} atualizados, ${totalInserido} inseridos`);
     
     return { 
       success: true,
@@ -314,7 +315,7 @@ export const salvarTudoNoSupabase = async (allData, quarter, year, routesToProvi
 // ============================================
 export const lerTudoDoSupabase = async (year) => {
   try {
-    console.log('🚀 Carregando dados do Supabase...');
+    log('🚀 Carregando dados do Supabase...');
     
     const anoAtual = year || new Date().getFullYear();
     
@@ -329,11 +330,11 @@ export const lerTudoDoSupabase = async (year) => {
     if (error) throw error;
 
     if (!todosRegistros || todosRegistros.length === 0) {
-      console.log('⚠️ Nenhum dado encontrado no Supabase para', anoAtual);
+      log('⚠️ Nenhum dado encontrado no Supabase para', anoAtual);
       return { success: true, data: {}, rotasTestadas: {}, rotasValidadas: {} };
     }
 
-    console.log(`📦 ${todosRegistros.length} registros encontrados`);
+    log(`📦 ${todosRegistros.length} registros encontrados`);
 
     // Separar em 3 estruturas
     const allData = {};
@@ -373,9 +374,9 @@ export const lerTudoDoSupabase = async (year) => {
       }
     });
 
-    console.log('✅ Dados convertidos para formato local');
-    console.log(`📊 Testadas: ${Object.keys(rotasTestadas).length} PSMs`);
-    console.log(`📊 Validadas: ${Object.keys(rotasValidadas).length} PSMs`);
+    log('✅ Dados convertidos para formato local');
+    log(`📊 Testadas: ${Object.keys(rotasTestadas).length} PSMs`);
+    log(`📊 Validadas: ${Object.keys(rotasValidadas).length} PSMs`);
     
     return { 
       success: true, 
@@ -408,12 +409,12 @@ export default {
 // ============================================
 export const salvarJustificativasNoSupabase = async (justificativas, year) => {
   try {
-    console.log('🚀 Salvando justificativas no Supabase...');
+    log('🚀 Salvando justificativas no Supabase...');
     
     const anoAtual = year || new Date().getFullYear();
     
     if (!justificativas || Object.keys(justificativas).length === 0) {
-      console.log('⚠️ Nenhuma justificativa para salvar');
+      log('⚠️ Nenhuma justificativa para salvar');
       return { success: true, count: 0 };
     }
     
@@ -436,7 +437,7 @@ export const salvarJustificativasNoSupabase = async (justificativas, year) => {
       });
     }
     
-    console.log(`📊 Encontradas ${Object.keys(mapaExistentes).length} justificativas existentes`);
+    log(`📊 Encontradas ${Object.keys(mapaExistentes).length} justificativas existentes`);
     
     // 2. Preparar lotes de UPDATE e INSERT
     const paraAtualizar = [];
@@ -464,20 +465,20 @@ export const salvarJustificativasNoSupabase = async (justificativas, year) => {
       if (existente) {
         // ✅ SEMPRE atualizar registros existentes, mesmo se valores forem 0
         paraAtualizar.push({ ...registro, id: existente.id });
-        console.log(`🔄 Atualizando: ${just.seccao} (T:${registro.transporte}, I:${registro.indisponiveis}, D:${registro.delta})`);
+        log(`🔄 Atualizando: ${just.seccao} (T:${registro.transporte}, I:${registro.indisponiveis}, D:${registro.delta})`);
       } else {
         paraInserir.push(registro);
-        console.log(`➕ Inserindo: ${just.seccao} (T:${registro.transporte}, I:${registro.indisponiveis}, D:${registro.delta})`);
+        log(`➕ Inserindo: ${just.seccao} (T:${registro.transporte}, I:${registro.indisponiveis}, D:${registro.delta})`);
       }
     });
     
-    console.log(`📦 Para atualizar: ${paraAtualizar.length}`);
-    console.log(`📦 Para inserir: ${paraInserir.length}`);
+    log(`📦 Para atualizar: ${paraAtualizar.length}`);
+    log(`📦 Para inserir: ${paraInserir.length}`);
     
     // 3. Executar UPDATEs
     let totalAtualizado = 0;
     if (paraAtualizar.length > 0) {
-      console.log('🔄 Atualizando justificativas existentes...');
+      log('🔄 Atualizando justificativas existentes...');
       
       for (const registro of paraAtualizar) {
         const { id, ...dadosSemId } = registro;
@@ -493,13 +494,13 @@ export const salvarJustificativasNoSupabase = async (justificativas, year) => {
         }
       }
       
-      console.log(`✅ Atualizadas: ${totalAtualizado}/${paraAtualizar.length}`);
+      log(`✅ Atualizadas: ${totalAtualizado}/${paraAtualizar.length}`);
     }
     
     // 4. Executar INSERTs
     let totalInserido = 0;
     if (paraInserir.length > 0) {
-      console.log('➕ Inserindo novas justificativas...');
+      log('➕ Inserindo novas justificativas...');
       
       const { data, error } = await supabase
         .from('psm_justificativas')
@@ -510,11 +511,11 @@ export const salvarJustificativasNoSupabase = async (justificativas, year) => {
         console.error(`❌ Erro no INSERT:`, error);
       } else {
         totalInserido = data?.length || 0;
-        console.log(`✅ Inseridas: ${totalInserido}`);
+        log(`✅ Inseridas: ${totalInserido}`);
       }
     }
     
-    console.log(`✅ Salvamento completo! ${totalAtualizado} atualizadas, ${totalInserido} inseridas`);
+    log(`✅ Salvamento completo! ${totalAtualizado} atualizadas, ${totalInserido} inseridas`);
     
     return {
       success: true,
@@ -534,7 +535,7 @@ export const salvarJustificativasNoSupabase = async (justificativas, year) => {
 // ============================================
 export const lerJustificativasDoSupabase = async (year) => {
   try {
-    console.log('🚀 Carregando justificativas do Supabase...');
+    log('🚀 Carregando justificativas do Supabase...');
     
     const anoAtual = year || new Date().getFullYear();
     
@@ -548,11 +549,11 @@ export const lerJustificativasDoSupabase = async (year) => {
     if (error) throw error;
     
     if (!registros || registros.length === 0) {
-      console.log('⚠️ Nenhuma justificativa encontrada no Supabase para', anoAtual);
+      log('⚠️ Nenhuma justificativa encontrada no Supabase para', anoAtual);
       return { success: true, data: {} };
     }
     
-    console.log(`📦 ${registros.length} justificativas encontradas`);
+    log(`📦 ${registros.length} justificativas encontradas`);
     
     // Converter para formato do App
     const justificativas = {};
@@ -570,7 +571,7 @@ export const lerJustificativasDoSupabase = async (year) => {
       };
     });
     
-    console.log('✅ Justificativas convertidas para formato local');
+    log('✅ Justificativas convertidas para formato local');
     
     return {
       success: true,

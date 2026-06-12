@@ -3,6 +3,7 @@
 // Máx. 120 linhas
 
 import { CURRENT_DATA_VERSION } from '../config/constants.js';
+import { log } from '../utils/logger';
 
 export const LS_KEYS = {
   DATA_VERSION: 'psm_data_version',
@@ -58,10 +59,10 @@ export const cleanupOldData = () => {
     const savedVersion = window.localStorage.getItem(LS_KEYS.DATA_VERSION);
     const versionNumber = savedVersion ? parseInt(savedVersion, 10) : 0;
 
-    console.log(`🔍 [CLEANUP] Versão localStorage: ${versionNumber}, Versão atual: ${CURRENT_DATA_VERSION}`);
+    log(`🔍 [CLEANUP] Versão localStorage: ${versionNumber}, Versão atual: ${CURRENT_DATA_VERSION}`);
 
     if (versionNumber < CURRENT_DATA_VERSION) {
-      console.log('🧹 [CLEANUP] Limpando localStorage antigo...');
+      log('🧹 [CLEANUP] Limpando localStorage antigo...');
 
       const keysToRemove = [
         LS_KEYS.LEGACY_DISTRIBUICAO,
@@ -74,19 +75,19 @@ export const cleanupOldData = () => {
 
       keysToRemove.forEach(key => {
         if (window.localStorage.getItem(key)) {
-          console.log(`🗑️ [CLEANUP] Removendo: ${key}`);
+          log(`🗑️ [CLEANUP] Removendo: ${key}`);
           window.localStorage.removeItem(key);
         }
       });
 
       window.localStorage.setItem(LS_KEYS.DATA_VERSION, CURRENT_DATA_VERSION.toString());
-      console.log('✅ [CLEANUP] localStorage limpo e atualizado para versão', CURRENT_DATA_VERSION);
-      console.log('ℹ️ [CLEANUP] Dados locais foram atualizados. Tudo será recarregado do servidor.');
+      log('✅ [CLEANUP] localStorage limpo e atualizado para versão', CURRENT_DATA_VERSION);
+      log('ℹ️ [CLEANUP] Dados locais foram atualizados. Tudo será recarregado do servidor.');
 
       return true;
     }
 
-    console.log('✅ [CLEANUP] localStorage já está na versão atual');
+    log('✅ [CLEANUP] localStorage já está na versão atual');
     return false;
   } catch (error) {
     console.error('❌ [CLEANUP] Erro ao limpar localStorage:', error);

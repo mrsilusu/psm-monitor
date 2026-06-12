@@ -4,6 +4,7 @@ import { getQuarterFromWeek } from '../../utils/dateUtils.js';
 import { lerTudoDoSupabase, salvarTudoNoSupabase, salvarJustificativasNoSupabase, lerJustificativasDoSupabase } from '../../services/supabaseService.js';
 import { carregarDistribuicaoDoSupabase, salvarDistribuicaoNoSupabase } from '../../services/supabaseDistribuicaoService.js';
 import { ROUTE_TO_PROVINCE } from '../../config/provinceConfig.js';
+import { log } from '../../utils/logger';
 
 export const usePersistence = ({
   data,
@@ -31,12 +32,12 @@ export const usePersistence = ({
   // useEffect #1: Carregar dados do Supabase ao iniciar e quando mudar o ano
   useEffect(() => {
     const carregarDadosDoSupabase = async () => {
-      console.log('🔄 Carregando dados do Supabase para o ano:', selectedYear);
+      log('🔄 Carregando dados do Supabase para o ano:', selectedYear);
 
       const resultado = await lerTudoDoSupabase(selectedYear);
 
       if (resultado.success && resultado.data && Object.keys(resultado.data).length > 0) {
-        console.log('✅ Dados carregados do Supabase!', resultado.data);
+        log('✅ Dados carregados do Supabase!', resultado.data);
         setData(resultado.data);
 
         if (resultado.rotasTestadas && Object.keys(resultado.rotasTestadas).length > 0) {
@@ -46,7 +47,7 @@ export const usePersistence = ({
           setRotasValidadas(resultado.rotasValidadas);
         }
       } else {
-        console.log('⚠️ Sem dados no Supabase para o ano', selectedYear);
+        log('⚠️ Sem dados no Supabase para o ano', selectedYear);
         setData({ ISISTEL: {}, FIBRASOL: {}, ANGLOBAL: {} });
         setRotasTestadas({});
         setRotasValidadas({});
@@ -79,7 +80,7 @@ export const usePersistence = ({
     }
 
     saveTimerRef.current = window.setTimeout(async () => {
-      console.log('💾 [DATA] Salvando no Supabase para o ano:', selectedYear);
+      log('💾 [DATA] Salvando no Supabase para o ano:', selectedYear);
       const resultado = await salvarTudoNoSupabase(
         data,
         selectedQuarter,
@@ -90,7 +91,7 @@ export const usePersistence = ({
       );
 
       if (resultado.success) {
-        console.log('✅ [DATA] Dados salvos no Supabase!', resultado);
+        log('✅ [DATA] Dados salvos no Supabase!', resultado);
       } else {
         console.error('❌ [DATA] Erro ao salvar no Supabase:', resultado.error);
       }
@@ -112,7 +113,7 @@ export const usePersistence = ({
   }, [data, selectedQuarter, rotasTestadas, rotasValidadas, selectedYear, setLastSaveTime, setSaveStatus]);
 
   useEffect(() => {
-    console.log('🔄 [JUSTIFICATIVAS] useEffect executado', {
+    log('🔄 [JUSTIFICATIVAS] useEffect executado', {
       quantidade: Object.keys(justificativas).length,
       ano: selectedYear
     });
@@ -128,11 +129,11 @@ export const usePersistence = ({
     }
 
     justificativasTimerRef.current = window.setTimeout(async () => {
-      console.log('💾 [JUSTIFICATIVAS] Salvando no Supabase para o ano:', selectedYear);
+      log('💾 [JUSTIFICATIVAS] Salvando no Supabase para o ano:', selectedYear);
       try {
         const resultado = await salvarJustificativasNoSupabase(justificativas, selectedYear);
         if (resultado.success) {
-          console.log('✅ [JUSTIFICATIVAS] Salvas no Supabase!', resultado);
+          log('✅ [JUSTIFICATIVAS] Salvas no Supabase!', resultado);
         } else {
           console.error('❌ [JUSTIFICATIVAS] Erro ao salvar:', resultado.error);
         }
@@ -151,7 +152,7 @@ export const usePersistence = ({
   useEffect(() => {
     const carregarDistribuicaoInicial = async () => {
       setIsLoadingDistribuicao(true);
-      console.log(`📥 [DISTRIBUIÇÃO] Carregando TODOS os quarters de ${selectedYear}...`);
+      log(`📥 [DISTRIBUIÇÃO] Carregando TODOS os quarters de ${selectedYear}...`);
 
       const dadosCompletos = {};
 
@@ -159,13 +160,13 @@ export const usePersistence = ({
         const distrib = await carregarDistribuicaoDoSupabase(quarter, selectedYear);
 
         if (Object.keys(distrib).length > 0) {
-          console.log(`✅ [DISTRIBUIÇÃO] ${selectedYear}/${quarter} carregado (${Object.keys(distrib).length} PSMs)`);
+          log(`✅ [DISTRIBUIÇÃO] ${selectedYear}/${quarter} carregado (${Object.keys(distrib).length} PSMs)`);
           Object.keys(distrib).forEach((psm) => {
             if (!dadosCompletos[psm]) dadosCompletos[psm] = {};
             Object.assign(dadosCompletos[psm], distrib[psm]);
           });
         } else {
-          console.log(`ℹ️ [DISTRIBUIÇÃO] ${selectedYear}/${quarter} sem dados`);
+          log(`ℹ️ [DISTRIBUIÇÃO] ${selectedYear}/${quarter} sem dados`);
         }
       }
 
@@ -173,7 +174,7 @@ export const usePersistence = ({
         setDistribuicaoReparacoes((prev) => {
           const updated = JSON.parse(JSON.stringify(prev));
           updated[selectedYear] = dadosCompletos;
-          console.log(`✅ [DISTRIBUIÇÃO] Todos os dados de ${selectedYear} carregados e mesclados`);
+          log(`✅ [DISTRIBUIÇÃO] Todos os dados de ${selectedYear} carregados e mesclados`);
           return updated;
         });
 
@@ -182,7 +183,7 @@ export const usePersistence = ({
           ...distribuicaoReparacoes
         });
       } else {
-        console.log(`ℹ️ [DISTRIBUIÇÃO] Nenhum dado encontrado para ${selectedYear}`);
+        log(`ℹ️ [DISTRIBUIÇÃO] Nenhum dado encontrado para ${selectedYear}`);
         setDistribuicaoReparacoes((prev) => {
           const updated = JSON.parse(JSON.stringify(prev));
           delete updated[selectedYear];
@@ -199,39 +200,39 @@ export const usePersistence = ({
 
   useEffect(() => {
     if (skipNextSaveRef.current) {
-      console.log('⏭️ [DISTRIBUIÇÃO] Pulando salvamento (após delete)');
+      log('⏭️ [DISTRIBUIÇÃO] Pulando salvamento (após delete)');
       skipNextSaveRef.current = false;
       return;
     }
 
     if (isLoadingDistribuicao) {
-      console.log('⏭️ [DISTRIBUIÇÃO] Carregando dados, pulando salvamento');
+      log('⏭️ [DISTRIBUIÇÃO] Carregando dados, pulando salvamento');
       return;
     }
 
     if (Object.keys(distribuicaoReparacoes).length === 0) {
-      console.log('⏭️ [DISTRIBUIÇÃO] Sem dados para salvar');
+      log('⏭️ [DISTRIBUIÇÃO] Sem dados para salvar');
       return;
     }
 
     const dadosAtuais = JSON.stringify(distribuicaoReparacoes);
     if (dadosAtuais === lastSavedDistribuicaoRef.current) {
-      console.log('⏭️ [DISTRIBUIÇÃO] Dados não mudaram, pulando salvamento');
+      log('⏭️ [DISTRIBUIÇÃO] Dados não mudaram, pulando salvamento');
       return;
     }
 
     if (distribuicaoTimerRef.current) {
       clearTimeout(distribuicaoTimerRef.current);
-      console.log('⏱️ [DISTRIBUIÇÃO] Timer anterior cancelado');
+      log('⏱️ [DISTRIBUIÇÃO] Timer anterior cancelado');
     }
 
     distribuicaoTimerRef.current = window.setTimeout(async () => {
-      console.log('💾 [DISTRIBUIÇÃO] Salvando após debounce (1s)...');
+      log('💾 [DISTRIBUIÇÃO] Salvando após debounce (1s)...');
       lastSavedDistribuicaoRef.current = dadosAtuais;
 
       try {
         window.localStorage.setItem(LS_KEYS.DISTRIBUICAO, dadosAtuais);
-        console.log('💾 [DISTRIBUIÇÃO] Salvo no localStorage v3 (com ano)');
+        log('💾 [DISTRIBUIÇÃO] Salvo no localStorage v3 (com ano)');
       } catch (error) {
         console.error('❌ [DISTRIBUIÇÃO] Erro ao salvar no localStorage:', error);
       }
@@ -253,14 +254,14 @@ export const usePersistence = ({
         for (const quarter of ['Q1', 'Q2', 'Q3']) {
           const dadosDoQuarter = dadosPorQuarter[quarter];
           if (Object.keys(dadosDoQuarter).length > 0) {
-            console.log(`💾 [DISTRIBUIÇÃO] Salvando ${selectedYear}/${quarter}...`);
+            log(`💾 [DISTRIBUIÇÃO] Salvando ${selectedYear}/${quarter}...`);
             const resultado = await salvarDistribuicaoNoSupabase(
               dadosDoQuarter,
               quarter,
               selectedYear
             );
             if (resultado.success) {
-              console.log(`✅ [DISTRIBUIÇÃO] ${selectedYear}/${quarter} salvo com sucesso`);
+              log(`✅ [DISTRIBUIÇÃO] ${selectedYear}/${quarter} salvo com sucesso`);
             } else {
               console.error(`❌ [DISTRIBUIÇÃO] Erro ao salvar ${selectedYear}/${quarter}:`, resultado.error);
             }

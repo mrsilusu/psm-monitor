@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient.js';
+import { log } from '../utils/logger';
 
 /**
  * V5.08.2: Salvar distribuição de reparações no Supabase (OTIMIZADO)
@@ -11,7 +12,7 @@ export const salvarDistribuicaoNoSupabase = async (distribuicao, quarter, year) 
   const startTime = Date.now();
   
   try {
-    console.log('🔄 [DISTRIBUIÇÃO] Iniciando salvamento...');
+    log('🔄 [DISTRIBUIÇÃO] Iniciando salvamento...');
     
     const registros = [];
     
@@ -38,12 +39,12 @@ export const salvarDistribuicaoNoSupabase = async (distribuicao, quarter, year) 
     });
     
     if (registros.length === 0) {
-      console.log('📝 [DISTRIBUIÇÃO] Nenhuma distribuição para salvar');
+      log('📝 [DISTRIBUIÇÃO] Nenhuma distribuição para salvar');
       return { success: true };
     }
     
-    console.log(`💾 [DISTRIBUIÇÃO] Salvando ${registros.length} registros...`);
-    console.log('📊 [DISTRIBUIÇÃO] Registros:', JSON.stringify(registros, null, 2));
+    log(`💾 [DISTRIBUIÇÃO] Salvando ${registros.length} registros...`);
+    log('📊 [DISTRIBUIÇÃO] Registros:', JSON.stringify(registros, null, 2));
     
     // Upsert com onConflict otimizado
     const { data, error } = await supabase
@@ -60,8 +61,8 @@ export const salvarDistribuicaoNoSupabase = async (distribuicao, quarter, year) 
     }
     
     const duration = Date.now() - startTime;
-    console.log(`✅ [DISTRIBUIÇÃO] ${registros.length} registros salvos em ${duration}ms`);
-    console.log('📊 [DISTRIBUIÇÃO] Dados salvos:', data);
+    log(`✅ [DISTRIBUIÇÃO] ${registros.length} registros salvos em ${duration}ms`);
+    log('📊 [DISTRIBUIÇÃO] Dados salvos:', data);
     
     return { success: true, data, duration };
   } catch (error) {
@@ -82,7 +83,7 @@ export const carregarDistribuicaoDoSupabase = async (quarter, year) => {
   const startTime = Date.now();
   
   try {
-    console.log(`🔄 [DISTRIBUIÇÃO] Iniciando carregamento (${quarter} ${year})...`);
+    log(`🔄 [DISTRIBUIÇÃO] Iniciando carregamento (${quarter} ${year})...`);
     
     const { data, error } = await supabase
       .from('psm_distribuicao_reparacoes')
@@ -98,12 +99,12 @@ export const carregarDistribuicaoDoSupabase = async (quarter, year) => {
     
     if (!data || data.length === 0) {
       const duration = Date.now() - startTime;
-      console.log(`📝 [DISTRIBUIÇÃO] Nenhum registro encontrado (${duration}ms)`);
+      log(`📝 [DISTRIBUIÇÃO] Nenhum registro encontrado (${duration}ms)`);
       return {};
     }
     
-    console.log(`📊 [DISTRIBUIÇÃO] ${data.length} registros encontrados`);
-    console.log('📊 [DISTRIBUIÇÃO] Primeiros registros:', JSON.stringify(data.slice(0, 3), null, 2));
+    log(`📊 [DISTRIBUIÇÃO] ${data.length} registros encontrados`);
+    log('📊 [DISTRIBUIÇÃO] Primeiros registros:', JSON.stringify(data.slice(0, 3), null, 2));
     
     // Converter array para objeto
     const distribuicao = {};
@@ -118,8 +119,8 @@ export const carregarDistribuicaoDoSupabase = async (quarter, year) => {
     });
     
     const duration = Date.now() - startTime;
-    console.log(`✅ [DISTRIBUIÇÃO] ${data.length} registros carregados em ${duration}ms`);
-    console.log('📊 [DISTRIBUIÇÃO] Estrutura carregada:', JSON.stringify(distribuicao, null, 2));
+    log(`✅ [DISTRIBUIÇÃO] ${data.length} registros carregados em ${duration}ms`);
+    log('📊 [DISTRIBUIÇÃO] Estrutura carregada:', JSON.stringify(distribuicao, null, 2));
     
     return distribuicao;
   } catch (error) {
@@ -141,7 +142,7 @@ export const carregarDistribuicaoDoSupabase = async (quarter, year) => {
  */
 export const limparDistribuicaoNoSupabase = async (psm, week, route, quarter, year) => {
   try {
-    console.log(`🧹 [DISTRIBUIÇÃO] Limpando (${psm}, ${week}, ${route})...`);
+    log(`🧹 [DISTRIBUIÇÃO] Limpando (${psm}, ${week}, ${route})...`);
     
     const { error } = await supabase
       .from('psm_distribuicao_reparacoes')
@@ -154,7 +155,7 @@ export const limparDistribuicaoNoSupabase = async (psm, week, route, quarter, ye
     
     if (error) throw error;
     
-    console.log('✅ [DISTRIBUIÇÃO] Limpa do Supabase');
+    log('✅ [DISTRIBUIÇÃO] Limpa do Supabase');
     return { success: true };
   } catch (error) {
     console.error('❌ [DISTRIBUIÇÃO] Erro ao limpar do Supabase:', error);

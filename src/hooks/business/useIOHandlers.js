@@ -10,6 +10,7 @@ import { QUARTER_CONFIG } from '../../config/quarterConfig';
 import { ALL_WEEKS } from '../../config/constants';
 import { ROUTES_BY_PSM } from '../../config/routeConfig';
 import { findPSMForRoute as findPSMForRouteUtil } from '../../utils/routeUtils.js';
+import { log, warn } from '../../utils/logger';
 
 export function useIOHandlers({
   data,
@@ -218,25 +219,25 @@ export function useIOHandlers({
           totalImported++;
 
         } else {
-          console.log('  ⚠️ Ignorado (todos valores = 0)');
+          log('  ⚠️ Ignorado (todos valores = 0)');
           skippedRows++;
         }
       }
 
       // 14. Logs de estatísticas
-      console.log('=' .repeat(60));
+      log('=' .repeat(60));
 
-      console.log('=' .repeat(60));
+      log('=' .repeat(60));
 
-      console.log('   ISISTEL:', Object.values(newJustificativas).filter(j => j.psm === 'ISISTEL').length);
-      console.log('   FIBRASOL:', Object.values(newJustificativas).filter(j => j.psm === 'FIBRASOL').length);
-      console.log('   ANGLOBAL:', Object.values(newJustificativas).filter(j => j.psm === 'ANGLOBAL').length);
-      console.log('=' .repeat(60));
+      log('   ISISTEL:', Object.values(newJustificativas).filter(j => j.psm === 'ISISTEL').length);
+      log('   FIBRASOL:', Object.values(newJustificativas).filter(j => j.psm === 'FIBRASOL').length);
+      log('   ANGLOBAL:', Object.values(newJustificativas).filter(j => j.psm === 'ANGLOBAL').length);
+      log('=' .repeat(60));
 
       // 15. Atualizar estado
       setJustificativas(prev => {
         const updated = { ...prev, ...newJustificativas };
-        console.log('💾 Estado de justificativas atualizado. Total:', Object.keys(updated).length);
+        log('💾 Estado de justificativas atualizado. Total:', Object.keys(updated).length);
         return updated;
       });
 
@@ -412,14 +413,14 @@ export function useIOHandlers({
               totalImported++;
 
             } else {
-              console.log('⚠️ Ignorado (todos valores = 0):', seccao);
+              log('⚠️ Ignorado (todos valores = 0):', seccao);
             }
           }
 
           // 11. Atualizar estado
           setJustificativas(prev => {
             const updated = { ...prev, ...newJustificativas };
-            console.log('💾 Estado de justificativas atualizado. Total:', Object.keys(updated).length);
+            log('💾 Estado de justificativas atualizado. Total:', Object.keys(updated).length);
             return updated;
           });
 
@@ -614,9 +615,9 @@ export function useIOHandlers({
           // v3.49.11: MERGE - Mantém dados de outros PSMs
           const newData = JSON.parse(JSON.stringify(data));
 
-          console.log('📦 MERGE DE DADOS GERAIS:');
-          console.log('  PSMs existentes:', Object.keys(data));
-          console.log('  PSM sendo importado:', selectedOperator);
+          log('📦 MERGE DE DADOS GERAIS:');
+          log('  PSMs existentes:', Object.keys(data));
+          log('  PSM sendo importado:', selectedOperator);
 
           let rowCount = 0;
           let errorCount = 0;
@@ -642,19 +643,19 @@ export function useIOHandlers({
                 rota = values[3]?.trim();   // Coluna 3: Rota
                 dataStartIndex = 4;         // Dados começam na coluna 4
 
-                console.log(`  📋 Formato NOVO detectado: Ano=${values[0]}, Quarter=${values[1]}, Semana=${week}`);
+                log(`  📋 Formato NOVO detectado: Ano=${values[0]}, Quarter=${values[1]}, Semana=${week}`);
               } else {
                 // FORMATO ANTIGO: Semana,Rota,...
                 week = values[0]?.trim();   // Coluna 0: Semana
                 rota = values[1]?.trim();   // Coluna 1: Rota
                 dataStartIndex = 2;         // Dados começam na coluna 2
 
-                console.log(`  📋 Formato ANTIGO detectado: Semana=${week}`);
+                log(`  📋 Formato ANTIGO detectado: Semana=${week}`);
               }
 
               // 12. Validar dados essenciais
               if (!week || !rota) {
-                console.warn(`⚠️ Linha ${i} ignorada: week='${week}', rota='${rota}'`);
+                warn(`⚠️ Linha ${i} ignorada: week='${week}', rota='${rota}'`);
                 continue;
               }
 
@@ -705,11 +706,11 @@ export function useIOHandlers({
           // 17. Atualizar estado global (salva automaticamente no localStorage)
           setData(newData);
 
-          console.log('  ✅ Estado atualizado - PSMs após merge:', Object.keys(newData));
+          log('  ✅ Estado atualizado - PSMs após merge:', Object.keys(newData));
 
           // v3.48.00: PROCESSAR VALIDAÇÕES POR SEMANA
-          console.log('🔍 INICIANDO PROCESSAMENTO DE VALIDAÇÕES POR SEMANA...');
-          console.log('  Headers:', headers);
+          log('🔍 INICIANDO PROCESSAMENTO DE VALIDAÇÕES POR SEMANA...');
+          log('  Headers:', headers);
 
           // V5.10.16: MERGE - Clonar estados atuais ao invés de criar vazios (com ANO)
           const novasTestadas = JSON.parse(JSON.stringify(rotasTestadas));
@@ -730,10 +731,10 @@ export function useIOHandlers({
             h === 'Validada' || h === 'validada' || h.includes('Validada')
           );
 
-          console.log('  📊 ÍNDICES: Testada:', testadaIdx, 'Validada:', validadaIdx);
+          log('  📊 ÍNDICES: Testada:', testadaIdx, 'Validada:', validadaIdx);
 
           if (testadaIdx >= 0 || validadaIdx >= 0) {
-            console.log('  ✅ Colunas encontradas, processando...');
+            log('  ✅ Colunas encontradas, processando...');
 
             // Processar TODAS as linhas (cada linha = uma semana)
             for (let i = 1; i < lines.length; i++) {
@@ -792,21 +793,21 @@ export function useIOHandlers({
             }
 
             // Atualizar estados
-            console.log('  📦 MERGE DE DADOS:');
-            console.log('    PSMs antes:', Object.keys(rotasTestadas));
-            console.log('    PSM importado:', selectedOperator);
-            console.log('    PSMs depois:', Object.keys(novasTestadas));
+            log('  📦 MERGE DE DADOS:');
+            log('    PSMs antes:', Object.keys(rotasTestadas));
+            log('    PSM importado:', selectedOperator);
+            log('    PSMs depois:', Object.keys(novasTestadas));
 
             setRotasTestadas(novasTestadas);
             setRotasValidadas(novasValidadas);
 
-            console.log('  ✅ Validações importadas:', validacoesImportadas);
+            log('  ✅ Validações importadas:', validacoesImportadas);
 
             // Contar semanas e rotas
             const semanasTest = Object.keys(novasTestadas[selectedOperator] || {}).length;
             const semanasValid = Object.keys(novasValidadas[selectedOperator] || {}).length;
-            console.log('  📅 Semanas com testadas:', semanasTest);
-            console.log('  📅 Semanas com validadas:', semanasValid);
+            log('  📅 Semanas com testadas:', semanasTest);
+            log('  📅 Semanas com validadas:', semanasValid);
           }
 
           // 18. DEBUG: Verificar dados importados
@@ -818,23 +819,23 @@ export function useIOHandlers({
           if (firstWeek && firstRoute) {
             const sampleData = newData[selectedOperator][firstWeek][firstRoute];
 
-            console.log('  Campos importados:', Object.keys(sampleData));
+            log('  Campos importados:', Object.keys(sampleData));
 
             // Verificar campos específicos - TODOS
 
-            console.log('  Transporte:', sampleData['Transporte'], '(tipo:', typeof sampleData['Transporte'], ')');
-            console.log('  Indisponíveis:', sampleData['Indisponíveis'], '(tipo:', typeof sampleData['Indisponíveis'], ')');
-            console.log('  Total Reparadas:', sampleData['Total Reparadas'], '(tipo:', typeof sampleData['Total Reparadas'], ')');
-            console.log('  Reconhecidas:', sampleData['Reconhecidas'], '(tipo:', typeof sampleData['Reconhecidas'], ')');
-            console.log('  Dep. de Passagem de Cabo:', sampleData['Dep. de Passagem de Cabo'], '(tipo:', typeof sampleData['Dep. de Passagem de Cabo'], ')');
-            console.log('  Dep. de Licença:', sampleData['Dep. de Licença'], '(tipo:', typeof sampleData['Dep. de Licença'], ')');
-            console.log('  Dep. de Cutover:', sampleData['Dep. de Cutover'], '(tipo:', typeof sampleData['Dep. de Cutover'], ')');
-            console.log('  Fibras dependentes da ' + selectedOperator + ':', sampleData[`Fibras dependentes da ${selectedOperator}`], '(tipo:', typeof sampleData[`Fibras dependentes da ${selectedOperator}`], ')');
+            log('  Transporte:', sampleData['Transporte'], '(tipo:', typeof sampleData['Transporte'], ')');
+            log('  Indisponíveis:', sampleData['Indisponíveis'], '(tipo:', typeof sampleData['Indisponíveis'], ')');
+            log('  Total Reparadas:', sampleData['Total Reparadas'], '(tipo:', typeof sampleData['Total Reparadas'], ')');
+            log('  Reconhecidas:', sampleData['Reconhecidas'], '(tipo:', typeof sampleData['Reconhecidas'], ')');
+            log('  Dep. de Passagem de Cabo:', sampleData['Dep. de Passagem de Cabo'], '(tipo:', typeof sampleData['Dep. de Passagem de Cabo'], ')');
+            log('  Dep. de Licença:', sampleData['Dep. de Licença'], '(tipo:', typeof sampleData['Dep. de Licença'], ')');
+            log('  Dep. de Cutover:', sampleData['Dep. de Cutover'], '(tipo:', typeof sampleData['Dep. de Cutover'], ')');
+            log('  Fibras dependentes da ' + selectedOperator + ':', sampleData[`Fibras dependentes da ${selectedOperator}`], '(tipo:', typeof sampleData[`Fibras dependentes da ${selectedOperator}`], ')');
 
             // Verificar se campo existe
 
           } else {
-            console.warn('⚠️ Nenhum dado encontrado após importação!');
+            warn('⚠️ Nenhum dado encontrado após importação!');
           }
 
           // 19. Contar detalhes da importação
@@ -852,7 +853,7 @@ export function useIOHandlers({
             });
           }
 
-          console.log('  Semanas:', Array.from(semanasCont).sort().join(', '));
+          log('  Semanas:', Array.from(semanasCont).sort().join(', '));
 
           // 19. Contar validações por semana
           let rotasTestCount = 0;
@@ -1012,7 +1013,7 @@ export function useIOHandlers({
           const newJustificativas = { ...justificativas, ...importedJustificativas };
           setJustificativas(newJustificativas);
 
-          console.log('  Total justificativas:', Object.keys(newJustificativas).length);
+          log('  Total justificativas:', Object.keys(newJustificativas).length);
 
           alert(`✓ Importação de justificativas bem-sucedida!\n\n` +
                 `📂 Arquivo: ${file.name}\n` +
@@ -1160,8 +1161,8 @@ export function useIOHandlers({
             }
           }
 
-          console.log(`✓ Mantendo ${dadosOutrosAnos.length} linhas de outros anos`);
-          console.log(`✓ Atualizando ${dadosAnoAtual.length} linhas de ${anoAtual}`);
+          log(`✓ Mantendo ${dadosOutrosAnos.length} linhas de outros anos`);
+          log(`✓ Atualizando ${dadosAnoAtual.length} linhas de ${anoAtual}`);
         }
 
         // v3.40.88: Montar CSV: Header + Outros anos + Ano atual
@@ -1306,13 +1307,13 @@ export function useIOHandlers({
   const handleViewState = () => {
     console.clear();
 
-    console.log('Total PSMs:', Object.keys(ROUTES_BY_PSM).length);
-    console.log('Total Rotas:', Object.values(ROUTES_BY_PSM).reduce((acc, r) => acc + r.length, 0));
+    log('Total PSMs:', Object.keys(ROUTES_BY_PSM).length);
+    log('Total Rotas:', Object.values(ROUTES_BY_PSM).reduce((acc, r) => acc + r.length, 0));
 
-    console.log('Justificativas carregadas:', Object.keys(justificativas).length);
+    log('Justificativas carregadas:', Object.keys(justificativas).length);
 
-    console.log('Tamanho data:', new Blob([localStorage.getItem('psm_rotas_data_v3') || '']).size, 'bytes');
-    console.log('Tamanho justificativas:', new Blob([localStorage.getItem('psm_justificativas_v1') || '']).size, 'bytes');
+    log('Tamanho data:', new Blob([localStorage.getItem('psm_rotas_data_v3') || '']).size, 'bytes');
+    log('Tamanho justificativas:', new Blob([localStorage.getItem('psm_justificativas_v1') || '']).size, 'bytes');
 
     alert('✓ Estado completo exibido no console!\n\nAbra o DevTools (F12) para visualizar.');
   };

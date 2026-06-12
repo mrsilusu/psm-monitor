@@ -5,6 +5,7 @@ import { QUARTER_CONFIG } from '../../config/quarterConfig';
 import { ALL_WEEKS } from '../../config/constants';
 import { ROUTE_TO_PROVINCE } from '../../config/provinceConfig';
 import { getValorReduzido as getValorReduzidoUtil } from '../../utils/valueUtils.js';
+import { log } from '../../utils/logger';
 
 const STATUS_COLORS = {
   'Transporte': '#334155',
@@ -177,7 +178,7 @@ const ClassificacaoCarrossel = ({
                   // v3.20.0 FASE 4: Filtrar por província ANTES da classificação (afeta DADOS GERAIS)
                   .filter(r => selectedProvince === 'Todas' || ROUTE_TO_PROVINCE[r.rota] === selectedProvince);
                 
-                console.log('📊 GRÁFICOS POR CLASSIFICAÇÃO - Acumulado desde introdução:', {
+                log('📊 GRÁFICOS POR CLASSIFICAÇÃO - Acumulado desde introdução:', {
                   provincia: selectedProvince,
                   semanaSelecionada: selectedWeek,
                   totalRotas: ROUTES_BY_PSM[selectedOperator].length,
