@@ -1,5 +1,5 @@
 import React from 'react';
-import { TrendingDown, AlertCircle } from 'lucide-react';
+import { TrendingDown, AlertCircle, AlertTriangle } from 'lucide-react';
 import { ROUTES_BY_PSM } from '../../config/routeConfig';
 import { log } from '../../utils/logger';
 
