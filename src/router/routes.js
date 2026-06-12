@@ -1,1 +1,6 @@
-// TODO: Fase 10 — Definição de rotas
+export const ROUTES = {
+  LOGIN:      '/login',
+  MAIN:       '/',
+  BACKOFFICE: '/backoffice',
+  NOT_FOUND:  '*',
+};

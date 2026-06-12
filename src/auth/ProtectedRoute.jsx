@@ -1,11 +1,13 @@
 import React from 'react';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './useAuth.js';
 
-// `fallback` pode ser um nó React (ex.: <Login />) ou null
-const ProtectedRoute = ({ children, fallback = null }) => {
+const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
+  const location = useLocation();
   if (loading) return null;
-  return isAuthenticated ? children : fallback;
+  if (!isAuthenticated) return <Navigate to="/login" state={{ from: location }} replace />;
+  return children;
 };
 
 export default ProtectedRoute;

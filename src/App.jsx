@@ -1,5 +1,11 @@
-import MainPage from './pages/MainPage';
+import React from 'react';
+import { AuthProvider } from './auth/AuthProvider';
+import AppRouter from './router/AppRouter';
 
-const PSMMonitorApp = () => <MainPage />;
+const App = () => (
+  <AuthProvider>
+    <AppRouter />
+  </AuthProvider>
+);
 
-export default PSMMonitorApp;
+export default App;
