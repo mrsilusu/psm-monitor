@@ -4,6 +4,7 @@ import { cleanupOldData } from '../services/localStorageService';
 
 import { ALL_WEEKS } from '../config/constants';
 import { QUARTER_CONFIG } from '../config/quarterConfig';
+import { getQuarterAnterior } from '../utils/dateUtils.js';
 import { useRouteChecks } from '../hooks/business/useRouteChecks.js';
 import { useFilters } from '../hooks/state/useFilters.js';
 import { useAppState } from '../hooks/state/useAppState.js';
@@ -235,6 +236,8 @@ const MainPage = () => {
     QUARTER_CONFIG[selectedQuarter].end
   );
 
+  const quarterAnterior = getQuarterAnterior(selectedQuarter, selectedYear);
+
   if (presentationMode) {
     return (
       <PresentationMode
@@ -439,6 +442,7 @@ const MainPage = () => {
             setManualDataExpanded={setManualDataExpanded}
             handleBlurTotalReparadas={handleBlurTotalReparadas}
             handleLimparJustificativas={handleLimparJustificativas}
+            quarterAnterior={quarterAnterior}
           />
         </div>
       </div>
