@@ -1,6 +1,6 @@
 import React from 'react';
 import { BarChart3, Menu, TrendingUp, XCircle, CheckCircle, AlertTriangle, Users, Clock, MapPin } from 'lucide-react';
-import { OPERATOR_TO_PROVINCES } from '../../config/provinceConfig';
+import { OPERATOR_TO_PROVINCES as STATIC_OPERATOR_TO_PROVINCES } from '../../config/provinceConfig';
 import { getWeeksForQuarter } from '../../utils/dateUtils.js';
 import SaveStatus from '../../components/feedback/SaveStatus.jsx';
 
@@ -31,6 +31,7 @@ const HeaderFilters = ({
   setAlertasLidos,
   headerCardsData,
   handleStatusClick,
+  operatorToProvinces = STATIC_OPERATOR_TO_PROVINCES,
 }) => {
   const summaryCards = headerCardsData ? [
     { label: headerCardsData.transporteQ2.label, value: headerCardsData.transporteQ2.value, bgColor: headerCardsData.transporteQ2.color, icon: <TrendingUp className="w-3 h-3" /> },
@@ -91,7 +92,7 @@ const HeaderFilters = ({
             className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
           >
             <option value="Todas">Todas as Províncias</option>
-            {OPERATOR_TO_PROVINCES[selectedOperator].map(prov => (
+            {operatorToProvinces[selectedOperator].map(prov => (
               <option key={prov} value={prov}>{prov}</option>
             ))}
           </select>

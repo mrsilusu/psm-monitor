@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { LS_KEYS, lsGet, lsSet } from '../../services/localStorageService.js';
-import { OPERATOR_TO_PROVINCES } from '../../config/provinceConfig.js';
+import { OPERATOR_TO_PROVINCES as STATIC_OPERATOR_TO_PROVINCES } from '../../config/provinceConfig.js';
 import { QUARTER_CONFIG } from '../../config/quarterConfig.js';
 
 const parseYear = (value) => {
@@ -8,7 +8,7 @@ const parseYear = (value) => {
   return Number.isInteger(year) ? year : new Date().getFullYear();
 };
 
-export const useFilters = () => {
+export const useFilters = ({ operatorToProvinces = STATIC_OPERATOR_TO_PROVINCES } = {}) => {
   const [selectedOperator, setSelectedOperator] = useState(
     () => lsGet(LS_KEYS.OPERATOR) || 'FIBRASOL'
   );
@@ -51,7 +51,7 @@ export const useFilters = () => {
 
   useEffect(() => {
     if (selectedProvince !== 'Todas') {
-      const provincesOfOperator = OPERATOR_TO_PROVINCES[selectedOperator] || [];
+      const provincesOfOperator = operatorToProvinces[selectedOperator] || [];
       if (!provincesOfOperator.includes(selectedProvince)) {
         setSelectedProvince('Todas');
       }

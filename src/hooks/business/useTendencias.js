@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
-import { ROUTES_BY_PSM } from '../../config/routeConfig.js';
+import { ROUTES_BY_PSM as STATIC_ROUTES_BY_PSM } from '../../config/routeConfig.js';
 import { QUARTER_CONFIG } from '../../config/quarterConfig.js';
 import { ALL_WEEKS } from '../../config/constants.js';
-import { ROUTE_TO_PROVINCE } from '../../config/provinceConfig.js';
+import { ROUTE_TO_PROVINCE as STATIC_ROUTE_TO_PROVINCE } from '../../config/provinceConfig.js';
 import { getValorReduzido as getValorReduzidoUtil } from '../../utils/valueUtils.js';
 
 export const useTendencias = ({
@@ -13,6 +13,8 @@ export const useTendencias = ({
   selectedYear,
   selectedWeek,
   selectedProvince,
+  routesByPsm = STATIC_ROUTES_BY_PSM,
+  routeToProvince = STATIC_ROUTE_TO_PROVINCE,
 }) => {
   const getValorReduzido = (psm, week, route, tipo) =>
     getValorReduzidoUtil(data, distribuicaoReparacoes, selectedQuarter, selectedYear, QUARTER_CONFIG, psm, week, route, tipo);
@@ -26,8 +28,8 @@ export const useTendencias = ({
     if (!quarterWeeks || quarterWeeks.length === 0) return [];
 
     const routesToProcess = selectedProvince !== 'Todas'
-      ? ROUTES_BY_PSM[selectedOperator].filter(route => ROUTE_TO_PROVINCE[route] === selectedProvince)
-      : ROUTES_BY_PSM[selectedOperator];
+      ? routesByPsm[selectedOperator].filter(route => routeToProvince[route] === selectedProvince)
+      : routesByPsm[selectedOperator];
 
     const selectedWeekNum = parseInt(selectedWeek.substring(1));
     const weeksAteSelecao = quarterWeeks.filter(week => {

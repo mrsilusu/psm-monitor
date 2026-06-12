@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
-import { ROUTES_BY_PSM } from '../../config/routeConfig.js';
+import { ROUTES_BY_PSM as STATIC_ROUTES_BY_PSM } from '../../config/routeConfig.js';
 import { QUARTER_CONFIG } from '../../config/quarterConfig.js';
 import { ALL_WEEKS } from '../../config/constants.js';
-import { ROUTE_TO_PROVINCE, OPERATOR_TO_PROVINCES } from '../../config/provinceConfig.js';
+import { ROUTE_TO_PROVINCE as STATIC_ROUTE_TO_PROVINCE, OPERATOR_TO_PROVINCES as STATIC_OPERATOR_TO_PROVINCES } from '../../config/provinceConfig.js';
 import { getValorReduzido as getValorReduzidoUtil } from '../../utils/valueUtils.js';
 
 export const useDashboard = ({
@@ -14,6 +14,9 @@ export const useDashboard = ({
   selectedYear,
   selectedWeek,
   selectedProvince,
+  routesByPsm = STATIC_ROUTES_BY_PSM,
+  routeToProvince = STATIC_ROUTE_TO_PROVINCE,
+  operatorToProvinces = STATIC_OPERATOR_TO_PROVINCES,
 }) => {
   const getValorReduzido = (psm, week, route, tipo) =>
     getValorReduzidoUtil(data, distribuicaoReparacoes, selectedQuarter, selectedYear, QUARTER_CONFIG, psm, week, route, tipo);
@@ -25,8 +28,8 @@ export const useDashboard = ({
     );
 
     const routesToProcess = selectedProvince !== 'Todas'
-      ? ROUTES_BY_PSM[selectedOperator].filter(route => ROUTE_TO_PROVINCE[route] === selectedProvince)
-      : ROUTES_BY_PSM[selectedOperator];
+      ? routesByPsm[selectedOperator].filter(route => routeToProvince[route] === selectedProvince)
+      : routesByPsm[selectedOperator];
 
     let stats = {
       transporteSum: 0,
@@ -148,7 +151,7 @@ export const useDashboard = ({
 
     const provinciasParaMedia = selectedProvince !== 'Todas'
       ? [selectedProvince]
-      : OPERATOR_TO_PROVINCES[selectedOperator];
+      : operatorToProvinces[selectedOperator];
 
     let somatorioEfetGlobal = 0;
     let somatorioEfetPSM = 0;
@@ -156,7 +159,7 @@ export const useDashboard = ({
     let provinciasComDadosPSM = 0;
 
     provinciasParaMedia.forEach(prov => {
-      const rotasProv = routesToProcess.filter(route => ROUTE_TO_PROVINCE[route] === prov);
+      const rotasProv = routesToProcess.filter(route => routeToProvince[route] === prov);
       if (rotasProv.length === 0) return;
 
       let indisponiveisProv = 0;
@@ -250,8 +253,8 @@ export const useDashboard = ({
     );
 
     const routesToProcess = selectedProvince !== 'Todas'
-      ? ROUTES_BY_PSM[selectedOperator].filter(route => ROUTE_TO_PROVINCE[route] === selectedProvince)
-      : ROUTES_BY_PSM[selectedOperator];
+      ? routesByPsm[selectedOperator].filter(route => routeToProvince[route] === selectedProvince)
+      : routesByPsm[selectedOperator];
 
     const routeStats = {};
     routesToProcess.forEach(route => {

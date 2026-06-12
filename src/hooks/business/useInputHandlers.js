@@ -7,7 +7,7 @@
 
 import { limparDistribuicaoNoSupabase } from '../../services/supabaseDistribuicaoService';
 import { QUARTER_CONFIG } from '../../config/quarterConfig';
-import { ROUTES_BY_PSM } from '../../config/routeConfig';
+import { ROUTES_BY_PSM as STATIC_ROUTES_BY_PSM } from '../../config/routeConfig';
 import { STATUS_CATEGORIES } from '../../config/constants';
 import { isValidNumericInput } from '../../utils/validators.js';
 import { buscarValorAnterior as buscarValorAnteriorUtil } from '../../utils/valueUtils.js';
@@ -34,6 +34,7 @@ export function useInputHandlers({
   setSelectedStatusDrilldown,
   setCurrentPageDrilldown,
   setShowStatusDrilldown,
+  routesByPsm = STATIC_ROUTES_BY_PSM,
 }) {
 
   // ============================================================================
@@ -295,7 +296,7 @@ export function useInputHandlers({
     log('🔍 handleStatusClick:', { statusLabel, key, selectedOperator });
 
     // Iterar sobre todas as rotas do PSM
-    ROUTES_BY_PSM[selectedOperator].forEach(route => {
+    routesByPsm[selectedOperator].forEach(route => {
       // Buscar último valor não-zero do status para esta rota
       let lastValue = 0;
       let lastWeek = null;

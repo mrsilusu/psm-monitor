@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { MapPin } from 'lucide-react';
-import { ROUTES_BY_PSM } from '../../config/routeConfig';
+import { ROUTES_BY_PSM as STATIC_ROUTES_BY_PSM } from '../../config/routeConfig';
 import { QUARTER_CONFIG } from '../../config/quarterConfig';
 import { ALL_WEEKS } from '../../config/constants';
-import { ROUTE_TO_PROVINCE } from '../../config/provinceConfig';
+import { ROUTE_TO_PROVINCE as STATIC_ROUTE_TO_PROVINCE } from '../../config/provinceConfig';
 import { getValorReduzido as getValorReduzidoUtil } from '../../utils/valueUtils.js';
 import { log } from '../../utils/logger';
 
@@ -27,6 +27,8 @@ const ClassificacaoCarrossel = ({
   handleRotaClick,
   data,
   distribuicaoReparacoes,
+  routesByPsm = STATIC_ROUTES_BY_PSM,
+  routeToProvince = STATIC_ROUTE_TO_PROVINCE,
 }) => {
   const [viewMode, setViewMode] = useState('carousel');
   const [viewModeClassificacao, setViewModeClassificacao] = useState('all');
@@ -86,7 +88,7 @@ const ClassificacaoCarrossel = ({
               {(() => {
                 // Preparar dados das rotas com valores
                 // v3.22.0: Calcular dados ACUMULADOS desde a primeira semana com dados até semana selecionada
-                const routesData = ROUTES_BY_PSM[selectedOperator]
+                const routesData = routesByPsm[selectedOperator]
                   .map(rota => {
                     // Encontrar primeira semana com dados para esta rota no quadrimestre
                     const quarterWeeks = ALL_WEEKS.slice(
@@ -176,12 +178,12 @@ const ClassificacaoCarrossel = ({
                   .filter(r => r !== null) // Remover rotas sem dados até semana selecionada
                   .filter(r => (r.transporte + r.indisponiveis + r.totalReparadas + r.reconhecidas + r.depPassagem + r.depLicenca + r.depCutover + r.fibrasDep) > 0)
                   // v3.20.0 FASE 4: Filtrar por província ANTES da classificação (afeta DADOS GERAIS)
-                  .filter(r => selectedProvince === 'Todas' || ROUTE_TO_PROVINCE[r.rota] === selectedProvince);
+                  .filter(r => selectedProvince === 'Todas' || routeToProvince[r.rota] === selectedProvince);
                 
                 log('📊 GRÁFICOS POR CLASSIFICAÇÃO - Acumulado desde introdução:', {
                   provincia: selectedProvince,
                   semanaSelecionada: selectedWeek,
-                  totalRotas: ROUTES_BY_PSM[selectedOperator].length,
+                  totalRotas: routesByPsm[selectedOperator].length,
                   rotasComDados: routesData.length,
                   amostra: routesData.slice(0, 2).map(r => ({
                     rota: r.rota,
@@ -206,13 +208,13 @@ const ClassificacaoCarrossel = ({
                     .filter(([_, prov]) => prov === selectedProvince)
                     .map(([rota]) => rota);
                   
-                  const rotasDegradadasProv = routesData.filter(r => r.transporte < r.indisponiveis && ROUTE_TO_PROVINCE[r.rota] === selectedProvince);
-                  const rotasGanhoProv = routesData.filter(r => r.transporte > r.indisponiveis && ROUTE_TO_PROVINCE[r.rota] === selectedProvince);
-                  const rotasEstaveisProv = routesData.filter(r => r.transporte === r.indisponiveis && ROUTE_TO_PROVINCE[r.rota] === selectedProvince);
+                  const rotasDegradadasProv = routesData.filter(r => r.transporte < r.indisponiveis && routeToProvince[r.rota] === selectedProvince);
+                  const rotasGanhoProv = routesData.filter(r => r.transporte > r.indisponiveis && routeToProvince[r.rota] === selectedProvince);
+                  const rotasEstaveisProv = routesData.filter(r => r.transporte === r.indisponiveis && routeToProvince[r.rota] === selectedProvince);
                   
-                  const totalTransporte = routesData.filter(r => ROUTE_TO_PROVINCE[r.rota] === selectedProvince).reduce((sum, r) => sum + r.transporte, 0);
-                  const totalIndisponiveis = routesData.filter(r => ROUTE_TO_PROVINCE[r.rota] === selectedProvince).reduce((sum, r) => sum + r.indisponiveis, 0);
-                  const totalReparadas = routesData.filter(r => ROUTE_TO_PROVINCE[r.rota] === selectedProvince).reduce((sum, r) => sum + r.totalReparadas, 0);
+                  const totalTransporte = routesData.filter(r => routeToProvince[r.rota] === selectedProvince).reduce((sum, r) => sum + r.transporte, 0);
+                  const totalIndisponiveis = routesData.filter(r => routeToProvince[r.rota] === selectedProvince).reduce((sum, r) => sum + r.indisponiveis, 0);
+                  const totalReparadas = routesData.filter(r => routeToProvince[r.rota] === selectedProvince).reduce((sum, r) => sum + r.totalReparadas, 0);
                   const totalGeral = totalTransporte + totalIndisponiveis + totalReparadas;
                   
                   return (

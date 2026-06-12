@@ -3,7 +3,7 @@ import { LS_KEYS } from '../../services/localStorageService.js';
 import { getQuarterFromWeek } from '../../utils/dateUtils.js';
 import { lerTudoDoSupabase, salvarTudoNoSupabase, salvarJustificativasNoSupabase, lerJustificativasDoSupabase } from '../../services/supabaseService.js';
 import { carregarDistribuicaoDoSupabase, salvarDistribuicaoNoSupabase } from '../../services/supabaseDistribuicaoService.js';
-import { ROUTE_TO_PROVINCE } from '../../config/provinceConfig.js';
+import { ROUTE_TO_PROVINCE as STATIC_ROUTE_TO_PROVINCE } from '../../config/provinceConfig.js';
 import { log } from '../../utils/logger';
 
 export const usePersistence = ({
@@ -20,7 +20,8 @@ export const usePersistence = ({
   setRotasValidadas,
   setDistribuicaoReparacoes,
   setSaveStatus,
-  setLastSaveTime
+  setLastSaveTime,
+  routeToProvince = STATIC_routeToProvince,
 }) => {
   const saveTimerRef = useRef(null);
   const justificativasTimerRef = useRef(null);
@@ -85,7 +86,7 @@ export const usePersistence = ({
         data,
         selectedQuarter,
         selectedYear,
-        ROUTE_TO_PROVINCE,
+        routeToProvince,
         rotasTestadas,
         rotasValidadas
       );

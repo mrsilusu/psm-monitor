@@ -6,6 +6,7 @@ import { ALL_WEEKS } from '../config/constants';
 import { QUARTER_CONFIG } from '../config/quarterConfig';
 import { getQuarterAnterior } from '../utils/dateUtils.js';
 import { useRouteChecks } from '../hooks/business/useRouteChecks.js';
+import { useRouteConfig } from '../hooks/state/useRouteConfig.js';
 import { useFilters } from '../hooks/state/useFilters.js';
 import { useAppState } from '../hooks/state/useAppState.js';
 import { usePersistence } from '../hooks/state/usePersistence.js';
@@ -41,6 +42,8 @@ const MainPage = () => {
       setTimeout(() => { window.location.reload(); }, 1000);
     }
   }, []);
+
+  const { routesByPsm, routeToProvince, operatorToProvinces } = useRouteConfig();
 
   const {
     data, setData,
@@ -82,7 +85,7 @@ const MainPage = () => {
     selectedQuarter, setSelectedQuarter,
     selectedYear, setSelectedYear,
     selectedProvince, setSelectedProvince,
-  } = useFilters();
+  } = useFilters({ operatorToProvinces });
 
   usePersistence({
     data, justificativas, distribuicaoReparacoes,
@@ -90,6 +93,7 @@ const MainPage = () => {
     rotasTestadas, rotasValidadas,
     setData, setJustificativas, setRotasTestadas, setRotasValidadas,
     setDistribuicaoReparacoes, setSaveStatus, setLastSaveTime,
+    routeToProvince,
   });
 
   const { scrollContainerRef, headerVisible } = useScrollHeader();
@@ -142,14 +146,17 @@ const MainPage = () => {
 
   const { intervencoesRecentes, rotasNormalizadas, rotasMaisIntervencionadas, rotasSemIntervencao } = useIntervencoes({
     data, selectedOperator, selectedQuarter, selectedWeek, selectedProvince,
+    routesByPsm, routeToProvince,
   });
 
   const { trendData } = useTendencias({
     data, distribuicaoReparacoes, selectedOperator, selectedQuarter, selectedYear, selectedWeek, selectedProvince,
+    routesByPsm, routeToProvince,
   });
 
   const { pieChartData } = usePieChart({
     data, distribuicaoReparacoes, selectedOperator, selectedQuarter, selectedYear, selectedProvince,
+    routesByPsm, routeToProvince,
   });
 
   const {
@@ -158,6 +165,7 @@ const MainPage = () => {
   } = useDashboard({
     data, distribuicaoReparacoes, justificativas,
     selectedOperator, selectedQuarter, selectedYear, selectedWeek, selectedProvince,
+    routesByPsm, routeToProvince, operatorToProvinces,
   });
 
   // Fechar dropdown de alertas ao clicar fora
@@ -195,6 +203,7 @@ const MainPage = () => {
     valorOriginalRef, skipNextSaveRef,
     setSelectedRota, setShowModal,
     setSelectedStatusDrilldown, setCurrentPageDrilldown, setShowStatusDrilldown,
+    routesByPsm,
   });
 
   const handleLimparJustificativas = () => {
@@ -265,6 +274,8 @@ const MainPage = () => {
         itemsPerPageDrilldown={itemsPerPageDrilldown}
         data={data}
         handleStatusClick={handleStatusClick}
+        routesByPsm={routesByPsm}
+        routeToProvince={routeToProvince}
       />
     );
   }
@@ -340,6 +351,7 @@ const MainPage = () => {
           setAlertasLidos={setAlertasLidos}
           headerCardsData={headerCardsData}
           handleStatusClick={handleStatusClick}
+          operatorToProvinces={operatorToProvinces}
         />
 
         <TestesAnalises
@@ -381,6 +393,9 @@ const MainPage = () => {
             efetividadeGlobalMedia={efetividadeGlobalMedia}
             efetividadePSMMedia={efetividadePSMMedia}
             data={data}
+            routesByPsm={routesByPsm}
+            routeToProvince={routeToProvince}
+            operatorToProvinces={operatorToProvinces}
           />
 
           <ProvincialDashboard
@@ -425,6 +440,8 @@ const MainPage = () => {
             handleRotaClick={handleRotaClick}
             data={data}
             distribuicaoReparacoes={distribuicaoReparacoes}
+            routesByPsm={routesByPsm}
+            routeToProvince={routeToProvince}
           />
 
           <AcompanhamentoTable

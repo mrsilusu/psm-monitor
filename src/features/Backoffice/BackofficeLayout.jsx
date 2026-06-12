@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
-import { Users, ClipboardList, Settings, ChevronRight, Shield } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Users, ClipboardList, Settings, ChevronRight, Shield, MapPin, Plus } from 'lucide-react';
 import UserList from './Users/UserList.jsx';
 import UserForm from './Users/UserForm.jsx';
 import AuditLog from './Audit/AuditLog.jsx';
 import AppSettings from './Settings/AppSettings.jsx';
+import RouteManager from './Routes/RouteManager.jsx';
 import { useUsers } from './Users/useUsers.js';
 
 const NAV_ITEMS = [
   { id: 'users', label: 'Utilizadores', icon: Users },
+  { id: 'routes', label: 'Rotas', icon: MapPin },
   { id: 'audit', label: 'Auditoria', icon: ClipboardList },
   { id: 'settings', label: 'Configurações', icon: Settings },
 ];
@@ -17,6 +19,7 @@ const BackofficeLayout = () => {
   const [showUserForm, setShowUserForm] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [formLoading, setFormLoading] = useState(false);
+  const addRouteRef = useRef(null);
 
   const { users, loading, createUser, updateUser, deactivateUser } = useUsers();
 
@@ -105,6 +108,15 @@ const BackofficeLayout = () => {
               Novo Utilizador
             </button>
           )}
+          {activeSection === 'routes' && (
+            <button
+              onClick={() => addRouteRef.current?.()}
+              className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              Adicionar Rota
+            </button>
+          )}
         </header>
 
         <div className="flex-1 p-6 overflow-y-auto">
@@ -116,6 +128,7 @@ const BackofficeLayout = () => {
               onDeactivate={handleDeactivate}
             />
           )}
+          {activeSection === 'routes' && <RouteManager onAddRoute={addRouteRef} />}
           {activeSection === 'audit' && <AuditLog />}
           {activeSection === 'settings' && <AppSettings />}
         </div>

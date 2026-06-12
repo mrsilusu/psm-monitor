@@ -1,7 +1,7 @@
 import React from 'react';
 import { BarChart3 } from 'lucide-react';
-import { ROUTES_BY_PSM } from '../../config/routeConfig';
-import { ROUTE_TO_PROVINCE, OPERATOR_TO_PROVINCES } from '../../config/provinceConfig';
+import { ROUTES_BY_PSM as STATIC_ROUTES_BY_PSM } from '../../config/routeConfig';
+import { ROUTE_TO_PROVINCE as STATIC_ROUTE_TO_PROVINCE, OPERATOR_TO_PROVINCES as STATIC_OPERATOR_TO_PROVINCES } from '../../config/provinceConfig';
 import { QUARTER_CONFIG } from '../../config/quarterConfig';
 import { getValorReduzido as getValorReduzidoUtil } from '../../utils/valueUtils.js';
 import { log } from '../../utils/logger';
@@ -21,6 +21,9 @@ const ExecutiveDashboard = ({
   efetividadeGlobalMedia,
   efetividadePSMMedia,
   data,
+  routesByPsm = STATIC_ROUTES_BY_PSM,
+  routeToProvince = STATIC_ROUTE_TO_PROVINCE,
+  operatorToProvinces = STATIC_OPERATOR_TO_PROVINCES,
 }) => {
   const getValorReduzido = (psm, week, route, tipo) =>
     getValorReduzidoUtil(data, distribuicaoReparacoes, selectedQuarter, selectedYear, QUARTER_CONFIG, psm, week, route, tipo);
@@ -87,8 +90,8 @@ const ExecutiveDashboard = ({
                     
                     // Rotas a processar (com filtro de província se aplicável)
                     const routesToProcess = selectedProvince !== 'Todas'
-                      ? ROUTES_BY_PSM[selectedOperator].filter(route => ROUTE_TO_PROVINCE[route] === selectedProvince)
-                      : ROUTES_BY_PSM[selectedOperator];
+                      ? routesByPsm[selectedOperator].filter(route => routeToProvince[route] === selectedProvince)
+                      : routesByPsm[selectedOperator];
                     
                     // Percorrer todas as rotas e semanas do quarter
                     routesToProcess.forEach(route => {
@@ -287,7 +290,7 @@ const ExecutiveDashboard = ({
                     // MODO PSM: Calcular por PROVÍNCIA (código original)
                     const provinciasParaCalcular = selectedProvince !== 'Todas'
                       ? [selectedProvince]
-                      : OPERATOR_TO_PROVINCES[selectedOperator];
+                      : operatorToProvinces[selectedOperator];
                     
                     log('🗺️ CARDS MODO PSM - Calculando por Província');
                     log('  PSM:', selectedOperator);
@@ -295,7 +298,7 @@ const ExecutiveDashboard = ({
                     log('  Províncias a calcular:', provinciasParaCalcular);
                     
                     entidadesDados = provinciasParaCalcular.map(prov => {
-                    const rotasProv = ROUTES_BY_PSM[selectedOperator].filter(route => ROUTE_TO_PROVINCE[route] === prov);
+                    const rotasProv = routesByPsm[selectedOperator].filter(route => routeToProvince[route] === prov);
                     
                     log(`  📍 ${prov}:`);
                     log(`     Total rotas: ${rotasProv.length}`);
@@ -548,9 +551,9 @@ const ExecutiveDashboard = ({
                         <div className="flex justify-center items-center">
                           {(() => {
                             // CALCULAR TOTAL DE TODAS AS PROVÍNCIAS DO PSM (não só as filtradas)
-                            const todasProvinciasPSM = OPERATOR_TO_PROVINCES[selectedOperator];
+                            const todasProvinciasPSM = operatorToProvinces[selectedOperator];
                             const totalGeralIndisponiveis = todasProvinciasPSM.reduce((sum, prov) => {
-                              const rotasProv = ROUTES_BY_PSM[selectedOperator].filter(route => ROUTE_TO_PROVINCE[route] === prov);
+                              const rotasProv = routesByPsm[selectedOperator].filter(route => routeToProvince[route] === prov);
                               let indisponiveisProvTotal = 0;
                               
                               rotasProv.forEach(route => {

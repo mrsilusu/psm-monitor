@@ -1,7 +1,7 @@
 import React from 'react';
 import { BarChart3, TrendingUp, XCircle, CheckCircle, AlertTriangle, Users, Clock, MapPin } from 'lucide-react';
-import { ROUTES_BY_PSM } from '../../config/routeConfig';
-import { ROUTE_TO_PROVINCE } from '../../config/provinceConfig';
+import { ROUTES_BY_PSM as STATIC_ROUTES_BY_PSM } from '../../config/routeConfig';
+import { ROUTE_TO_PROVINCE as STATIC_ROUTE_TO_PROVINCE } from '../../config/provinceConfig';
 import { QUARTER_CONFIG } from '../../config/quarterConfig';
 
 const PresentationMode = ({
@@ -29,6 +29,8 @@ const PresentationMode = ({
   itemsPerPageDrilldown,
   data,
   handleStatusClick,
+  routesByPsm = STATIC_ROUTES_BY_PSM,
+  routeToProvince = STATIC_ROUTE_TO_PROVINCE,
 }) => {
   const summaryCards = headerCardsData ? [
     { label: headerCardsData.transporteQ2.label, value: headerCardsData.transporteQ2.value, bgColor: headerCardsData.transporteQ2.color, icon: <TrendingUp className="w-3 h-3" /> },
@@ -137,8 +139,8 @@ const PresentationMode = ({
 
                       // Rotas a processar (com filtro de província se aplicável)
                       const routesToProcess = selectedProvince !== 'Todas'
-                        ? ROUTES_BY_PSM[selectedOperator].filter(route => ROUTE_TO_PROVINCE[route] === selectedProvince)
-                        : ROUTES_BY_PSM[selectedOperator];
+                        ? routesByPsm[selectedOperator].filter(route => routeToProvince[route] === selectedProvince)
+                        : routesByPsm[selectedOperator];
 
                       // Percorrer todas as rotas e semanas do quarter
                       routesToProcess.forEach(route => {
