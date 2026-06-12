@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileText } from 'lucide-react';
+import { FileText, Trash2 } from 'lucide-react';
 import { ROUTES_BY_PSM } from '../../config/routeConfig';
 
 const AcompanhamentoTable = ({
