@@ -25,6 +25,18 @@ const ProvincialDashboard = ({
   itemsPerPageSemIntervencao,
   itemsPerPageNormalizadas,
 }) => {
+  const totalPagesNormalizadas = Math.ceil((rotasNormalizadas?.length || 0) / (itemsPerPageNormalizadas || 6));
+  const currentDataNormalizadas = (rotasNormalizadas || []).slice(
+    currentPageNormalizadas * (itemsPerPageNormalizadas || 6),
+    (currentPageNormalizadas + 1) * (itemsPerPageNormalizadas || 6)
+  );
+  const goToNextPageNormalizadas = () => setCurrentPageNormalizadas(p => Math.min(p + 1, totalPagesNormalizadas - 1));
+  const goToPrevPageNormalizadas = () => setCurrentPageNormalizadas(p => Math.max(p - 1, 0));
+  const goToNextPageIntervencoes = () => setCurrentPageIntervencoes(p => Math.min(p + 1, Math.ceil((intervencoesRecentes?.length || 0) / (itemsPerPageIntervencoes || 5)) - 1));
+  const goToPrevPageIntervencoes = () => setCurrentPageIntervencoes(p => Math.max(p - 1, 0));
+  const goToNextPageSemIntervencao = () => setCurrentPageSemIntervencao(p => Math.min(p + 1, Math.ceil((rotasSemIntervencao?.length || 0) / (itemsPerPageSemIntervencao || 5)) - 1));
+  const goToPrevPageSemIntervencao = () => setCurrentPageSemIntervencao(p => Math.max(p - 1, 0));
+
   return (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 mt-6">
             <div className="py-4 px-4 border-b border-gray-200 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors">
