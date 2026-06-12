@@ -1,5 +1,5 @@
-import React from 'react';
-import { BarChart3, PieChart } from 'lucide-react';
+import React, { useState } from 'react';
+import { BarChart3, PieChart, TrendingUp } from 'lucide-react';
 
 const AnaliseContainer = ({
   selectedProvince,
@@ -9,11 +9,9 @@ const AnaliseContainer = ({
   data,
   trendData,
   pieChartData,
-  hoveredPieSlice,
-  setHoveredPieSlice,
-  hoveredWeekIndex,
-  setHoveredWeekIndex,
 }) => {
+  const [hoveredPieSlice, setHoveredPieSlice] = useState(null);
+  const [hoveredWeekIndex, setHoveredWeekIndex] = useState(null);
   return (
     <>
           {/* v3.13.0: Análise Comparativa - 2 Colunas Lado a Lado Estilo Performance */}

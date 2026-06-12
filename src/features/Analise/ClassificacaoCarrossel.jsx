@@ -1,7 +1,21 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { MapPin } from 'lucide-react';
 import { ROUTES_BY_PSM } from '../../config/routeConfig';
 import { QUARTER_CONFIG } from '../../config/quarterConfig';
+import { ALL_WEEKS } from '../../config/constants';
+import { ROUTE_TO_PROVINCE } from '../../config/provinceConfig';
 import { getValorReduzido as getValorReduzidoUtil } from '../../utils/valueUtils.js';
+
+const STATUS_COLORS = {
+  'Transporte': '#334155',
+  'Indisponíveis': '#ef4444',
+  'Total Reparadas': '#22c55e',
+  'Reconhecidas': '#06b6d4',
+  'Dep. de Passagem de Cabo': '#3b82f6',
+  'Dep. de Licença': '#f97316',
+  'Dep. de Cutover': '#9333ea',
+};
+const getFibrasDepColor = () => '#475569';
 
 const ClassificacaoCarrossel = ({
   selectedOperator,
@@ -12,28 +26,24 @@ const ClassificacaoCarrossel = ({
   handleRotaClick,
   data,
   distribuicaoReparacoes,
-  viewMode,
-  setViewMode,
-  viewModeClassificacao,
-  setViewModeClassificacao,
-  currentGraph,
-  setCurrentGraph,
-  currentGraphClassificacao,
-  setCurrentGraphClassificacao,
-  goToNextGraph,
-  goToPrevGraph,
-  goToGraph,
-  goToNextGraphClassificacao,
-  goToPrevGraphClassificacao,
-  goToGraphClassificacao,
-  toggleViewMode,
-  toggleViewModeClassificacao,
-  quarterWeeks,
-  tooltipData,
-  setTooltipData,
-  tooltipPosition,
-  setTooltipPosition,
 }) => {
+  const [viewMode, setViewMode] = useState('carousel');
+  const [viewModeClassificacao, setViewModeClassificacao] = useState('all');
+  const [currentGraph, setCurrentGraph] = useState(0);
+  const [currentGraphClassificacao, setCurrentGraphClassificacao] = useState(0);
+  const [tooltipData, setTooltipData] = useState(null);
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+
+  const goToNextGraphClassificacao = () => setCurrentGraphClassificacao((prev) => (prev + 1) % 3);
+  const goToPrevGraphClassificacao = () => setCurrentGraphClassificacao((prev) => (prev - 1 + 3) % 3);
+  const goToGraphClassificacao = (index) => setCurrentGraphClassificacao(index);
+  const toggleViewModeClassificacao = () => setViewModeClassificacao((prev) => (prev === 'carousel' ? 'all' : 'carousel'));
+
+  const quarterWeeks = ALL_WEEKS.slice(
+    QUARTER_CONFIG[selectedQuarter].start - 1,
+    QUARTER_CONFIG[selectedQuarter].end
+  );
+
   const getValorReduzido = (psm, week, route, tipo) =>
     getValorReduzidoUtil(data, distribuicaoReparacoes, selectedQuarter, selectedYear, QUARTER_CONFIG, psm, week, route, tipo);
 
@@ -239,16 +249,15 @@ const ClassificacaoCarrossel = ({
                   );
                 };
                 
-                // USAR CORES DIRETAMENTE DO colorMap GLOBAL
                 const colors = {
-                  transporte: colorMap["Transporte"],
-                  indisponiveis: colorMap["Indisponíveis"],
-                  totalReparadas: colorMap["Total Reparadas"],
-                  reconhecidas: colorMap["Reconhecidas"],
-                  depPassagem: colorMap["Dep. de Passagem de Cabo"],
-                  depLicenca: colorMap["Dep. de Licença"],
-                  depCutover: colorMap["Dep. de Cutover"],
-                  fibrasDep: colorMap[`Fibras dependentes da ${selectedOperator}`]
+                  transporte: STATUS_COLORS['Transporte'],
+                  indisponiveis: STATUS_COLORS['Indisponíveis'],
+                  totalReparadas: STATUS_COLORS['Total Reparadas'],
+                  reconhecidas: STATUS_COLORS['Reconhecidas'],
+                  depPassagem: STATUS_COLORS['Dep. de Passagem de Cabo'],
+                  depLicenca: STATUS_COLORS['Dep. de Licença'],
+                  depCutover: STATUS_COLORS['Dep. de Cutover'],
+                  fibrasDep: getFibrasDepColor(),
                 };
                 
                 // Função para renderizar gráfico com ROTAS INDIVIDUAIS (nome completo, barras alinhadas)
