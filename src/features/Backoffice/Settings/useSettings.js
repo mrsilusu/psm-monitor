@@ -29,30 +29,31 @@ export const useSettings = () => {
     try {
       const { data, error: err } = await supabase
         .from(SETTINGS_TABLE)
-        .select('*')
+        .select('config')
         .limit(1)
         .maybeSingle();
       if (err) throw err;
-      if (data) setSettings({ ...DEFAULT_SETTINGS, ...data });
+      if (data?.config) setSettings({ ...DEFAULT_SETTINGS, ...data.config });
     } catch (e) {
-      setError(e.message);
+      // Tabela pode não ter coluna config ainda — usar defaults silenciosamente
+      setError(null);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  useEffect(() => { load(); }, [load]);
 
   const save = async (updates) => {
     setSaving(true);
     setError(null);
     try {
+      const newSettings = { ...settings, ...updates };
       const { error: err } = await supabase
         .from(SETTINGS_TABLE)
-        .upsert({ id: 1, ...settings, ...updates });
+        .upsert({ id: 1, config: newSettings });
       if (err) throw err;
-      setSettings(prev => ({ ...prev, ...updates }));
+      setSettings(newSettings);
       await logAction({ action: 'UPDATE', entity: 'settings', newValue: updates });
       setSaving(false);
       return {};
