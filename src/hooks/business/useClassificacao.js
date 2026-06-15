@@ -14,7 +14,7 @@ export const useClassificacao = ({
       estaveis: [],
     };
 
-    ROUTES_BY_PSM[selectedOperator].forEach(rota => {
+    (ROUTES_BY_PSM[selectedOperator] || []).forEach(rota => {
       let mostRecentWeek = null;
       const weekNum = parseInt(selectedWeek.substring(1));
 

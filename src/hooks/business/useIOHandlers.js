@@ -509,7 +509,7 @@ export function useIOHandlers({
       // Iterar sobre PSM selecionado, semanas do quadrimestre e rotas
       quarterWeeks.forEach(week => {
         if (data[selectedOperator] && data[selectedOperator][week]) {
-          ROUTES_BY_PSM[selectedOperator].forEach(route => {
+          (ROUTES_BY_PSM[selectedOperator] || []).forEach(route => {
             const routeData = data[selectedOperator][week][route];
             if (routeData) {
               csv += `${selectedOperator},${week},"${route}",`;
@@ -541,7 +541,7 @@ export function useIOHandlers({
             `PSM: ${selectedOperator}\n` +
             `Quadrimestre: ${selectedQuarter}\n` +
             `Semanas: ${quarterWeeks.length}\n` +
-            `Rotas: ${ROUTES_BY_PSM[selectedOperator].length}\n` +
+            `Rotas: ${(ROUTES_BY_PSM[selectedOperator] || []).length}\n` +
             `Justificativas: ${Object.keys(justificativas).length}\n` +
             `Horário: ${new Date().toLocaleString('pt-BR')}`);
 
@@ -1113,7 +1113,7 @@ export function useIOHandlers({
 
       // v3.40.88: Coletar dados do ANO ATUAL (W1-W52 do ano selecionado)
       const weeks = ALL_WEEKS;
-      const rotas = ROUTES_BY_PSM[selectedOperator];
+      const rotas = ROUTES_BY_PSM[selectedOperator] || [];
       let dadosAnoAtual = [];
 
       weeks.forEach(week => {

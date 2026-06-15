@@ -16,8 +16,8 @@ export const useAlertas = ({
     const alertasDetectados = [];
 
     const routesToCheck = selectedProvince !== 'Todas'
-      ? ROUTES_BY_PSM[selectedOperator].filter(route => ROUTE_TO_PROVINCE[route] === selectedProvince)
-      : ROUTES_BY_PSM[selectedOperator];
+      ? (ROUTES_BY_PSM[selectedOperator] || []).filter(route => ROUTE_TO_PROVINCE[route] === selectedProvince)
+      : (ROUTES_BY_PSM[selectedOperator] || []);
 
     const selectedWeekNum = parseInt(selectedWeek.substring(1));
 
