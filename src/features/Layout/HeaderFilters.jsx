@@ -1,8 +1,10 @@
 import React from 'react';
-import { BarChart3, Menu, TrendingUp, XCircle, CheckCircle, AlertTriangle, Users, Clock, MapPin } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { BarChart3, Menu, TrendingUp, XCircle, CheckCircle, AlertTriangle, Users, Clock, MapPin, Shield } from 'lucide-react';
 import { OPERATOR_TO_PROVINCES as STATIC_OPERATOR_TO_PROVINCES } from '../../config/provinceConfig';
 import { getWeeksForQuarter } from '../../utils/dateUtils.js';
 import SaveStatus from '../../components/feedback/SaveStatus.jsx';
+import usePermissions from '../../auth/usePermissions.js';
 
 const HeaderFilters = ({
   headerVisible,
@@ -33,6 +35,8 @@ const HeaderFilters = ({
   handleStatusClick,
   operatorToProvinces = STATIC_OPERATOR_TO_PROVINCES,
 }) => {
+  const { hasRole } = usePermissions();
+
   const summaryCards = headerCardsData ? [
     { label: headerCardsData.transporteQ2.label, value: headerCardsData.transporteQ2.value, bgColor: headerCardsData.transporteQ2.color, icon: <TrendingUp className="w-3 h-3" /> },
     { label: headerCardsData.indisponiveis.label, value: headerCardsData.indisponiveis.value, bgColor: headerCardsData.indisponiveis.color, icon: <XCircle className="w-3 h-3" /> },
@@ -69,8 +73,20 @@ const HeaderFilters = ({
               <p className="text-xs text-gray-500">v5.02.0 - Sem Semana Rep! 🎨✨</p>
             </div>
           </div>
-          {/* Indicador de Salvamento */}
-          <SaveStatus saveStatus={saveStatus} lastSaveTime={lastSaveTime} />
+          <div className="flex items-center gap-3">
+            {hasRole('admin') && (
+              <Link
+                to="/backoffice"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium rounded-lg transition-colors"
+                title="Backoffice - Administração"
+              >
+                <Shield className="w-4 h-4" />
+                Backoffice
+              </Link>
+            )}
+            {/* Indicador de Salvamento */}
+            <SaveStatus saveStatus={saveStatus} lastSaveTime={lastSaveTime} />
+          </div>
         </div>
       </div>
 
