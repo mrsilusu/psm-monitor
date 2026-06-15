@@ -29,9 +29,13 @@ export const usePersistence = ({
   const lastSavedDistribuicaoRef = useRef(null);
   const [isLoadingDistribuicao, setIsLoadingDistribuicao] = useState(false);
   const skipNextSaveRef = useRef(false);
+  // Impede salvamento no Supabase antes do primeiro load completar (evita race condition)
+  const isSupabaseLoadedRef = useRef(false);
 
   // useEffect #1: Carregar dados do Supabase ao iniciar e quando mudar o ano
   useEffect(() => {
+    isSupabaseLoadedRef.current = false; // Reset ao mudar de ano
+
     const carregarDadosDoSupabase = async () => {
       log('🔄 Carregando dados do Supabase para o ano:', selectedYear);
 
@@ -49,10 +53,11 @@ export const usePersistence = ({
         }
       } else {
         log('⚠️ Sem dados no Supabase para o ano', selectedYear);
-        setData({});
-        setRotasTestadas({});
-        setRotasValidadas({});
+        // Não apagar dados: manter o que está no localStorage / createInitialData
       }
+
+      // Marcar que o load completou — só agora permite saves no Supabase
+      isSupabaseLoadedRef.current = true;
 
       const resultadoJust = await lerJustificativasDoSupabase(selectedYear);
       if (resultadoJust.success && resultadoJust.data && Object.keys(resultadoJust.data).length > 0) {
@@ -81,6 +86,10 @@ export const usePersistence = ({
     }
 
     saveTimerRef.current = window.setTimeout(async () => {
+      if (!isSupabaseLoadedRef.current) {
+        log('⏭️ [DATA] Supabase ainda não carregou — salvamento adiado para evitar sobrescrever dados');
+        return;
+      }
       log('💾 [DATA] Salvando no Supabase para o ano:', selectedYear);
       const resultado = await salvarTudoNoSupabase(
         data,
