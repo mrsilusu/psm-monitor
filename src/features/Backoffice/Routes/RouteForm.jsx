@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 
 const STATIC_PSM_LIST = ['FIBRASOL', 'ISISTEL', 'ANGLOBAL'];
-const STATIC_PROVINCES_BY_PSM = {
+const STATIC_OPERATOR_TO_PROVINCES = {
   FIBRASOL: ['Zaire', 'Uíge', 'Malanje', 'Cuanza Norte'],
   ISISTEL: ['Cabinda'],
   ANGLOBAL: ['Lunda Norte', 'Lunda Sul', 'Moxico'],
@@ -11,8 +11,8 @@ const STATIC_PROVINCES_BY_PSM = {
 const RouteForm = ({
   route = null,
   selectedPsm,
-  psmList = STATIC_PSM_LIST,
-  provincesByPsm = STATIC_PROVINCES_BY_PSM,
+  allPsms = STATIC_PSM_LIST,
+  operatorToProvinces = STATIC_OPERATOR_TO_PROVINCES,
   onSave,
   onCancel,
   loading = false,
@@ -20,7 +20,7 @@ const RouteForm = ({
   const isEdit = !!route;
 
   const [form, setForm] = useState({
-    psm: selectedPsm || psmList[0] || 'FIBRASOL',
+    psm: selectedPsm || allPsms[0] || 'FIBRASOL',
     route_name: '',
     province: '',
     tipo_de_rede: 'Backbone',
@@ -38,19 +38,20 @@ const RouteForm = ({
         is_active: route.is_active !== false,
       });
     } else if (selectedPsm) {
-      const provinces = provincesByPsm[selectedPsm] || [];
+      const provinces = operatorToProvinces[selectedPsm] || [];
       setForm(f => ({ ...f, psm: selectedPsm, province: provinces[0] || '' }));
     }
   }, [route, selectedPsm]);
 
-  const provinces = provincesByPsm[form.psm] || [];
+  const provinceOptions = operatorToProvinces[form.psm] || [];
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    if (!form.psm.trim()) { setError('O PSM é obrigatório.'); return; }
     if (!form.route_name.trim()) { setError('O nome da rota é obrigatório.'); return; }
-    if (!form.province) { setError('A província é obrigatória.'); return; }
-    const result = await onSave(form);
+    if (!form.province.trim()) { setError('A província é obrigatória.'); return; }
+    const result = await onSave({ ...form, psm: form.psm.trim().toUpperCase(), province: form.province.trim() });
     if (result?.error) setError(result.error.message || 'Erro ao guardar.');
   };
 
@@ -67,24 +68,29 @@ const RouteForm = ({
         </div>
 
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
+
+          {/* PSM — combobox: escolhe existente ou escreve novo */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">PSM</label>
-            <select
+            <label className="block text-sm font-medium text-gray-700 mb-1">PSM *</label>
+            <input
+              type="text"
+              list="psm-options"
               value={form.psm}
               onChange={e => {
-                const psm = e.target.value;
-                const provs = provincesByPsm[psm] || [];
-                setForm(f => ({ ...f, psm, province: provs[0] || '' }));
+                const psm = e.target.value.toUpperCase();
+                const provinces = operatorToProvinces[psm] || [];
+                setForm(f => ({ ...f, psm, province: provinces[0] || '' }));
               }}
               disabled={isEdit}
+              placeholder="Ex: FIBRASOL ou novo PSM"
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-50"
-            >
-              {psmList.map(psm => (
-                <option key={psm} value={psm}>{psm}</option>
-              ))}
-            </select>
+            />
+            <datalist id="psm-options">
+              {allPsms.map(psm => <option key={psm} value={psm} />)}
+            </datalist>
           </div>
 
+          {/* Nome da rota */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Nome da Rota *</label>
             <input
@@ -96,19 +102,28 @@ const RouteForm = ({
             />
           </div>
 
+          {/* Província — combobox: escolhe existente ou escreve nova */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Província *</label>
-            <select
+            <input
+              type="text"
+              list={`province-options-${form.psm}`}
               value={form.province}
               onChange={e => setForm(f => ({ ...f, province: e.target.value }))}
+              placeholder="Ex: Cabinda ou nova província"
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-            >
-              {provinces.map(p => (
-                <option key={p} value={p}>{p}</option>
-              ))}
-            </select>
+            />
+            <datalist id={`province-options-${form.psm}`}>
+              {provinceOptions.map(p => <option key={p} value={p} />)}
+            </datalist>
+            {provinceOptions.length > 0 && (
+              <p className="text-xs text-gray-400 mt-1">
+                Sugestões: {provinceOptions.join(', ')} — ou escreve uma nova
+              </p>
+            )}
           </div>
 
+          {/* Tipo de rede */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de Rede</label>
             <div className="flex gap-4">
@@ -128,6 +143,7 @@ const RouteForm = ({
             </div>
           </div>
 
+          {/* Ativa */}
           <label className="flex items-center gap-2 cursor-pointer">
             <input
               type="checkbox"

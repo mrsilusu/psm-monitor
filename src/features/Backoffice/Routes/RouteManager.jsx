@@ -13,7 +13,7 @@ const PSM_COLORS = [
   { color: 'bg-pink-500', light: 'bg-pink-50 text-pink-700 border-pink-300' },
 ];
 
-const RouteManager = ({ onAddRoute, psmList = DEFAULT_PSM_LIST, provincesByPsm = {} }) => {
+const RouteManager = ({ onAddRoute, allPsms = DEFAULT_PSM_LIST, operatorToProvinces = {} }) => {
   const { routes, loading, error, createRoute, updateRoute, deleteRoute, toggleActive } = useRouteManager();
   const [activePsm, setActivePsm] = useState('FIBRASOL');
   const [showForm, setShowForm] = useState(false);
@@ -53,7 +53,7 @@ const RouteManager = ({ onAddRoute, psmList = DEFAULT_PSM_LIST, provincesByPsm =
     await deleteRoute(id);
   };
 
-  const psmTabs = psmList.map((id, idx) => ({
+  const psmTabs = allPsms.map((id, idx) => ({
     id,
     ...PSM_COLORS[idx % PSM_COLORS.length],
   }));
@@ -198,8 +198,8 @@ const RouteManager = ({ onAddRoute, psmList = DEFAULT_PSM_LIST, provincesByPsm =
         <RouteForm
           route={editingRoute}
           selectedPsm={activePsm}
-          psmList={psmList}
-          provincesByPsm={provincesByPsm}
+          allPsms={allPsms}
+          operatorToProvinces={operatorToProvinces}
           onSave={handleSave}
           onCancel={() => { setShowForm(false); setEditingRoute(null); }}
           loading={formLoading}

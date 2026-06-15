@@ -3,18 +3,13 @@ import { supabase } from '../../../services/supabaseClient.js';
 import { logAction } from '../../../services/auditService.js';
 
 const SETTINGS_TABLE = 'app_settings';
+const SETTINGS_KEY = 'app_config';
 
 const DEFAULT_SETTINGS = {
   app_name: 'PSM Monitor',
   active_operators: ['FIBRASOL', 'ISISTEL', 'ANGLOBAL'],
   available_years: ['2024', '2025', '2026'],
   max_quarters: 3,
-  psm_list: ['FIBRASOL', 'ISISTEL', 'ANGLOBAL'],
-  provinces_by_psm: {
-    FIBRASOL: ['Zaire', 'Uíge', 'Malanje', 'Cuanza Norte'],
-    ISISTEL: ['Cabinda'],
-    ANGLOBAL: ['Lunda Norte', 'Lunda Sul', 'Moxico'],
-  },
 };
 
 export const useSettings = () => {
@@ -30,12 +25,12 @@ export const useSettings = () => {
       const { data, error: err } = await supabase
         .from(SETTINGS_TABLE)
         .select('config')
-        .limit(1)
+        .eq('key', SETTINGS_KEY)
         .maybeSingle();
       if (err) throw err;
       if (data?.config) setSettings({ ...DEFAULT_SETTINGS, ...data.config });
     } catch {
-      // Falha silenciosa — usa defaults locais
+      // Usa defaults silenciosamente se a tabela não estiver pronta
     } finally {
       setLoading(false);
     }
@@ -48,8 +43,9 @@ export const useSettings = () => {
     setError(null);
     try {
       const newSettings = { ...settings, ...updates };
-      // Usa RPC para evitar dependência do PK da tabela app_settings
-      const { error: err } = await supabase.rpc('upsert_app_settings', { p_config: newSettings });
+      const { error: err } = await supabase
+        .from(SETTINGS_TABLE)
+        .upsert({ key: SETTINGS_KEY, config: newSettings }, { onConflict: 'key' });
       if (err) throw err;
       setSettings(newSettings);
       await logAction({ action: 'UPDATE', entity: 'settings', newValue: updates });

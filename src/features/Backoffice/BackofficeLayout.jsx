@@ -7,7 +7,7 @@ import AuditLog from './Audit/AuditLog.jsx';
 import AppSettings from './Settings/AppSettings.jsx';
 import RouteManager from './Routes/RouteManager.jsx';
 import { useUsers } from './Users/useUsers.js';
-import { useSettings } from './Settings/useSettings.js';
+import { useRouteConfig } from '../../hooks/state/useRouteConfig.js';
 
 const NAV_ITEMS = [
   { id: 'users', label: 'Utilizadores', icon: Users },
@@ -25,9 +25,7 @@ const BackofficeLayout = () => {
   const addRouteRef = useRef(null);
 
   const { users, loading, createUser, updateUser, deactivateUser } = useUsers();
-  const { settings } = useSettings();
-  const psmList = settings.psm_list || ['FIBRASOL', 'ISISTEL', 'ANGLOBAL'];
-  const provincesByPsm = settings.provinces_by_psm || {};
+  const { allPsms, operatorToProvinces } = useRouteConfig();
 
   const handleEdit = (user) => {
     setEditingUser(user);
@@ -144,8 +142,8 @@ const BackofficeLayout = () => {
           {activeSection === 'routes' && (
             <RouteManager
               onAddRoute={addRouteRef}
-              psmList={psmList}
-              provincesByPsm={provincesByPsm}
+              allPsms={allPsms}
+              operatorToProvinces={operatorToProvinces}
             />
           )}
           {activeSection === 'audit' && <AuditLog />}
