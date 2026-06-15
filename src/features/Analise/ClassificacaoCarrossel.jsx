@@ -204,7 +204,7 @@ const ClassificacaoCarrossel = ({
                 const renderProvincialDashboard = () => {
                   if (selectedProvince === 'Todas') return null;
                   
-                  const rotasProvincia = Object.entries(ROUTE_TO_PROVINCE)
+                  const rotasProvincia = Object.entries(routeToProvince)
                     .filter(([_, prov]) => prov === selectedProvince)
                     .map(([rota]) => rota);
                   

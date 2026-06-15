@@ -1,6 +1,7 @@
 import React from 'react';
 import { TrendingDown, TrendingUp, AlertCircle, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
 import { ROUTES_BY_PSM } from '../../config/routeConfig';
+import { ROUTE_TO_PROVINCE } from '../../config/provinceConfig';
 import { log } from '../../utils/logger';
 
 const ProvincialDashboard = ({
