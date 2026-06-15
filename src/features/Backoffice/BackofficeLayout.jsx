@@ -157,6 +157,7 @@ const BackofficeLayout = () => {
           onSave={handleSave}
           onCancel={() => { setShowUserForm(false); setEditingUser(null); }}
           loading={formLoading}
+          allPsms={allPsms}
         />
       )}
     </div>

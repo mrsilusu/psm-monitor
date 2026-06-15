@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 
-const PSM_OPTIONS = ['FIBRASOL', 'ISISTEL', 'ANGLOBAL'];
+const STATIC_PSM_OPTIONS = ['FIBRASOL', 'ISISTEL', 'ANGLOBAL'];
 const ROLE_OPTIONS = ['admin', 'editor', 'viewer'];
 
-const UserForm = ({ user = null, onSave, onCancel, loading = false }) => {
+const UserForm = ({ user = null, onSave, onCancel, loading = false, allPsms = [] }) => {
+  const psmOptions = allPsms.length > 0 ? allPsms : STATIC_PSM_OPTIONS;
   const isEdit = !!user;
 
   const [form, setForm] = useState({
@@ -96,8 +97,8 @@ const UserForm = ({ user = null, onSave, onCancel, loading = false }) => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Acesso PSM</label>
-            <div className="flex gap-3">
-              {PSM_OPTIONS.map(psm => (
+            <div className="flex flex-wrap gap-3">
+              {psmOptions.map(psm => (
                 <label key={psm} className="flex items-center gap-1.5 cursor-pointer">
                   <input
                     type="checkbox"
