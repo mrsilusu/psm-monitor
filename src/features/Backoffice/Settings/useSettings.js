@@ -9,6 +9,12 @@ const DEFAULT_SETTINGS = {
   active_operators: ['FIBRASOL', 'ISISTEL', 'ANGLOBAL'],
   available_years: ['2024', '2025', '2026'],
   max_quarters: 3,
+  psm_list: ['FIBRASOL', 'ISISTEL', 'ANGLOBAL'],
+  provinces_by_psm: {
+    FIBRASOL: ['Zaire', 'Uíge', 'Malanje', 'Cuanza Norte'],
+    ISISTEL: ['Cabinda'],
+    ANGLOBAL: ['Lunda Norte', 'Lunda Sul', 'Moxico'],
+  },
 };
 
 export const useSettings = () => {

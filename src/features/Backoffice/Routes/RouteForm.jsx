@@ -1,17 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 
-const PSM_PROVINCES = {
+const STATIC_PSM_LIST = ['FIBRASOL', 'ISISTEL', 'ANGLOBAL'];
+const STATIC_PROVINCES_BY_PSM = {
   FIBRASOL: ['Zaire', 'Uíge', 'Malanje', 'Cuanza Norte'],
   ISISTEL: ['Cabinda'],
   ANGLOBAL: ['Lunda Norte', 'Lunda Sul', 'Moxico'],
 };
 
-const RouteForm = ({ route = null, selectedPsm, onSave, onCancel, loading = false }) => {
+const RouteForm = ({
+  route = null,
+  selectedPsm,
+  psmList = STATIC_PSM_LIST,
+  provincesByPsm = STATIC_PROVINCES_BY_PSM,
+  onSave,
+  onCancel,
+  loading = false,
+}) => {
   const isEdit = !!route;
 
   const [form, setForm] = useState({
-    psm: selectedPsm || 'FIBRASOL',
+    psm: selectedPsm || psmList[0] || 'FIBRASOL',
     route_name: '',
     province: '',
     tipo_de_rede: 'Backbone',
@@ -29,12 +38,12 @@ const RouteForm = ({ route = null, selectedPsm, onSave, onCancel, loading = fals
         is_active: route.is_active !== false,
       });
     } else if (selectedPsm) {
-      const provinces = PSM_PROVINCES[selectedPsm] || [];
+      const provinces = provincesByPsm[selectedPsm] || [];
       setForm(f => ({ ...f, psm: selectedPsm, province: provinces[0] || '' }));
     }
   }, [route, selectedPsm]);
 
-  const provinces = PSM_PROVINCES[form.psm] || [];
+  const provinces = provincesByPsm[form.psm] || [];
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -64,15 +73,15 @@ const RouteForm = ({ route = null, selectedPsm, onSave, onCancel, loading = fals
               value={form.psm}
               onChange={e => {
                 const psm = e.target.value;
-                const provs = PSM_PROVINCES[psm] || [];
+                const provs = provincesByPsm[psm] || [];
                 setForm(f => ({ ...f, psm, province: provs[0] || '' }));
               }}
               disabled={isEdit}
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-50"
             >
-              <option value="FIBRASOL">FIBRASOL</option>
-              <option value="ISISTEL">ISISTEL</option>
-              <option value="ANGLOBAL">ANGLOBAL</option>
+              {psmList.map(psm => (
+                <option key={psm} value={psm}>{psm}</option>
+              ))}
             </select>
           </div>
 

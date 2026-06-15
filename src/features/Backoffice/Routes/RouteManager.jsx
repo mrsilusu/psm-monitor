@@ -3,13 +3,17 @@ import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight } from 'lucide-react';
 import { useRouteManager } from './useRouteManager.js';
 import RouteForm from './RouteForm.jsx';
 
-const PSM_TABS = [
-  { id: 'FIBRASOL', color: 'bg-blue-500', light: 'bg-blue-50 text-blue-700 border-blue-300' },
-  { id: 'ISISTEL', color: 'bg-green-500', light: 'bg-green-50 text-green-700 border-green-300' },
-  { id: 'ANGLOBAL', color: 'bg-orange-500', light: 'bg-orange-50 text-orange-700 border-orange-300' },
+const DEFAULT_PSM_LIST = ['FIBRASOL', 'ISISTEL', 'ANGLOBAL'];
+
+const PSM_COLORS = [
+  { color: 'bg-blue-500', light: 'bg-blue-50 text-blue-700 border-blue-300' },
+  { color: 'bg-green-500', light: 'bg-green-50 text-green-700 border-green-300' },
+  { color: 'bg-orange-500', light: 'bg-orange-50 text-orange-700 border-orange-300' },
+  { color: 'bg-purple-500', light: 'bg-purple-50 text-purple-700 border-purple-300' },
+  { color: 'bg-pink-500', light: 'bg-pink-50 text-pink-700 border-pink-300' },
 ];
 
-const RouteManager = ({ onAddRoute }) => {
+const RouteManager = ({ onAddRoute, psmList = DEFAULT_PSM_LIST, provincesByPsm = {} }) => {
   const { routes, loading, error, createRoute, updateRoute, deleteRoute, toggleActive } = useRouteManager();
   const [activePsm, setActivePsm] = useState('FIBRASOL');
   const [showForm, setShowForm] = useState(false);
@@ -49,11 +53,16 @@ const RouteManager = ({ onAddRoute }) => {
     await deleteRoute(id);
   };
 
+  const psmTabs = psmList.map((id, idx) => ({
+    id,
+    ...PSM_COLORS[idx % PSM_COLORS.length],
+  }));
+
   const psmRoutes = routes.filter(r => r.psm === activePsm);
   const activeCount = psmRoutes.filter(r => r.is_active).length;
   const totalCount = psmRoutes.length;
 
-  const activeTab = PSM_TABS.find(t => t.id === activePsm);
+  const activeTab = psmTabs.find(t => t.id === activePsm);
 
   if (loading) {
     return (
@@ -75,8 +84,8 @@ const RouteManager = ({ onAddRoute }) => {
     <div className="space-y-4">
       {/* PSM Tab selector */}
       <div className="flex items-center justify-between">
-        <div className="flex gap-2">
-          {PSM_TABS.map(tab => (
+        <div className="flex gap-2 flex-wrap">
+          {psmTabs.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActivePsm(tab.id)}
@@ -189,6 +198,8 @@ const RouteManager = ({ onAddRoute }) => {
         <RouteForm
           route={editingRoute}
           selectedPsm={activePsm}
+          psmList={psmList}
+          provincesByPsm={provincesByPsm}
           onSave={handleSave}
           onCancel={() => { setShowForm(false); setEditingRoute(null); }}
           loading={formLoading}

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Save, RefreshCw } from 'lucide-react';
 import { useSettings } from './useSettings.js';
 import OperatorSettings from './OperatorSettings.jsx';
+import PsmProvinceSettings from './PsmProvinceSettings.jsx';
 
 const AppSettings = () => {
   const { settings, loading, error, saving, save } = useSettings();
@@ -77,6 +78,8 @@ const AppSettings = () => {
       </div>
 
       <OperatorSettings settings={settings} onSave={save} />
+
+      <PsmProvinceSettings settings={settings} onSave={save} saving={saving} />
 
       <div className="flex items-center gap-3">
         <button
