@@ -1,11 +1,11 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { BarChart3, Menu, TrendingUp, XCircle, CheckCircle, AlertTriangle, Users, Clock, MapPin, Shield, LogOut } from 'lucide-react';
 import { OPERATOR_TO_PROVINCES as STATIC_OPERATOR_TO_PROVINCES } from '../../config/provinceConfig';
 import { getWeeksForQuarter } from '../../utils/dateUtils.js';
 import SaveStatus from '../../components/feedback/SaveStatus.jsx';
-import usePermissions from '../../auth/usePermissions.js';
 import useAuth from '../../auth/useAuth.js';
+import { supabase } from '../../services/supabaseClient.js';
 
 const HeaderFilters = ({
   headerVisible,
@@ -36,8 +36,33 @@ const HeaderFilters = ({
   handleStatusClick,
   operatorToProvinces = STATIC_OPERATOR_TO_PROVINCES,
 }) => {
-  const { hasRole } = usePermissions();
-  const { signOut } = useAuth();
+  const { user, signOut } = useAuth();
+  const [profile, setProfile] = useState(null);
+
+  useEffect(() => {
+    if (!user?.email) return;
+    supabase
+      .from('user_profiles')
+      .select('full_name, role')
+      .eq('email', user.email)
+      .single()
+      .then(({ data }) => setProfile(data ?? null));
+  }, [user?.email]);
+
+  const role = profile?.role ?? user?.user_metadata?.roles?.[0] ?? null;
+  const isAdmin = role === 'admin';
+  const displayName = profile?.full_name || user?.email || '';
+  const initials = displayName
+    .split(/[\s@]/)
+    .slice(0, 2)
+    .map(p => p[0]?.toUpperCase() ?? '')
+    .join('');
+
+  const ROLE_STYLE = {
+    admin:  'bg-purple-100 text-purple-700',
+    editor: 'bg-blue-100 text-blue-700',
+    viewer: 'bg-gray-100 text-gray-600',
+  };
 
   const summaryCards = headerCardsData ? [
     { label: headerCardsData.transporteQ2.label, value: headerCardsData.transporteQ2.value, bgColor: headerCardsData.transporteQ2.color, icon: <TrendingUp className="w-3 h-3" /> },
@@ -76,26 +101,46 @@ const HeaderFilters = ({
             </div>
           </div>
           <div className="flex items-center gap-3">
-            {hasRole('admin') && (
-              <Link
-                to="/backoffice"
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium rounded-lg transition-colors"
-                title="Backoffice - Administração"
-              >
-                <Shield className="w-4 h-4" />
-                Backoffice
-              </Link>
-            )}
-            {/* Indicador de Salvamento */}
             <SaveStatus saveStatus={saveStatus} lastSaveTime={lastSaveTime} />
-            <button
-              onClick={signOut}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors text-sm"
-              title="Terminar sessão"
-            >
-              <LogOut className="w-4 h-4" />
-              Sair
-            </button>
+
+            {/* User info */}
+            <div className="flex items-center gap-2 pl-3 border-l border-gray-200">
+              {/* Avatar */}
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 ${isAdmin ? 'bg-purple-600' : 'bg-gray-400'}`}>
+                {initials || '?'}
+              </div>
+
+              {/* Nome + role */}
+              <div className="hidden sm:flex flex-col leading-tight">
+                <span className="text-xs font-medium text-gray-700 max-w-[120px] truncate">{displayName}</span>
+                {role && (
+                  <span className={`text-[10px] font-semibold rounded px-1 py-0.5 w-fit ${ROLE_STYLE[role] ?? ROLE_STYLE.viewer}`}>
+                    {role}
+                  </span>
+                )}
+              </div>
+
+              {/* Backoffice link — só admin */}
+              {isAdmin && (
+                <Link
+                  to="/backoffice"
+                  className="flex items-center gap-1 px-2.5 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium rounded-lg transition-colors"
+                  title="Backoffice"
+                >
+                  <Shield className="w-3.5 h-3.5" />
+                  <span className="hidden md:inline">Backoffice</span>
+                </Link>
+              )}
+
+              {/* Logout */}
+              <button
+                onClick={signOut}
+                className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                title="Terminar sessão"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
