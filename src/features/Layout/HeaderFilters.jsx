@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { BarChart3, Menu, TrendingUp, XCircle, CheckCircle, AlertTriangle, Users, Clock, MapPin, Shield, LogOut } from 'lucide-react';
 import { OPERATOR_TO_PROVINCES as STATIC_OPERATOR_TO_PROVINCES } from '../../config/provinceConfig';
 import { getWeeksForQuarter } from '../../utils/dateUtils.js';
@@ -36,6 +36,7 @@ const HeaderFilters = ({
   operatorToProvinces = STATIC_OPERATOR_TO_PROVINCES,
 }) => {
   const { user, profile, signOut } = useAuth();
+  const navigate = useNavigate();
 
   const role = profile?.role ?? user?.user_metadata?.roles?.[0] ?? null;
   const isAdmin = role === 'admin';
@@ -110,14 +111,14 @@ const HeaderFilters = ({
 
               {/* Backoffice link — só admin */}
               {isAdmin && (
-                <Link
-                  to="/backoffice"
+                <button
+                  onClick={() => navigate('/backoffice')}
                   className="flex items-center gap-1 px-2.5 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium rounded-lg transition-colors"
                   title="Backoffice"
                 >
                   <Shield className="w-3.5 h-3.5" />
                   <span className="hidden md:inline">Backoffice</span>
-                </Link>
+                </button>
               )}
 
               {/* Logout */}
