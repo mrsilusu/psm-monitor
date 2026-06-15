@@ -4,11 +4,12 @@ import { AuthContext } from './AuthContext.jsx';
 
 const fetchProfile = async (email) => {
   if (!email) return null;
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('user_profiles')
     .select('full_name, role, psm_access, is_active')
     .eq('email', email)
     .maybeSingle();
+  console.log('[AuthProvider] fetchProfile:', { email, data, error });
   return data ?? null;
 };
 
