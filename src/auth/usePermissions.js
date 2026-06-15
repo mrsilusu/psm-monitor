@@ -15,7 +15,13 @@ const usePermissions = () => {
       .eq('email', user.email)
       .single()
       .then(({ data }) => {
-        setRoles(data?.role ? [data.role] : []);
+        if (data?.role) {
+          setRoles([data.role]);
+        } else {
+          // fallback: lê do JWT metadata (Supabase Dashboard ou signUp options)
+          const metaRoles = user?.user_metadata?.roles;
+          setRoles(Array.isArray(metaRoles) ? metaRoles : []);
+        }
       });
   }, [user?.email]);
 
