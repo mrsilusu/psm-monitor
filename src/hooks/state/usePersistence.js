@@ -92,7 +92,8 @@ export const usePersistence = ({
         log('⏭️ [DATA] Supabase ainda não carregou — salvamento adiado para evitar sobrescrever dados');
         return;
       }
-      log('💾 [DATA] Salvando no Supabase para o ano:', selectedYear);
+      const psmsParaSalvar = Object.keys(data);
+      log('💾 [DATA] Salvando no Supabase:', psmsParaSalvar, 'ano:', selectedYear);
       const resultado = await salvarTudoNoSupabase(
         data,
         selectedQuarter,
@@ -106,6 +107,7 @@ export const usePersistence = ({
         log('✅ [DATA] Dados salvos no Supabase!', resultado);
       } else {
         console.error('❌ [DATA] Erro ao salvar no Supabase:', resultado.error);
+        console.error('❌ [DATA] PSMs que tentaram ser salvos:', psmsParaSalvar);
       }
     }, 5000);
 

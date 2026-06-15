@@ -255,17 +255,45 @@ export const salvarTudoNoSupabase = async (allData, quarter, year, routesToProvi
     
     log(`📦 Para atualizar: ${paraAtualizar.length}`);
     log(`📦 Para inserir: ${paraInserir.length}`);
-    
-    // 3. Executar UPDATEs em batch
+
+    // 3. Executar INSERTs PRIMEIRO — novos registros (incluindo PSMs dinâmicos)
+    // têm prioridade sobre UPDATEs para garantir que novos dados chegam ao BD
+    let totalInserido = 0;
+    if (paraInserir.length > 0) {
+      log('➕ Inserindo novos registros...');
+      const BATCH_SIZE = 100;
+
+      for (let i = 0; i < paraInserir.length; i += BATCH_SIZE) {
+        const batch = paraInserir.slice(i, i + BATCH_SIZE);
+
+        const { data: insertData, error } = await supabase
+          .from('psm_data')
+          .insert(batch)
+          .select();
+
+        if (error) {
+          console.error(`❌ Erro no INSERT batch ${i}:`, error);
+          console.error('❌ Payload que falhou:', JSON.stringify(batch[0]));
+        } else {
+          totalInserido += batch.length;
+          log(`✅ Inseridos ${Math.min(i + BATCH_SIZE, paraInserir.length)}/${paraInserir.length}`);
+        }
+
+        if (i + BATCH_SIZE < paraInserir.length) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      }
+    }
+
+    // 4. Executar UPDATEs em batch (registros existentes)
     let totalAtualizado = 0;
     if (paraAtualizar.length > 0) {
       log('🔄 Atualizando registros existentes...');
-      const BATCH_SIZE = 50; // Reduzir para evitar timeout
-      
+      const BATCH_SIZE = 50;
+
       for (let i = 0; i < paraAtualizar.length; i += BATCH_SIZE) {
         const batch = paraAtualizar.slice(i, i + BATCH_SIZE);
-        
-        // Atualizar em paralelo (até 10 por vez)
+
         const promises = batch.map(registro => {
           const { id, ...dadosSemId } = registro;
           return supabase
@@ -273,46 +301,18 @@ export const salvarTudoNoSupabase = async (allData, quarter, year, routesToProvi
             .update(dadosSemId)
             .eq('id', id);
         });
-        
+
         await Promise.all(promises);
         totalAtualizado += batch.length;
-        
+
         log(`✅ Atualizados ${Math.min(i + BATCH_SIZE, paraAtualizar.length)}/${paraAtualizar.length}`);
-        
-        // Pequeno delay entre batches
+
         if (i + BATCH_SIZE < paraAtualizar.length) {
           await new Promise(resolve => setTimeout(resolve, 100));
         }
       }
     }
-    
-    // 4. Executar INSERTs em batch
-    let totalInserido = 0;
-    if (paraInserir.length > 0) {
-      log('➕ Inserindo novos registros...');
-      const BATCH_SIZE = 100;
-      
-      for (let i = 0; i < paraInserir.length; i += BATCH_SIZE) {
-        const batch = paraInserir.slice(i, i + BATCH_SIZE);
-        
-        const { data, error } = await supabase
-          .from('psm_data')
-          .insert(batch)
-          .select();
-        
-        if (error) {
-          console.error(`❌ Erro no INSERT batch ${i}:`, error);
-        } else {
-          totalInserido += batch.length;
-          log(`✅ Inseridos ${Math.min(i + BATCH_SIZE, paraInserir.length)}/${paraInserir.length}`);
-        }
-        
-        if (i + BATCH_SIZE < paraInserir.length) {
-          await new Promise(resolve => setTimeout(resolve, 100));
-        }
-      }
-    }
-    
+
     log(`✅ Salvamento completo! ${totalAtualizado} atualizados, ${totalInserido} inseridos`);
     
     return { 
