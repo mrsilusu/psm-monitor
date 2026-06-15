@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import { BarChart3, Menu, TrendingUp, XCircle, CheckCircle, AlertTriangle, Users, Clock, MapPin, Shield, LogOut } from 'lucide-react';
 import { OPERATOR_TO_PROVINCES as STATIC_OPERATOR_TO_PROVINCES } from '../../config/provinceConfig';
 import { getWeeksForQuarter } from '../../utils/dateUtils.js';
 import SaveStatus from '../../components/feedback/SaveStatus.jsx';
 import useAuth from '../../auth/useAuth.js';
-import { supabase } from '../../services/supabaseClient.js';
 
 const HeaderFilters = ({
   headerVisible,
@@ -36,18 +35,7 @@ const HeaderFilters = ({
   handleStatusClick,
   operatorToProvinces = STATIC_OPERATOR_TO_PROVINCES,
 }) => {
-  const { user, signOut } = useAuth();
-  const [profile, setProfile] = useState(null);
-
-  useEffect(() => {
-    if (!user?.email) return;
-    supabase
-      .from('user_profiles')
-      .select('full_name, role')
-      .eq('email', user.email)
-      .single()
-      .then(({ data }) => setProfile(data ?? null));
-  }, [user?.email]);
+  const { user, profile, signOut } = useAuth();
 
   const role = profile?.role ?? user?.user_metadata?.roles?.[0] ?? null;
   const isAdmin = role === 'admin';
