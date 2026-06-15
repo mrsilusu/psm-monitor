@@ -85,21 +85,11 @@ export const ROUTE_TO_PROVINCE = {
   'Cuango - Caungula': 'Malanje',
 
   // LUNDA NORTE
-  'Aeroporto - Estadio': 'Lunda Norte',
   'Cambacumba - Dundo': 'Lunda Norte',
   'Camissombo (Lucapa) - Dundo': 'Lunda Norte',
   'Caungula - Cuilo': 'Lunda Norte',
-  'Chitato - Luachimo': 'Lunda Norte',
   'Cuilo - Cambacumba': 'Lunda Norte',
-  'Dundo_CRT - Dundo_Norte': 'Lunda Norte',
-  'Dundo_CRT - Samanhonga': 'Lunda Norte',
   'Dundo_CRT ODF1 - Dundo_CRT ODF2': 'Lunda Norte',
-  'Dundo_Norte - Chitato': 'Lunda Norte',
-  'Estadio - Loja_Dundo': 'Lunda Norte',
-  'Loja_Dundo - Dundo_CRT': 'Lunda Norte',
-  'Luachimo - Dundo_CRT': 'Lunda Norte',
-  'Lucapa - Dundo': 'Lunda Norte',
-  'Samanhonga - Aeroporto': 'Lunda Norte',
 
   // LUNDA SUL
   'Cazombo -- Karipande': 'Lunda Sul',
@@ -145,7 +135,7 @@ export const PROVINCE_TO_OPERATOR = {
   'Cabinda': 'ISISTEL',
   'Zaire': 'FIBRASOL',
   'Uíge': 'FIBRASOL',
-  'Malange': 'FIBRASOL',
+  'Malanje': 'FIBRASOL',
   'Cuanza Norte': 'FIBRASOL',
   'Lunda Norte': 'ANGLOBAL',
   'Lunda Sul': 'ANGLOBAL',

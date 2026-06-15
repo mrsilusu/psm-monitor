@@ -4,20 +4,18 @@ import { ROUTE_TO_PROVINCE as STATIC_ROUTE_TO_PROVINCE, OPERATOR_TO_PROVINCES as
 import { getActiveRoutes, seedRoutesIfEmpty } from '../../services/routeConfigService.js';
 
 const buildMapsFromRows = (rows) => {
-  const routesByPsm = { FIBRASOL: [], ISISTEL: [], ANGLOBAL: [] };
+  const routesByPsm = {};
   const routeToProvince = {};
+  const operatorToProvinces = {};
 
   rows.forEach(({ psm, route_name, province }) => {
-    if (routesByPsm[psm]) routesByPsm[psm].push(route_name);
-    routeToProvince[route_name] = province;
-  });
+    if (!routesByPsm[psm]) routesByPsm[psm] = [];
+    routesByPsm[psm].push(route_name);
 
-  const operatorToProvinces = {};
-  Object.entries(routeToProvince).forEach(([route, province]) => {
-    const psm = rows.find(r => r.route_name === route)?.psm;
-    if (!psm) return;
+    routeToProvince[route_name] = province;
+
     if (!operatorToProvinces[psm]) operatorToProvinces[psm] = [];
-    if (!operatorToProvinces[psm].includes(province)) {
+    if (province && !operatorToProvinces[psm].includes(province)) {
       operatorToProvinces[psm].push(province);
     }
   });
