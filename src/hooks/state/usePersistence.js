@@ -21,7 +21,7 @@ export const usePersistence = ({
   setDistribuicaoReparacoes,
   setSaveStatus,
   setLastSaveTime,
-  routeToProvince = STATIC_routeToProvince,
+  routeToProvince = STATIC_ROUTE_TO_PROVINCE,
 }) => {
   const saveTimerRef = useRef(null);
   const justificativasTimerRef = useRef(null);
@@ -49,7 +49,7 @@ export const usePersistence = ({
         }
       } else {
         log('⚠️ Sem dados no Supabase para o ano', selectedYear);
-        setData({ ISISTEL: {}, FIBRASOL: {}, ANGLOBAL: {} });
+        setData({});
         setRotasTestadas({});
         setRotasValidadas({});
       }

@@ -75,11 +75,7 @@ export const useAppState = () => {
     comIndisponibilidades: 0
   });
 
-  const [todosTestesData, setTodosTestesData] = useState({
-    FIBRASOL: null,
-    ISISTEL: null,
-    ANGLOBAL: null
-  });
+  const [todosTestesData, setTodosTestesData] = useState({});
 
   const [rotasTestadas, setRotasTestadas] = useState(() => {
     const saved = loadSavedState(LS_KEYS.TESTED_ROUTES, null);
