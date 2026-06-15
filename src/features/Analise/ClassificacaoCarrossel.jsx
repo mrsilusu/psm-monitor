@@ -88,7 +88,7 @@ const ClassificacaoCarrossel = ({
               {(() => {
                 // Preparar dados das rotas com valores
                 // v3.22.0: Calcular dados ACUMULADOS desde a primeira semana com dados até semana selecionada
-                const routesData = routesByPsm[selectedOperator]
+                const routesData = (routesByPsm[selectedOperator] || [])
                   .map(rota => {
                     // Encontrar primeira semana com dados para esta rota no quadrimestre
                     const quarterWeeks = ALL_WEEKS.slice(
@@ -183,7 +183,7 @@ const ClassificacaoCarrossel = ({
                 log('📊 GRÁFICOS POR CLASSIFICAÇÃO - Acumulado desde introdução:', {
                   provincia: selectedProvince,
                   semanaSelecionada: selectedWeek,
-                  totalRotas: routesByPsm[selectedOperator].length,
+                  totalRotas: (routesByPsm[selectedOperator] || []).length,
                   rotasComDados: routesData.length,
                   amostra: routesData.slice(0, 2).map(r => ({
                     rota: r.rota,

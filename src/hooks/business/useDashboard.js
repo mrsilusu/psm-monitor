@@ -28,8 +28,8 @@ export const useDashboard = ({
     );
 
     const routesToProcess = selectedProvince !== 'Todas'
-      ? routesByPsm[selectedOperator].filter(route => routeToProvince[route] === selectedProvince)
-      : routesByPsm[selectedOperator];
+      ? (routesByPsm[selectedOperator] || []).filter(route => routeToProvince[route] === selectedProvince)
+      : (routesByPsm[selectedOperator] || []);
 
     let stats = {
       transporteSum: 0,
@@ -253,8 +253,8 @@ export const useDashboard = ({
     );
 
     const routesToProcess = selectedProvince !== 'Todas'
-      ? routesByPsm[selectedOperator].filter(route => routeToProvince[route] === selectedProvince)
-      : routesByPsm[selectedOperator];
+      ? (routesByPsm[selectedOperator] || []).filter(route => routeToProvince[route] === selectedProvince)
+      : (routesByPsm[selectedOperator] || []);
 
     const routeStats = {};
     routesToProcess.forEach(route => {

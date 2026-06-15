@@ -28,8 +28,8 @@ export const useTendencias = ({
     if (!quarterWeeks || quarterWeeks.length === 0) return [];
 
     const routesToProcess = selectedProvince !== 'Todas'
-      ? routesByPsm[selectedOperator].filter(route => routeToProvince[route] === selectedProvince)
-      : routesByPsm[selectedOperator];
+      ? (routesByPsm[selectedOperator] || []).filter(route => routeToProvince[route] === selectedProvince)
+      : (routesByPsm[selectedOperator] || []);
 
     const selectedWeekNum = parseInt(selectedWeek.substring(1));
     const weeksAteSelecao = quarterWeeks.filter(week => {

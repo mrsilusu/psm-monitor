@@ -26,8 +26,8 @@ export const useIntervencoes = ({
     }).reverse();
 
     const routesToProcess = selectedProvince !== 'Todas'
-      ? routesByPsm[selectedOperator].filter(route => routeToProvince[route] === selectedProvince)
-      : routesByPsm[selectedOperator];
+      ? (routesByPsm[selectedOperator] || []).filter(route => routeToProvince[route] === selectedProvince)
+      : (routesByPsm[selectedOperator] || []);
 
     const intervencoes = [];
 
@@ -78,8 +78,8 @@ export const useIntervencoes = ({
     const quarterLimits = QUARTER_CONFIG[selectedQuarter];
 
     const routesToProcess = selectedProvince !== 'Todas'
-      ? routesByPsm[selectedOperator].filter(route => routeToProvince[route] === selectedProvince)
-      : routesByPsm[selectedOperator];
+      ? (routesByPsm[selectedOperator] || []).filter(route => routeToProvince[route] === selectedProvince)
+      : (routesByPsm[selectedOperator] || []);
 
     const normalizadas = [];
 
@@ -213,8 +213,8 @@ export const useIntervencoes = ({
     );
 
     const routesToProcess = selectedProvince !== 'Todas'
-      ? routesByPsm[selectedOperator].filter(route => routeToProvince[route] === selectedProvince)
-      : routesByPsm[selectedOperator];
+      ? (routesByPsm[selectedOperator] || []).filter(route => routeToProvince[route] === selectedProvince)
+      : (routesByPsm[selectedOperator] || []);
 
     const rotasComReparadas = [];
 
@@ -249,8 +249,8 @@ export const useIntervencoes = ({
     );
 
     const routesToProcess = selectedProvince !== 'Todas'
-      ? routesByPsm[selectedOperator].filter(route => routeToProvince[route] === selectedProvince)
-      : routesByPsm[selectedOperator];
+      ? (routesByPsm[selectedOperator] || []).filter(route => routeToProvince[route] === selectedProvince)
+      : (routesByPsm[selectedOperator] || []);
 
     const rotasSemReparadas = [];
 
