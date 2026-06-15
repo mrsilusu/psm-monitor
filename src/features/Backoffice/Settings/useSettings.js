@@ -34,9 +34,8 @@ export const useSettings = () => {
         .maybeSingle();
       if (err) throw err;
       if (data?.config) setSettings({ ...DEFAULT_SETTINGS, ...data.config });
-    } catch (e) {
-      // Tabela pode não ter coluna config ainda — usar defaults silenciosamente
-      setError(null);
+    } catch {
+      // Falha silenciosa — usa defaults locais
     } finally {
       setLoading(false);
     }
@@ -49,9 +48,8 @@ export const useSettings = () => {
     setError(null);
     try {
       const newSettings = { ...settings, ...updates };
-      const { error: err } = await supabase
-        .from(SETTINGS_TABLE)
-        .upsert({ id: 1, config: newSettings });
+      // Usa RPC para evitar dependência do PK da tabela app_settings
+      const { error: err } = await supabase.rpc('upsert_app_settings', { p_config: newSettings });
       if (err) throw err;
       setSettings(newSettings);
       await logAction({ action: 'UPDATE', entity: 'settings', newValue: updates });
