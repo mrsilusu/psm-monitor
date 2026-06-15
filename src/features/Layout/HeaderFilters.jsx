@@ -5,6 +5,8 @@ import { getWeeksForQuarter } from '../../utils/dateUtils.js';
 import SaveStatus from '../../components/feedback/SaveStatus.jsx';
 import useAuth from '../../auth/useAuth.js';
 
+const STATIC_ALL_PSMS = Object.keys(STATIC_OPERATOR_TO_PROVINCES);
+
 const HeaderFilters = ({
   headerVisible,
   isMobileDevice,
@@ -33,6 +35,7 @@ const HeaderFilters = ({
   headerCardsData,
   handleStatusClick,
   operatorToProvinces = STATIC_OPERATOR_TO_PROVINCES,
+  allPsms = STATIC_ALL_PSMS,
 }) => {
   const { user, profile, signOut } = useAuth();
 
@@ -138,9 +141,9 @@ const HeaderFilters = ({
         {/* Filtros */}
         <div className="flex items-center space-x-3">
           <select value={selectedOperator} onChange={(e) => setSelectedOperator(e.target.value)} className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
-            <option value="FIBRASOL">FIBRASOL</option>
-            <option value="ISISTEL">ISISTEL</option>
-            <option value="ANGLOBAL">ANGLOBAL</option>
+            {allPsms.map(psm => (
+              <option key={psm} value={psm}>{psm}</option>
+            ))}
           </select>
 
           {/* FILTRO DE PROVÍNCIA - Texto simples */}

@@ -119,6 +119,7 @@ const RouteManager = ({ onAddRoute }) => {
               <tr>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Nome da Rota</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Província</th>
+                <th className="text-left px-4 py-3 font-medium text-gray-600">Tipo de Rede</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Estado</th>
                 <th className="text-right px-4 py-3 font-medium text-gray-600">Acções</th>
               </tr>
@@ -128,6 +129,19 @@ const RouteManager = ({ onAddRoute }) => {
                 <tr key={route.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-4 py-3 text-gray-800 font-medium">{route.route_name}</td>
                   <td className="px-4 py-3 text-gray-500">{route.province}</td>
+                  <td className="px-4 py-3">
+                    {route.tipo_de_rede ? (
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                        route.tipo_de_rede === 'Metro'
+                          ? 'bg-blue-100 text-blue-700'
+                          : 'bg-orange-100 text-orange-700'
+                      }`}>
+                        {route.tipo_de_rede}
+                      </span>
+                    ) : (
+                      <span className="text-gray-300 text-xs">—</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                       route.is_active

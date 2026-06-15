@@ -43,7 +43,7 @@ const MainPage = () => {
     }
   }, []);
 
-  const { routesByPsm, routeToProvince, operatorToProvinces } = useRouteConfig();
+  const { routesByPsm, routeToProvince, operatorToProvinces, allPsms } = useRouteConfig();
 
   const {
     data, setData,
@@ -352,6 +352,7 @@ const MainPage = () => {
           headerCardsData={headerCardsData}
           handleStatusClick={handleStatusClick}
           operatorToProvinces={operatorToProvinces}
+          allPsms={allPsms}
         />
 
         <TestesAnalises

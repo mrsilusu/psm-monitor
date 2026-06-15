@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
-import { Users, ClipboardList, Settings, ChevronRight, Shield, MapPin, Plus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Users, ClipboardList, Settings, ChevronRight, Shield, MapPin, Plus, ArrowLeft } from 'lucide-react';
 import UserList from './Users/UserList.jsx';
 import UserForm from './Users/UserForm.jsx';
 import AuditLog from './Audit/AuditLog.jsx';
@@ -15,6 +16,7 @@ const NAV_ITEMS = [
 ];
 
 const BackofficeLayout = () => {
+  const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState('users');
   const [showUserForm, setShowUserForm] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
@@ -68,6 +70,13 @@ const BackofficeLayout = () => {
               <p className="text-xs text-gray-400">Administração</p>
             </div>
           </div>
+          <button
+            onClick={() => navigate('/')}
+            className="mt-3 w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-500 hover:text-purple-700 hover:bg-purple-50 rounded-lg transition-colors"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            Visão Geral
+          </button>
         </div>
 
         <nav className="flex-1 p-3 space-y-1">

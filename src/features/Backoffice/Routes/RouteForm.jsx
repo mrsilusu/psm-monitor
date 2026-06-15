@@ -14,6 +14,7 @@ const RouteForm = ({ route = null, selectedPsm, onSave, onCancel, loading = fals
     psm: selectedPsm || 'FIBRASOL',
     route_name: '',
     province: '',
+    tipo_de_rede: 'Backbone',
     is_active: true,
   });
   const [error, setError] = useState('');
@@ -24,6 +25,7 @@ const RouteForm = ({ route = null, selectedPsm, onSave, onCancel, loading = fals
         psm: route.psm,
         route_name: route.route_name,
         province: route.province,
+        tipo_de_rede: route.tipo_de_rede || 'Backbone',
         is_active: route.is_active !== false,
       });
     } else if (selectedPsm) {
@@ -96,6 +98,25 @@ const RouteForm = ({ route = null, selectedPsm, onSave, onCancel, loading = fals
                 <option key={p} value={p}>{p}</option>
               ))}
             </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de Rede</label>
+            <div className="flex gap-4">
+              {['Backbone', 'Metro'].map(tipo => (
+                <label key={tipo} className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="tipo_de_rede"
+                    value={tipo}
+                    checked={form.tipo_de_rede === tipo}
+                    onChange={() => setForm(f => ({ ...f, tipo_de_rede: tipo }))}
+                    className="text-purple-600 focus:ring-purple-500"
+                  />
+                  <span className="text-sm text-gray-700">{tipo}</span>
+                </label>
+              ))}
+            </div>
           </div>
 
           <label className="flex items-center gap-2 cursor-pointer">
