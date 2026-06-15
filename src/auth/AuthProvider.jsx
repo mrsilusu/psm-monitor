@@ -8,7 +8,7 @@ const fetchProfile = async (email) => {
     .from('user_profiles')
     .select('full_name, role, psm_access, is_active')
     .eq('email', email)
-    .single();
+    .maybeSingle();
   return data ?? null;
 };
 
@@ -21,59 +21,54 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     let mounted = true;
 
-    const init = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!mounted) return;
-        const authUser = session?.user ?? null;
-        setUser(authUser);
-        setProfile(await fetchProfile(authUser?.email));
-      } catch (e) {
-        if (!mounted) return;
-        setError(e.message);
-      } finally {
-        if (!mounted) return;
-        setLoading(false);
-      }
-    };
-
-    init();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       const authUser = session?.user ?? null;
+      if (!mounted) return;
       setUser(authUser);
-      setProfile(await fetchProfile(authUser?.email));
-      setLoading(false);
+
+      fetchProfile(authUser?.email)
+        .then(p => { if (mounted) setProfile(p); })
+        .catch(() => { if (mounted) setProfile(null); })
+        .finally(() => { if (mounted) setLoading(false); });
     });
+
+    // Garante que loading=false mesmo que onAuthStateChange não dispare
+    supabase.auth.getSession()
+      .then(({ data: { session } }) => {
+        if (!mounted || !session) return;
+        setUser(session.user);
+        return fetchProfile(session.user?.email).then(p => {
+          if (mounted) setProfile(p);
+        });
+      })
+      .catch(e => { if (mounted) setError(e.message); })
+      .finally(() => { if (mounted) setLoading(false); });
 
     return () => {
       mounted = false;
-      try { subscription.unsubscribe(); } catch (e) { /* ignore */ }
+      try { subscription.unsubscribe(); } catch (_) { /* ignore */ }
     };
   }, []);
 
   const signIn = async (email, password) => {
-    setLoading(true); setError(null);
+    setError(null);
     const result = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
     if (result.error) setError(result.error.message);
     return result;
   };
 
   const signUp = async (email, password, options = {}) => {
-    setLoading(true); setError(null);
+    setError(null);
     const result = await supabase.auth.signUp({ email, password }, { data: options });
-    setLoading(false);
     if (result.error) setError(result.error.message);
     return result;
   };
 
   const signOut = async () => {
-    setLoading(true); setError(null);
+    setError(null);
     const result = await supabase.auth.signOut();
     setUser(null);
     setProfile(null);
-    setLoading(false);
     if (result.error) setError(result.error.message);
     return result;
   };
