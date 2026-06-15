@@ -24,11 +24,11 @@ export const useSettings = () => {
     try {
       const { data, error: err } = await supabase
         .from(SETTINGS_TABLE)
-        .select('config')
+        .select('value')
         .eq('key', SETTINGS_KEY)
         .maybeSingle();
       if (err) throw err;
-      if (data?.config) setSettings({ ...DEFAULT_SETTINGS, ...data.config });
+      if (data?.value) setSettings({ ...DEFAULT_SETTINGS, ...data.value });
     } catch {
       // Usa defaults silenciosamente se a tabela não estiver pronta
     } finally {
@@ -45,7 +45,7 @@ export const useSettings = () => {
       const newSettings = { ...settings, ...updates };
       const { error: err } = await supabase
         .from(SETTINGS_TABLE)
-        .upsert({ key: SETTINGS_KEY, config: newSettings }, { onConflict: 'key' });
+        .upsert({ key: SETTINGS_KEY, value: newSettings }, { onConflict: 'key' });
       if (err) throw err;
       setSettings(newSettings);
       await logAction({ action: 'UPDATE', entity: 'settings', newValue: updates });
