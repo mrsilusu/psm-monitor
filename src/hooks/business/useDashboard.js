@@ -151,7 +151,7 @@ export const useDashboard = ({
 
     const provinciasParaMedia = selectedProvince !== 'Todas'
       ? [selectedProvince]
-      : operatorToProvinces[selectedOperator];
+      : (operatorToProvinces[selectedOperator] || []);
 
     let somatorioEfetGlobal = 0;
     let somatorioEfetPSM = 0;

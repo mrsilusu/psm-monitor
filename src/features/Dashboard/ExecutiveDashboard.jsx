@@ -290,7 +290,7 @@ const ExecutiveDashboard = ({
                     // MODO PSM: Calcular por PROVÍNCIA (código original)
                     const provinciasParaCalcular = selectedProvince !== 'Todas'
                       ? [selectedProvince]
-                      : operatorToProvinces[selectedOperator];
+                      : (operatorToProvinces[selectedOperator] || []);
                     
                     log('🗺️ CARDS MODO PSM - Calculando por Província');
                     log('  PSM:', selectedOperator);

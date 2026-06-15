@@ -153,7 +153,7 @@ const HeaderFilters = ({
             className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
           >
             <option value="Todas">Todas as Províncias</option>
-            {operatorToProvinces[selectedOperator].map(prov => (
+            {(operatorToProvinces[selectedOperator] || []).map(prov => (
               <option key={prov} value={prov}>{prov}</option>
             ))}
           </select>
