@@ -43,10 +43,24 @@ export const useSettings = () => {
     setError(null);
     try {
       const newSettings = { ...settings, ...updates };
-      const { error: err } = await supabase
+
+      // Tenta UPDATE primeiro (linha já existe)
+      const { data: updated, error: updateErr } = await supabase
         .from(SETTINGS_TABLE)
-        .upsert({ key: SETTINGS_KEY, value: newSettings }, { onConflict: 'key' });
-      if (err) throw err;
+        .update({ value: newSettings })
+        .eq('key', SETTINGS_KEY)
+        .select();
+
+      if (updateErr) throw updateErr;
+
+      // Se não actualizou nenhuma linha, faz INSERT
+      if (!updated || updated.length === 0) {
+        const { error: insertErr } = await supabase
+          .from(SETTINGS_TABLE)
+          .insert({ key: SETTINGS_KEY, value: newSettings });
+        if (insertErr) throw insertErr;
+      }
+
       setSettings(newSettings);
       await logAction({ action: 'UPDATE', entity: 'settings', newValue: updates });
       setSaving(false);
