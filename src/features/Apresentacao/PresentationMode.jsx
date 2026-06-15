@@ -139,8 +139,8 @@ const PresentationMode = ({
 
                       // Rotas a processar (com filtro de província se aplicável)
                       const routesToProcess = selectedProvince !== 'Todas'
-                        ? routesByPsm[selectedOperator].filter(route => routeToProvince[route] === selectedProvince)
-                        : routesByPsm[selectedOperator];
+                        ? (routesByPsm[selectedOperator] || []).filter(route => routeToProvince[route] === selectedProvince)
+                        : (routesByPsm[selectedOperator] || []);
 
                       // Percorrer todas as rotas e semanas do quarter
                       routesToProcess.forEach(route => {

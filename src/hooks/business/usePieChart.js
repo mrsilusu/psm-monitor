@@ -25,8 +25,8 @@ export const usePieChart = ({
     );
 
     const routesToProcess = selectedProvince !== 'Todas'
-      ? routesByPsm[selectedOperator].filter(route => routeToProvince[route] === selectedProvince)
-      : routesByPsm[selectedOperator];
+      ? (routesByPsm[selectedOperator] || []).filter(route => routeToProvince[route] === selectedProvince)
+      : (routesByPsm[selectedOperator] || []);
 
     let totals = {
       transporte: 0,

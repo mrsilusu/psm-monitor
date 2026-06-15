@@ -90,8 +90,8 @@ const ExecutiveDashboard = ({
                     
                     // Rotas a processar (com filtro de província se aplicável)
                     const routesToProcess = selectedProvince !== 'Todas'
-                      ? routesByPsm[selectedOperator].filter(route => routeToProvince[route] === selectedProvince)
-                      : routesByPsm[selectedOperator];
+                      ? (routesByPsm[selectedOperator] || []).filter(route => routeToProvince[route] === selectedProvince)
+                      : (routesByPsm[selectedOperator] || []);
                     
                     // Percorrer todas as rotas e semanas do quarter
                     routesToProcess.forEach(route => {
@@ -193,7 +193,7 @@ const ExecutiveDashboard = ({
                       let depLicenca = 0;
                       let depCutover = 0;
                       
-                      routesByPsm[psm].forEach(route => {
+                      (routesByPsm[psm] || []).forEach(route => {
                         let ultimoIndisp = 0;
                         let somaReparadas = 0;
                         let ultimaReconh = 0;
@@ -240,7 +240,7 @@ const ExecutiveDashboard = ({
                       
                       // V5.10.3: Buscar valor ORIGINAL de Fibras Dep. PSM
                       let fibrasDependentesPSMOriginal = 0;
-                      routesByPsm[psm].forEach(route => {
+                      (routesByPsm[psm] || []).forEach(route => {
                         for (let i = quarterWeeks.length - 1; i >= 0; i--) {
                           const week = quarterWeeks[i];
                           const routeData = data[psm]?.[week]?.[route];
@@ -256,7 +256,7 @@ const ExecutiveDashboard = ({
                       
                       // Calcular APENAS reparadas de Fibras Dep. PSM
                       let fibrasPSMReparadas = 0;
-                      routesByPsm[psm].forEach(route => {
+                      (routesByPsm[psm] || []).forEach(route => {
                         quarterWeeks.forEach(week => {
                           const weekNum = parseInt(week.substring(1));
                           const selectedWeekNum = parseInt(selectedWeek.substring(1));
@@ -298,7 +298,7 @@ const ExecutiveDashboard = ({
                     log('  Províncias a calcular:', provinciasParaCalcular);
                     
                     entidadesDados = provinciasParaCalcular.map(prov => {
-                    const rotasProv = routesByPsm[selectedOperator].filter(route => routeToProvince[route] === prov);
+                    const rotasProv = (routesByPsm[selectedOperator] || []).filter(route => routeToProvince[route] === prov);
                     
                     log(`  📍 ${prov}:`);
                     log(`     Total rotas: ${rotasProv.length}`);
@@ -551,9 +551,9 @@ const ExecutiveDashboard = ({
                         <div className="flex justify-center items-center">
                           {(() => {
                             // CALCULAR TOTAL DE TODAS AS PROVÍNCIAS DO PSM (não só as filtradas)
-                            const todasProvinciasPSM = operatorToProvinces[selectedOperator];
+                            const todasProvinciasPSM = operatorToProvinces[selectedOperator] || [];
                             const totalGeralIndisponiveis = todasProvinciasPSM.reduce((sum, prov) => {
-                              const rotasProv = routesByPsm[selectedOperator].filter(route => routeToProvince[route] === prov);
+                              const rotasProv = (routesByPsm[selectedOperator] || []).filter(route => routeToProvince[route] === prov);
                               let indisponiveisProvTotal = 0;
                               
                               rotasProv.forEach(route => {

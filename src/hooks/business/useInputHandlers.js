@@ -296,7 +296,7 @@ export function useInputHandlers({
     log('🔍 handleStatusClick:', { statusLabel, key, selectedOperator });
 
     // Iterar sobre todas as rotas do PSM
-    routesByPsm[selectedOperator].forEach(route => {
+    (routesByPsm[selectedOperator] || []).forEach(route => {
       // Buscar último valor não-zero do status para esta rota
       let lastValue = 0;
       let lastWeek = null;
