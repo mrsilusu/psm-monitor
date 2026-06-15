@@ -1,10 +1,11 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { BarChart3, Menu, TrendingUp, XCircle, CheckCircle, AlertTriangle, Users, Clock, MapPin, Shield } from 'lucide-react';
+import { BarChart3, Menu, TrendingUp, XCircle, CheckCircle, AlertTriangle, Users, Clock, MapPin, Shield, LogOut } from 'lucide-react';
 import { OPERATOR_TO_PROVINCES as STATIC_OPERATOR_TO_PROVINCES } from '../../config/provinceConfig';
 import { getWeeksForQuarter } from '../../utils/dateUtils.js';
 import SaveStatus from '../../components/feedback/SaveStatus.jsx';
 import usePermissions from '../../auth/usePermissions.js';
+import useAuth from '../../auth/useAuth.js';
 
 const HeaderFilters = ({
   headerVisible,
@@ -36,6 +37,7 @@ const HeaderFilters = ({
   operatorToProvinces = STATIC_OPERATOR_TO_PROVINCES,
 }) => {
   const { hasRole } = usePermissions();
+  const { signOut } = useAuth();
 
   const summaryCards = headerCardsData ? [
     { label: headerCardsData.transporteQ2.label, value: headerCardsData.transporteQ2.value, bgColor: headerCardsData.transporteQ2.color, icon: <TrendingUp className="w-3 h-3" /> },
@@ -86,6 +88,14 @@ const HeaderFilters = ({
             )}
             {/* Indicador de Salvamento */}
             <SaveStatus saveStatus={saveStatus} lastSaveTime={lastSaveTime} />
+            <button
+              onClick={signOut}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors text-sm"
+              title="Terminar sessão"
+            >
+              <LogOut className="w-4 h-4" />
+              Sair
+            </button>
           </div>
         </div>
       </div>
