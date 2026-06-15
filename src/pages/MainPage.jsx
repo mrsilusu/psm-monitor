@@ -451,6 +451,7 @@ const MainPage = () => {
             selectedWeek={selectedWeek}
             selectedYear={selectedYear}
             acompanhamentoData={acompanhamentoData}
+            routesByPsm={routesByPsm}
             currentPageAcomp={currentPageAcomp}
             setCurrentPageAcomp={setCurrentPageAcomp}
             itemsPerPageAcomp={itemsPerPageAcomp}

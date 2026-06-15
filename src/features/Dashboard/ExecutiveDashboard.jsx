@@ -193,7 +193,7 @@ const ExecutiveDashboard = ({
                       let depLicenca = 0;
                       let depCutover = 0;
                       
-                      ROUTES_BY_PSM[psm].forEach(route => {
+                      routesByPsm[psm].forEach(route => {
                         let ultimoIndisp = 0;
                         let somaReparadas = 0;
                         let ultimaReconh = 0;
@@ -240,7 +240,7 @@ const ExecutiveDashboard = ({
                       
                       // V5.10.3: Buscar valor ORIGINAL de Fibras Dep. PSM
                       let fibrasDependentesPSMOriginal = 0;
-                      ROUTES_BY_PSM[psm].forEach(route => {
+                      routesByPsm[psm].forEach(route => {
                         for (let i = quarterWeeks.length - 1; i >= 0; i--) {
                           const week = quarterWeeks[i];
                           const routeData = data[psm]?.[week]?.[route];
@@ -256,7 +256,7 @@ const ExecutiveDashboard = ({
                       
                       // Calcular APENAS reparadas de Fibras Dep. PSM
                       let fibrasPSMReparadas = 0;
-                      ROUTES_BY_PSM[psm].forEach(route => {
+                      routesByPsm[psm].forEach(route => {
                         quarterWeeks.forEach(week => {
                           const weekNum = parseInt(week.substring(1));
                           const selectedWeekNum = parseInt(selectedWeek.substring(1));

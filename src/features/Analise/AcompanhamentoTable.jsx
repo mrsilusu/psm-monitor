@@ -1,5 +1,6 @@
 import React from 'react';
 import { FileText, Trash2 } from 'lucide-react';
+import { ROUTES_BY_PSM as STATIC_ROUTES_BY_PSM } from '../../config/routeConfig';
 
 const AcompanhamentoTable = ({
   selectedOperator,
@@ -17,6 +18,7 @@ const AcompanhamentoTable = ({
   handleBlurTotalReparadas,
   handleLimparJustificativas,
   quarterAnterior,
+  routesByPsm = STATIC_ROUTES_BY_PSM,
 }) => {
   const totalPagesAcomp = Math.ceil(acompanhamentoData.length / itemsPerPageAcomp);
   const startIndexAcomp = currentPageAcomp * itemsPerPageAcomp;
@@ -219,7 +221,7 @@ const AcompanhamentoTable = ({
                   </h2>
                   {!manualDataExpanded && (
                     <p className="text-xs text-gray-500 mt-1">
-                      {ROUTES_BY_PSM[selectedOperator].length} rotas disponíveis • Clique para expandir
+                      {routesByPsm[selectedOperator].length} rotas disponíveis • Clique para expandir
                     </p>
                   )}
                 </div>
@@ -269,7 +271,7 @@ const AcompanhamentoTable = ({
               {/* Container com scroll após 10 rotas */}
               <div 
                 className="overflow-auto border border-gray-200 rounded-lg"
-                style={{ maxHeight: ROUTES_BY_PSM[selectedOperator].length > 10 ? '500px' : 'none' }}
+                style={{ maxHeight: routesByPsm[selectedOperator].length > 10 ? '500px' : 'none' }}
               >
                 <table className="w-full border-collapse">
                   <thead className="sticky top-0 z-20">
@@ -296,7 +298,7 @@ const AcompanhamentoTable = ({
                     </tr>
                   </thead>
                   <tbody>
-                    {ROUTES_BY_PSM[selectedOperator].map((route, index) => (
+                    {routesByPsm[selectedOperator].map((route, index) => (
                       <tr key={index} className={`h-4 border-b border-gray-200 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 transition-colors`}>
                         <td className="px-1 py-0 text-[10px] leading-none text-gray-700 font-medium border-r border-gray-200 sticky left-0 bg-inherit z-10 max-h-5">{route}</td>
                         <td className="px-1.5 py-0 text-center text-xs text-gray-600 border-r border-gray-200">
@@ -388,7 +390,7 @@ const AcompanhamentoTable = ({
                 </table>
               </div>
               <div className="mt-4 text-xs text-gray-500 text-center">
-                Mostrando todas as {ROUTES_BY_PSM[selectedOperator].length} rotas do PSM {selectedOperator}
+                Mostrando todas as {routesByPsm[selectedOperator].length} rotas do PSM {selectedOperator}
               </div>
             </div>
           </div>
