@@ -43,7 +43,9 @@ export const usePersistence = ({
 
       if (resultado.success && resultado.data && Object.keys(resultado.data).length > 0) {
         log('✅ Dados carregados do Supabase!', resultado.data);
-        setData(resultado.data);
+        // Merge: Supabase prevalece para PSMs que lá existem; PSMs dinâmicos sem
+        // registo no Supabase (não salvos ainda) são preservados do localStorage/estado anterior
+        setData(prev => ({ ...prev, ...resultado.data }));
 
         if (resultado.rotasTestadas && Object.keys(resultado.rotasTestadas).length > 0) {
           setRotasTestadas(resultado.rotasTestadas);
