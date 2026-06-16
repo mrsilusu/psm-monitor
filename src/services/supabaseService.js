@@ -68,15 +68,18 @@ const mapSupabaseToLocalStorage = (supabaseData) => {
 // ============================================
 // SALVAR TODOS OS DADOS (OTIMIZADO - PRESERVA TESTADA/VALIDADA)
 // ============================================
-export const salvarTudoNoSupabase = async (allData, quarter, year, routesToProvinceMap, rotasTestadas, rotasValidadas) => {
+export const salvarTudoNoSupabase = async (allData, quarter, year, routesToProvinceMap, rotasTestadas, rotasValidadas, userIdParam = null) => {
   try {
     log('🚀 Iniciando salvamento OTIMIZADO no Supabase...');
 
     const anoAtual = year || new Date().getFullYear();
 
-    // Obter utilizador autenticado — necessário para satisfazer RLS e coluna user_id
-    const { data: { user } } = await supabase.auth.getUser();
-    const userId = user?.id || null;
+    // Usar userId do contexto se disponível; caso contrário validar via rede
+    let userId = userIdParam || null;
+    if (!userId) {
+      const { data: { user } } = await supabase.auth.getUser();
+      userId = user?.id || null;
+    }
     if (!userId) {
       console.error('❌ Utilizador não autenticado — save cancelado');
       return { success: false, error: new Error('not_authenticated') };

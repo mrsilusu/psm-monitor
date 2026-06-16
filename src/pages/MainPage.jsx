@@ -5,6 +5,7 @@ import { cleanupOldData } from '../services/localStorageService';
 import { ALL_WEEKS } from '../config/constants';
 import { QUARTER_CONFIG } from '../config/quarterConfig';
 import { getQuarterAnterior } from '../utils/dateUtils.js';
+import { useAuth } from '../auth/useAuth.js';
 import { useRouteChecks } from '../hooks/business/useRouteChecks.js';
 import { useRouteConfig } from '../hooks/state/useRouteConfig.js';
 import { useFilters } from '../hooks/state/useFilters.js';
@@ -43,6 +44,7 @@ const MainPage = () => {
     }
   }, []);
 
+  const { user } = useAuth();
   const { routesByPsm, routeToProvince, operatorToProvinces, allPsms } = useRouteConfig();
 
   const {
@@ -94,6 +96,7 @@ const MainPage = () => {
     setData, setJustificativas, setRotasTestadas, setRotasValidadas,
     setDistribuicaoReparacoes, setSaveStatus, setLastSaveTime,
     routeToProvince,
+    user,
   });
 
   const { scrollContainerRef, headerVisible } = useScrollHeader();

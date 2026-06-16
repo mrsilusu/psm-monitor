@@ -22,6 +22,7 @@ export const usePersistence = ({
   setSaveStatus,
   setLastSaveTime,
   routeToProvince = STATIC_ROUTE_TO_PROVINCE,
+  user = null,
 }) => {
   const saveTimerRef = useRef(null);
   const justificativasTimerRef = useRef(null);
@@ -36,7 +37,9 @@ export const usePersistence = ({
   useEffect(() => { routeToProvinceRef.current = routeToProvince; }, [routeToProvince]);
 
   // useEffect #1: Carregar dados do Supabase ao iniciar e quando mudar o ano
+  // Aguarda sessão autenticada antes de consultar (RLS exige auth)
   useEffect(() => {
+    if (!user) return; // Sessão ainda não estabelecida — aguardar
     isSupabaseLoadedRef.current = false; // Reset ao mudar de ano
 
     const carregarDadosDoSupabase = async () => {
@@ -88,7 +91,7 @@ export const usePersistence = ({
     };
 
     carregarDadosDoSupabase();
-  }, [selectedYear, setData, setJustificativas, setRotasTestadas, setRotasValidadas]);
+  }, [selectedYear, user, setData, setJustificativas, setRotasTestadas, setRotasValidadas]);
 
   useEffect(() => {
     if (Object.keys(data).length === 0) return;
@@ -110,6 +113,10 @@ export const usePersistence = ({
         log('⏭️ [DATA] Supabase ainda não carregou — salvamento adiado para evitar sobrescrever dados');
         return;
       }
+      if (!user?.id) {
+        log('⏭️ [DATA] Utilizador não autenticado — salvamento cancelado');
+        return;
+      }
       const psmsParaSalvar = Object.keys(data);
       log('💾 [DATA] Salvando no Supabase:', psmsParaSalvar, 'ano:', selectedYear);
       const resultado = await salvarTudoNoSupabase(
@@ -118,7 +125,8 @@ export const usePersistence = ({
         selectedYear,
         routeToProvinceRef.current,
         rotasTestadas,
-        rotasValidadas
+        rotasValidadas,
+        user.id
       );
 
       if (resultado.success) {
@@ -142,7 +150,7 @@ export const usePersistence = ({
         clearTimeout(saveTimerRef.current);
       }
     };
-  }, [data, selectedQuarter, rotasTestadas, rotasValidadas, selectedYear, setLastSaveTime, setSaveStatus]);
+  }, [data, selectedQuarter, rotasTestadas, rotasValidadas, selectedYear, user, setLastSaveTime, setSaveStatus]);
 
   useEffect(() => {
     log('🔄 [JUSTIFICATIVAS] useEffect executado', {
@@ -182,6 +190,8 @@ export const usePersistence = ({
   }, [justificativas, selectedYear]);
 
   useEffect(() => {
+    if (!user) return; // Aguardar sessão autenticada antes de carregar distribuição
+
     const carregarDistribuicaoInicial = async () => {
       setIsLoadingDistribuicao(true);
       log(`📥 [DISTRIBUIÇÃO] Carregando TODOS os quarters de ${selectedYear}...`);
@@ -228,7 +238,7 @@ export const usePersistence = ({
     };
 
     carregarDistribuicaoInicial();
-  }, [selectedYear, setDistribuicaoReparacoes]);
+  }, [selectedYear, user, setDistribuicaoReparacoes]);
 
   useEffect(() => {
     if (skipNextSaveRef.current) {
