@@ -215,8 +215,8 @@ export const salvarTudoNoSupabase = async (allData, quarter, year, routesToProvi
           
           // Verificar se tem algum valor diferente de zero
           const temDadosNaoZero = Object.entries(dadosBase).some(([key, val]) => {
-            // Ignorar campos de identificação
-            if (['psm', 'week', 'route', 'year', 'quarter', 'provincia'].includes(key)) return false;
+            // Ignorar campos de identificação e user_id (string UUID, não é dado numérico)
+            if (['psm', 'week', 'route', 'year', 'quarter', 'provincia', 'user_id'].includes(key)) return false;
             return val !== 0;
           });
           
