@@ -71,9 +71,17 @@ const mapSupabaseToLocalStorage = (supabaseData) => {
 export const salvarTudoNoSupabase = async (allData, quarter, year, routesToProvinceMap, rotasTestadas, rotasValidadas) => {
   try {
     log('🚀 Iniciando salvamento OTIMIZADO no Supabase...');
-    
+
     const anoAtual = year || new Date().getFullYear();
-    
+
+    // Obter utilizador autenticado — necessário para satisfazer RLS e coluna user_id
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id || null;
+    if (!userId) {
+      console.error('❌ Utilizador não autenticado — save cancelado');
+      return { success: false, error: new Error('not_authenticated') };
+    }
+
     // 1. Buscar TODOS os registros existentes do ano de UMA VEZ
     log('📥 Buscando registros existentes...');
     const { data: registrosExistentes, error: fetchError } = await supabase
@@ -186,6 +194,7 @@ export const salvarTudoNoSupabase = async (allData, quarter, year, routesToProvi
             year: anoAtual,
             quarter: quarter || 'Q1',
             provincia: provincia,
+            user_id: userId,
             transporte: parseOrZero(routeData['Transporte']),
             indisponiveis: parseOrZero(routeData['Indisponíveis']),
             total_reparadas: parseOrZero(routeData['Total Reparadas']),
