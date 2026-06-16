@@ -23,10 +23,19 @@ export const getAllRoutes = async () => {
   return { data, error };
 };
 
+// Colunas conhecidas da tabela route_config — filtra campos extra do formulário (ex: tipo_de_rede)
+const pickRouteFields = ({ psm, route_name, province, is_active, display_order }) => ({
+  psm,
+  route_name,
+  province,
+  is_active: is_active !== false,
+  display_order: display_order ?? 0,
+});
+
 export const createRoute = async (route) => {
   const { data, error } = await supabase
     .from(TABLE)
-    .insert([route])
+    .insert([pickRouteFields(route)])
     .select();
   return { data, error };
 };
@@ -34,7 +43,7 @@ export const createRoute = async (route) => {
 export const updateRoute = async (id, updates) => {
   const { data, error } = await supabase
     .from(TABLE)
-    .update({ ...updates, updated_at: new Date().toISOString() })
+    .update({ ...pickRouteFields(updates), updated_at: new Date().toISOString() })
     .eq('id', id)
     .select();
   return { data, error };

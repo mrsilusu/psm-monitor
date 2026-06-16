@@ -31,6 +31,9 @@ export const usePersistence = ({
   const skipNextSaveRef = useRef(false);
   // Impede salvamento no Supabase antes do primeiro load completar (evita race condition)
   const isSupabaseLoadedRef = useRef(false);
+  // Ref para routeToProvince: evita closure stale no timer de save
+  const routeToProvinceRef = useRef(routeToProvince);
+  useEffect(() => { routeToProvinceRef.current = routeToProvince; }, [routeToProvince]);
 
   // useEffect #1: Carregar dados do Supabase ao iniciar e quando mudar o ano
   useEffect(() => {
@@ -43,9 +46,24 @@ export const usePersistence = ({
 
       if (resultado.success && resultado.data && Object.keys(resultado.data).length > 0) {
         log('✅ Dados carregados do Supabase!', resultado.data);
-        // Merge: Supabase prevalece para PSMs que lá existem; PSMs dinâmicos sem
-        // registo no Supabase (não salvos ainda) são preservados do localStorage/estado anterior
-        setData(prev => ({ ...prev, ...resultado.data }));
+        // Merge profundo por semana: Supabase prevalece por rota mas preserva rotas dinâmicas
+        // que ainda não existem no Supabase (entradas locais ainda não persistidas)
+        setData(prev => {
+          const next = { ...prev };
+          for (const psm of Object.keys(resultado.data)) {
+            const prevPsm = prev[psm] || {};
+            const supPsm = resultado.data[psm];
+            const mergedPsm = {};
+            const allWeeks = new Set([...Object.keys(prevPsm), ...Object.keys(supPsm)]);
+            for (const week of allWeeks) {
+              // rotas locais primeiro (preserva rotas ainda não guardadas no Supabase);
+              // rotas do Supabase sobrescrevem (source of truth para rotas já persistidas)
+              mergedPsm[week] = { ...(prevPsm[week] || {}), ...(supPsm[week] || {}) };
+            }
+            next[psm] = mergedPsm;
+          }
+          return next;
+        });
 
         if (resultado.rotasTestadas && Object.keys(resultado.rotasTestadas).length > 0) {
           setRotasTestadas(resultado.rotasTestadas);
@@ -98,7 +116,7 @@ export const usePersistence = ({
         data,
         selectedQuarter,
         selectedYear,
-        routeToProvince,
+        routeToProvinceRef.current,
         rotasTestadas,
         rotasValidadas
       );
