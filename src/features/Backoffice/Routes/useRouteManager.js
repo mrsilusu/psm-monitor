@@ -43,11 +43,21 @@ export const useRouteManager = () => {
   const handleDelete = async (id) => {
     const old = routes.find(r => r.id === id);
     const { error: err } = await deleteRoute(id);
-    if (!err) {
-      await logAction({ action: 'DELETE', entity: 'route_config', entityId: id, oldValue: old });
-      await load();
+    if (err) {
+      // FK violation (código 23503): a rota tem dados históricos em psm_data
+      if (err.code === '23503') {
+        return {
+          error: {
+            ...err,
+            message: `Não é possível eliminar a rota "${old?.route_name}" porque tem dados históricos registados. Desactive-a em vez de eliminar.`,
+          },
+        };
+      }
+      return { error: err };
     }
-    return { error: err };
+    await logAction({ action: 'DELETE', entity: 'route_config', entityId: id, oldValue: old });
+    await load();
+    return { error: null };
   };
 
   const toggleActive = async (id, currentActive) => {

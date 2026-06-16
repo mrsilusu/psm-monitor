@@ -50,7 +50,10 @@ const RouteManager = ({ onAddRoute, allPsms = DEFAULT_PSM_LIST, operatorToProvin
 
   const handleDelete = async (id) => {
     if (!window.confirm('Apagar esta rota permanentemente?')) return;
-    await deleteRoute(id);
+    const result = await deleteRoute(id);
+    if (result?.error) {
+      window.alert(result.error.message || 'Erro ao apagar a rota.');
+    }
   };
 
   const psmTabs = allPsms.map((id, idx) => ({
