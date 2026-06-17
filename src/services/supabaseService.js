@@ -396,13 +396,6 @@ export const lerTudoDoSupabase = async (year) => {
   }
 };
 
-export default {
-  salvarTudoNoSupabase,
-  lerTudoDoSupabase,
-  salvarJustificativasNoSupabase,
-  lerJustificativasDoSupabase
-};
-
 // ============================================
 // SALVAR JUSTIFICATIVAS NO SUPABASE
 // ============================================
@@ -585,4 +578,11 @@ export const lerJustificativasDoSupabase = async (year) => {
       data: {}
     };
   }
+};
+
+export default {
+  salvarTudoNoSupabase,
+  lerTudoDoSupabase,
+  salvarJustificativasNoSupabase,
+  lerJustificativasDoSupabase
 };
