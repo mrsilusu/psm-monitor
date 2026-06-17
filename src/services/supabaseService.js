@@ -315,25 +315,47 @@ export const salvarTudoNoSupabase = async (allData, quarter, year, routesToProvi
 export const lerTudoDoSupabase = async (year) => {
   try {
     console.log('🚀 Carregando dados do Supabase...');
-    
+
     const anoAtual = year || new Date().getFullYear();
-    
-    // UMA query para buscar TUDO
-    const { data: todosRegistros, error } = await supabase
-      .from('psm_data')
-      .select('*')
-      .eq('year', anoAtual)
-      .order('psm', { ascending: true })
-      .order('week', { ascending: true });
+    const PAGE_SIZE = 1000;
 
-    if (error) throw error;
+    // Buscar por PSM em paralelo, com paginação por PSM para suportar > 1000 registos
+    const psms = ['ISISTEL', 'FIBRASOL', 'ANGLOBAL'];
 
-    if (!todosRegistros || todosRegistros.length === 0) {
+    const fetchPSM = async (psm) => {
+      let todos = [];
+      let from = 0;
+      while (true) {
+        const { data, error } = await supabase
+          .from('psm_data')
+          .select('*')
+          .eq('year', anoAtual)
+          .eq('psm', psm)
+          .order('week', { ascending: true })
+          .range(from, from + PAGE_SIZE - 1);
+
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        todos = todos.concat(data);
+        console.log(`📦 ${psm}: ${todos.length} registos carregados`);
+        if (data.length < PAGE_SIZE) break;
+        from += PAGE_SIZE;
+      }
+      return todos;
+    };
+
+    const [regISISTEL, regFIBRASOL, regANGLOBAL] = await Promise.all(
+      psms.map(fetchPSM)
+    );
+
+    const todosRegistros = [...regISISTEL, ...regFIBRASOL, ...regANGLOBAL];
+
+    if (todosRegistros.length === 0) {
       console.log('⚠️ Nenhum dado encontrado no Supabase para', anoAtual);
       return { success: true, data: {}, rotasTestadas: {}, rotasValidadas: {} };
     }
 
-    console.log(`📦 ${todosRegistros.length} registros encontrados`);
+    console.log(`📦 Total: ${todosRegistros.length} registos (ISISTEL:${regISISTEL.length} FIBRASOL:${regFIBRASOL.length} ANGLOBAL:${regANGLOBAL.length})`);
 
     // Separar em 3 estruturas
     const allData = {};
