@@ -204,9 +204,11 @@ const ClassificacaoCarrossel = ({
                 const renderProvincialDashboard = () => {
                   if (selectedProvince === 'Todas') return null;
                   
+                  const psmRoutes = routesByPsm[selectedOperator] || [];
                   const rotasProvincia = Object.entries(routeToProvince)
                     .filter(([_, prov]) => prov === selectedProvince)
-                    .map(([rota]) => rota);
+                    .map(([rota]) => rota)
+                    .filter(rota => psmRoutes.includes(rota));
                   
                   const rotasDegradadasProv = routesData.filter(r => r.transporte < r.indisponiveis && routeToProvince[r.rota] === selectedProvince);
                   const rotasGanhoProv = routesData.filter(r => r.transporte > r.indisponiveis && routeToProvince[r.rota] === selectedProvince);
