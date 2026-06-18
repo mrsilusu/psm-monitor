@@ -333,46 +333,38 @@ export const lerTudoDoSupabase = async (year) => {
   try {
     console.log('🚀 Carregando dados do Supabase...');
 
-    const anoAtual = year || new Date().getFullYear();
+    const anoAtual = parseInt(year, 10) || new Date().getFullYear();
     const PAGE_SIZE = 1000;
 
-    // Buscar por PSM em paralelo, com paginação por PSM para suportar > 1000 registos
-    const psms = ['ISISTEL', 'FIBRASOL', 'ANGLOBAL'];
+    // Paginação simples sem filtro por PSM nem order em coluna custom —
+    // mesmo padrão que carregarDistribuicaoDoSupabase usa com sucesso.
+    // Ordenar por created_at (coluna automática, sempre estável) evita
+    // resultados inconsistentes entre páginas com text ordering em "W1"..."W52".
+    const todosRegistros = [];
+    let from = 0;
 
-    const fetchPSM = async (psm) => {
-      let todos = [];
-      let from = 0;
-      while (true) {
-        const { data, error } = await supabase
-          .from('psm_data')
-          .select('*')
-          .eq('year', anoAtual)
-          .eq('psm', psm)
-          .order('week', { ascending: true })
-          .range(from, from + PAGE_SIZE - 1);
+    while (true) {
+      const { data, error } = await supabase
+        .from('psm_data')
+        .select('*')
+        .eq('year', anoAtual)
+        .order('created_at', { ascending: true })
+        .range(from, from + PAGE_SIZE - 1);
 
-        if (error) throw error;
-        if (!data || data.length === 0) break;
-        todos = todos.concat(data);
-        console.log(`📦 ${psm}: ${todos.length} registos carregados`);
-        if (data.length < PAGE_SIZE) break;
-        from += PAGE_SIZE;
-      }
-      return todos;
-    };
-
-    const [regISISTEL, regFIBRASOL, regANGLOBAL] = await Promise.all(
-      psms.map(fetchPSM)
-    );
-
-    const todosRegistros = [...regISISTEL, ...regFIBRASOL, ...regANGLOBAL];
+      if (error) throw error;
+      if (!data || data.length === 0) break;
+      todosRegistros.push(...data);
+      console.log(`📦 psm_data: ${todosRegistros.length} registos carregados...`);
+      if (data.length < PAGE_SIZE) break;
+      from += PAGE_SIZE;
+    }
 
     if (todosRegistros.length === 0) {
       console.log('⚠️ Nenhum dado encontrado no Supabase para', anoAtual);
       return { success: true, data: {}, rotasTestadas: {}, rotasValidadas: {} };
     }
 
-    console.log(`📦 Total: ${todosRegistros.length} registos (ISISTEL:${regISISTEL.length} FIBRASOL:${regFIBRASOL.length} ANGLOBAL:${regANGLOBAL.length})`);
+    console.log(`📦 Total: ${todosRegistros.length} registos carregados do psm_data`);
 
     // Separar em 3 estruturas
     const allData = {};
