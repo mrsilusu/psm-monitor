@@ -529,11 +529,14 @@ useEffect(() => {
       
       const resultado = await lerTudoDoSupabase(selectedYear);
       
-      if (resultado.success && resultado.data && Object.keys(resultado.data).length > 0) {
+      if (!resultado.success) {
+        // Erro de rede, RLS ou outro — manter dados existentes (localStorage)
+        console.error('❌ Erro ao carregar psm_data do Supabase:', resultado.error);
+        console.warn('⚠️ A usar dados locais como fallback. Verifica RLS e variáveis de ambiente no Supabase.');
+      } else if (resultado.data && Object.keys(resultado.data).length > 0) {
         console.log('✅ Dados carregados do Supabase!', resultado.data);
         setData(resultado.data);
-        
-        // ✅ CORREÇÃO: Carregar também os estados de teste e validação
+
         // Supabase retorna { psm: { week: { route: {} } } } mas o estado usa { year: { psm: ... } }
         if (resultado.rotasTestadas && Object.keys(resultado.rotasTestadas).length > 0) {
           console.log('✅ Rotas testadas carregadas do Supabase:', resultado.rotasTestadas);
@@ -545,8 +548,8 @@ useEffect(() => {
           setRotasValidadas(prev => ({ ...prev, [selectedYear]: resultado.rotasValidadas }));
         }
       } else {
+        // Supabase respondeu com sucesso mas sem registos para este ano
         console.log('⚠️ Sem dados no Supabase para o ano', selectedYear);
-        // Limpar dados se não houver nada para o ano selecionado
         setData({ ISISTEL: {}, FIBRASOL: {}, ANGLOBAL: {} });
         setRotasTestadas({});
         setRotasValidadas({});
