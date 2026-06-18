@@ -83,25 +83,44 @@ export const carregarDistribuicaoDoSupabase = async (quarter, year) => {
   
   try {
     console.log(`🔄 [DISTRIBUIÇÃO] Iniciando carregamento (${quarter} ${year})...`);
-    
-    const { data, error } = await supabase
-      .from('psm_distribuicao_reparacoes')
-      .select('*')
-      .eq('year', parseInt(year, 10))
-      .eq('quarter', quarter)
-      .order('created_at', { ascending: false }); // V5.08.2: Ordenar por mais recente
-    
-    if (error) {
-      console.error('❌ [DISTRIBUIÇÃO] Erro do Supabase:', error);
-      throw error;
-    }
-    
-    if (!data || data.length === 0) {
+
+    const PAGE_SIZE = 1000;
+    const psms = ['ISISTEL', 'FIBRASOL', 'ANGLOBAL'];
+
+    const fetchDistribPSM = async (psm) => {
+      let todos = [];
+      let from = 0;
+      while (true) {
+        const { data, error } = await supabase
+          .from('psm_distribuicao_reparacoes')
+          .select('*')
+          .eq('year', parseInt(year, 10))
+          .eq('quarter', quarter)
+          .eq('psm', psm)
+          .order('created_at', { ascending: false })
+          .range(from, from + PAGE_SIZE - 1);
+
+        if (error) {
+          console.error(`❌ [DISTRIBUIÇÃO] Erro ao buscar ${psm}:`, error);
+          throw error;
+        }
+        if (!data || data.length === 0) break;
+        todos = todos.concat(data);
+        if (data.length < PAGE_SIZE) break;
+        from += PAGE_SIZE;
+      }
+      return todos;
+    };
+
+    const resultsPorPSM = await Promise.all(psms.map(fetchDistribPSM));
+    const data = resultsPorPSM.flat();
+
+    if (data.length === 0) {
       const duration = Date.now() - startTime;
       console.log(`📝 [DISTRIBUIÇÃO] Nenhum registro encontrado (${duration}ms)`);
       return {};
     }
-    
+
     console.log(`📊 [DISTRIBUIÇÃO] ${data.length} registros encontrados`);
     console.log('📊 [DISTRIBUIÇÃO] Primeiros registros:', JSON.stringify(data.slice(0, 3), null, 2));
     

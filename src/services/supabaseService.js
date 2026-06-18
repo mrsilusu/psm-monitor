@@ -58,26 +58,44 @@ export const salvarTudoNoSupabase = async (allData, quarter, year, routesToProvi
     
     const anoAtual = year || new Date().getFullYear();
     
-    // 1. Buscar TODOS os registros existentes do ano de UMA VEZ
+    // 1. Buscar TODOS os registros existentes do ano com paginação por PSM
     console.log('📥 Buscando registros existentes...');
-    const { data: registrosExistentes, error: fetchError } = await supabase
-      .from('psm_data')
-      .select('id, psm, week, route, testada, validada')
-      .eq('year', anoAtual);
-    
-    if (fetchError) {
-      console.error('⚠️ Erro ao buscar existentes:', fetchError);
-    }
-    
+    const PAGE_SIZE = 1000;
+    const psms = ['ISISTEL', 'FIBRASOL', 'ANGLOBAL'];
+
+    const fetchExistentesPSM = async (psm) => {
+      let todos = [];
+      let from = 0;
+      while (true) {
+        const { data, error } = await supabase
+          .from('psm_data')
+          .select('id, psm, week, route, testada, validada')
+          .eq('year', anoAtual)
+          .eq('psm', psm)
+          .range(from, from + PAGE_SIZE - 1);
+
+        if (error) {
+          console.error(`⚠️ Erro ao buscar existentes (${psm}):`, error);
+          break;
+        }
+        if (!data || data.length === 0) break;
+        todos = todos.concat(data);
+        if (data.length < PAGE_SIZE) break;
+        from += PAGE_SIZE;
+      }
+      return todos;
+    };
+
+    const existentesPorPSM = await Promise.all(psms.map(fetchExistentesPSM));
+    const todosExistentes = existentesPorPSM.flat();
+
     // Criar mapa de registros existentes para lookup rápido
     const mapaExistentes = {};
-    if (registrosExistentes) {
-      registrosExistentes.forEach(reg => {
-        const chave = `${reg.psm}|${reg.week}|${reg.route}`;
-        mapaExistentes[chave] = reg;
-      });
-    }
-    
+    todosExistentes.forEach(reg => {
+      const chave = `${reg.psm}|${reg.week}|${reg.route}`;
+      mapaExistentes[chave] = reg;
+    });
+
     console.log(`📊 Encontrados ${Object.keys(mapaExistentes).length} registros existentes`);
     
     // 2. Preparar lotes de UPDATE e INSERT
