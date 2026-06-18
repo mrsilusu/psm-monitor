@@ -119,33 +119,32 @@ export const salvarTudoNoSupabase = async (allData, quarter, year, routesToProvi
     }
     
     // ✅ Adicionar rotas marcadas como TESTADAS (mesmo sem dados numéricos)
-    if (rotasTestadas) {
-      for (const psmName in rotasTestadas) {
-        for (const week in rotasTestadas[psmName]) {
-          for (const route in rotasTestadas[psmName][week]) {
-            if (rotasTestadas[psmName][week][route]?.testada === true) {
-              const chave = `${psmName}|${week}|${route}`;
-              if (!rotasParaProcessar.has(chave)) {
-                rotasParaProcessar.set(chave, { psm: psmName, week, route });
-                console.log(`📌 Adicionando rota TESTADA sem dados: ${chave}`);
-              }
+    // rotasTestadas tem estrutura { year: { psm: { week: { route: { testada: true } } } } }
+    const testadaDoAno = rotasTestadas?.[anoAtual] || {};
+    for (const psmName in testadaDoAno) {
+      for (const week in testadaDoAno[psmName]) {
+        for (const route in testadaDoAno[psmName][week]) {
+          if (testadaDoAno[psmName][week][route]?.testada === true) {
+            const chave = `${psmName}|${week}|${route}`;
+            if (!rotasParaProcessar.has(chave)) {
+              rotasParaProcessar.set(chave, { psm: psmName, week, route });
+              console.log(`📌 Adicionando rota TESTADA sem dados: ${chave}`);
             }
           }
         }
       }
     }
-    
+
     // ✅ Adicionar rotas marcadas como VALIDADAS (mesmo sem dados numéricos)
-    if (rotasValidadas) {
-      for (const psmName in rotasValidadas) {
-        for (const week in rotasValidadas[psmName]) {
-          for (const route in rotasValidadas[psmName][week]) {
-            if (rotasValidadas[psmName][week][route]?.validada === true) {
-              const chave = `${psmName}|${week}|${route}`;
-              if (!rotasParaProcessar.has(chave)) {
-                rotasParaProcessar.set(chave, { psm: psmName, week, route });
-                console.log(`📌 Adicionando rota VALIDADA sem dados: ${chave}`);
-              }
+    const validadaDoAno = rotasValidadas?.[anoAtual] || {};
+    for (const psmName in validadaDoAno) {
+      for (const week in validadaDoAno[psmName]) {
+        for (const route in validadaDoAno[psmName][week]) {
+          if (validadaDoAno[psmName][week][route]?.validada === true) {
+            const chave = `${psmName}|${week}|${route}`;
+            if (!rotasParaProcessar.has(chave)) {
+              rotasParaProcessar.set(chave, { psm: psmName, week, route });
+              console.log(`📌 Adicionando rota VALIDADA sem dados: ${chave}`);
             }
           }
         }
@@ -208,13 +207,13 @@ export const salvarTudoNoSupabase = async (allData, quarter, year, routesToProvi
           });
           
           // ✅ Verificar se a rota foi marcada como testada ou validada
-          const foiTestada = rotasTestadas?.[psmName]?.[week]?.[route]?.testada === true;
-          const foiValidada = rotasValidadas?.[psmName]?.[week]?.[route]?.validada === true;
-          
+          const foiTestada = rotasTestadas?.[anoAtual]?.[psmName]?.[week]?.[route]?.testada === true;
+          const foiValidada = rotasValidadas?.[anoAtual]?.[psmName]?.[week]?.[route]?.validada === true;
+
           if (existente) {
             // ✅ UPDATE: Sempre atualizar registros existentes (mesmo que seja para zerar)
-            const testeLocal = rotasTestadas?.[psmName]?.[week]?.[route]?.testada === true;
-            const validaLocal = rotasValidadas?.[psmName]?.[week]?.[route]?.validada === true;
+            const testeLocal = rotasTestadas?.[anoAtual]?.[psmName]?.[week]?.[route]?.testada === true;
+            const validaLocal = rotasValidadas?.[anoAtual]?.[psmName]?.[week]?.[route]?.validada === true;
             
             // Usar valores locais se existirem, senão preservar do banco
             dadosBase.testada = testeLocal || existente.testada || false;

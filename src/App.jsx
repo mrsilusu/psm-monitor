@@ -534,14 +534,15 @@ useEffect(() => {
         setData(resultado.data);
         
         // ✅ CORREÇÃO: Carregar também os estados de teste e validação
+        // Supabase retorna { psm: { week: { route: {} } } } mas o estado usa { year: { psm: ... } }
         if (resultado.rotasTestadas && Object.keys(resultado.rotasTestadas).length > 0) {
           console.log('✅ Rotas testadas carregadas do Supabase:', resultado.rotasTestadas);
-          setRotasTestadas(resultado.rotasTestadas);
+          setRotasTestadas(prev => ({ ...prev, [selectedYear]: resultado.rotasTestadas }));
         }
-        
+
         if (resultado.rotasValidadas && Object.keys(resultado.rotasValidadas).length > 0) {
           console.log('✅ Rotas validadas carregadas do Supabase:', resultado.rotasValidadas);
-          setRotasValidadas(resultado.rotasValidadas);
+          setRotasValidadas(prev => ({ ...prev, [selectedYear]: resultado.rotasValidadas }));
         }
       } else {
         console.log('⚠️ Sem dados no Supabase para o ano', selectedYear);
