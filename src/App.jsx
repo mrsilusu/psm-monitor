@@ -232,7 +232,7 @@ const PSMMonitorApp = () => {
     'Cabinda': 'ISISTEL',
     'Zaire': 'FIBRASOL',
     'Uíge': 'FIBRASOL',
-    'Malange': 'FIBRASOL',
+    'Malanje': 'FIBRASOL',
     'Cuanza Norte': 'FIBRASOL',
     'Lunda Norte': 'ANGLOBAL',
     'Lunda Sul': 'ANGLOBAL',
@@ -535,9 +535,22 @@ useEffect(() => {
         console.warn('⚠️ A usar dados locais como fallback. Verifica RLS e variáveis de ambiente no Supabase.');
       } else if (resultado.data && Object.keys(resultado.data).length > 0) {
         console.log('✅ Dados carregados do Supabase!', resultado.data);
-        setData(resultado.data);
 
-        // Supabase retorna { psm: { week: { route: {} } } } mas o estado usa { year: { psm: ... } }
+        // Merge: garantir que TODAS as rotas de todos os PSMs estão presentes.
+        // Rotas com dados no Supabase recebem os valores do Supabase.
+        // Rotas sem dados no Supabase mantêm valores do estado anterior (localStorage/inicial).
+        setData(prev => {
+          const merged = JSON.parse(JSON.stringify(prev));
+          Object.keys(resultado.data).forEach(psm => {
+            if (!merged[psm]) merged[psm] = {};
+            Object.keys(resultado.data[psm]).forEach(week => {
+              if (!merged[psm][week]) merged[psm][week] = {};
+              Object.assign(merged[psm][week], resultado.data[psm][week]);
+            });
+          });
+          return merged;
+        });
+
         if (resultado.rotasTestadas && Object.keys(resultado.rotasTestadas).length > 0) {
           console.log('✅ Rotas testadas carregadas do Supabase:', resultado.rotasTestadas);
           setRotasTestadas(prev => ({ ...prev, [selectedYear]: resultado.rotasTestadas }));

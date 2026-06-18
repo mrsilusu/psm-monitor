@@ -72,6 +72,7 @@ export const salvarTudoNoSupabase = async (allData, quarter, year, routesToProvi
           .select('id, psm, week, route, testada, validada')
           .eq('year', anoAtual)
           .eq('psm', psm)
+          .order('id', { ascending: true })
           .range(from, from + PAGE_SIZE - 1);
 
         if (error) {
@@ -348,7 +349,7 @@ export const lerTudoDoSupabase = async (year) => {
         .from('psm_data')
         .select('*')
         .eq('year', anoAtual)
-        .order('created_at', { ascending: true })
+        .order('id', { ascending: true })
         .range(from, from + PAGE_SIZE - 1);
 
       if (error) throw error;
